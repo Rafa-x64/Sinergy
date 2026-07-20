@@ -1,0 +1,62 @@
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// --- Modelos Iniciales de Sinergy ---
+// Estos modelos son un punto de partida. Se deben ajustar
+// durante el levantamiento de información con el equipo.
+
+model Planta {
+  id        Int      @id @default(autoincrement())
+  nombre    String   @unique
+  ubicacion String
+  equipos   Equipo[]
+  creadoEn  DateTime @default(now())
+}
+
+model Equipo {
+  id           Int          @id @default(autoincrement())
+  codigo       String       @unique
+  nombre       String
+  tipo         String
+  planta       Planta       @relation(fields: [plantaId], references: [id])
+  plantaId     Int
+  inspecciones Inspeccion[]
+
+  @@index([plantaId])
+}
+
+model Usuario {
+  id           Int          @id @default(autoincrement())
+  nombre       String
+  email        String       @unique
+  rol          Rol
+  inspecciones Inspeccion[]
+  creadoEn     DateTime     @default(now())
+}
+
+enum Rol {
+  TECNICO
+  SUPERVISOR
+  ADMIN
+}
+
+model Inspeccion {
+  id          Int      @id @default(autoincrement())
+  equipo      Equipo   @relation(fields: [equipoId], references: [id])
+  equipoId    Int
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
+  usuarioId   Int
+  datos       Json
+  observacion String?
+  realizadaEn DateTime @default(now())
+
+  @@index([equipoId])
+  @@index([realizadaEn])
+}
