@@ -1,4 +1,4 @@
-# 📝 Bloc de Notas - Proyecto Sinergy
+#  Bloc de Notas - Proyecto Sinergy
 
 Aquí se registran las anotaciones, palabras clave y requerimientos solicitados por los usuarios.
 
@@ -11,7 +11,7 @@ Aquí se registran las anotaciones, palabras clave y requerimientos solicitados 
 
 ---
 
-## 📋 Tabla de Contenidos
+##  Tabla de Contenidos
 
 - [Recordatorios](#recordatorios)
 - [Notas Generales](#notas-generales)
@@ -21,7 +21,7 @@ Aquí se registran las anotaciones, palabras clave y requerimientos solicitados 
 
 ---
 
-## 📌 Recordatorios
+##  Recordatorios
 
 - [ ] **Repositorio:** Crear repositorio privado de GitHub para Sinergy.
 - [ ] **Levantamiento de Información:** Realizar levantamiento el 17-07-2026 con *Elizabeth Ramirez* y *Ali Ramos*.
@@ -39,7 +39,7 @@ Aquí se registran las anotaciones, palabras clave y requerimientos solicitados 
 
 ---
 
-## 💡 Notas Generales
+##  Notas Generales
 
 ### Roles y Control de Acceso
 - **Interfaces Personalizadas:** Cada usuario tendrá módulos e interfaces específicas tras iniciar sesión, priorizando una buena UX.
@@ -77,7 +77,7 @@ Aquí se registran las anotaciones, palabras clave y requerimientos solicitados 
 
 ---
 
-## ⚙️ Relevamiento de Requisitos del Sistema
+## ️ Relevamiento de Requisitos del Sistema
 **Fecha:** 27/07/2026
 
 ### Sistema Actual
@@ -88,7 +88,7 @@ Aquí se registran las anotaciones, palabras clave y requerimientos solicitados 
 4. Historial: Visualización de chequeos anteriores en la pantalla principal.
 5. Detalle: Al hacer clic en un registro, se ven los datos fijos (solo lectura).
 
-> **💡 Oportunidad de Mejora:** Implementar un inicio de sesión seguro y amigable. Redirigir a un *Dashboard* con estadísticas en tiempo real. La interfaz debe permitir realizar múltiples tareas cómodamente, mantener la sesión iniciada y contar con un menú lateral o desplegable.
+> ** Oportunidad de Mejora:** Implementar un inicio de sesión seguro y amigable. Redirigir a un *Dashboard* con estadísticas en tiempo real. La interfaz debe permitir realizar múltiples tareas cómodamente, mantener la sesión iniciada y contar con un menú lateral o desplegable.
 
 ---
 
@@ -142,7 +142,7 @@ Aquí se registran las anotaciones, palabras clave y requerimientos solicitados 
 
 ---
 
-## 🚨 Observaciones Importantes
+##  Observaciones Importantes
 
 > [!NOTE]
 > **Inventario:** La gestión de inventario no es necesaria, ya que utilizan `idempiere`.

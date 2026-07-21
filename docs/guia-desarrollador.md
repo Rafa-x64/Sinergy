@@ -479,7 +479,7 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 })
 
 app.listen(port, () => {
-  console.log(`🚀 Backend running at http://localhost:${port}`)
+  console.log(` Backend running at http://localhost:${port}`)
 })
 ```
 
