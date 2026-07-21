@@ -13,7 +13,7 @@ export default defineConfig({
     chunkSizeWarningLimit: 600, // Sube el aviso a un tamaño razonable
     rollupOptions: {
       output: {
-        manualChunks(id) {
+        manualChunks(id: string) {
           // Si es una librería de node_modules, la separamos en su propio fragmento (chunk)
           if (id.includes('node_modules')) {
             if (id.includes('echarts') || id.includes('apexcharts') || id.includes('chart.js')) {
