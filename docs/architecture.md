@@ -26,9 +26,9 @@ Sinergy es un sistema de gestión de mantenimiento industrial estructurado como 
 │                                                             │
 │   ┌──────────────────┐        ┌──────────────────────────┐  │
 │   │   apps/frontend  │  HTTP  │     apps/backend         │  │
-│   │   Vue 3 + TS     │ ──────▶│   Express + Prisma       │  │
-│   │   Bootstrap 5    │  REST  │   PostgreSQL              │  │
-│   │   Pinia          │        │   DDD-Lite                │  │
+│   │   Vue 3 + TS     │ ────── │   Express + Prisma       │  │
+│   │   Bootstrap 5    │  REST  │   PostgreSQL             │  │
+│   │   Pinia          │        │   DDD-Lite               │  │
 │   └──────────────────┘        └──────────────────────────┘  │
 │                                                             │
 │   ┌────────────────────────────────────────────────────┐    │
@@ -225,9 +225,9 @@ El backend aplica una versión pragmática de DDD con 4 capas. La regla fundamen
 ### Regla de Dependencias
 
 ```
-interfaces/ ──▶ application/ ──▶ domain/
+interfaces/ ── application/ ── domain/
                      ▲
-             infrastructure/ ──▶ domain/
+             infrastructure/ ── domain/
 ```
 
 `domain/` no importa nada de capas externas. Es código TypeScript puro.
@@ -310,7 +310,7 @@ Ejemplo: `GET /api/tecnicos/planta/1`
 │                     FRONTEND (Vue 3 SPA)                   │
 │                                                            │
 │  ┌──────────┐   ┌─────────────┐   ┌──────────────────────┐ │
-│  │  Views   │──▶│ Composables │──▶│    utils/http.ts     │ │
+│  │  Views   │── │ Composables │── │    utils/http.ts     │ │
 │  └──────────┘   └─────────────┘   │    (Axios + JWT)     │ │
 │       │                           └──────────────────────┘ │
 │       ▼                                        │           │
@@ -325,28 +325,28 @@ Ejemplo: `GET /api/tecnicos/planta/1`
                               │ REST API
                               ▼
 ┌────────────────────────────────────────────────────────────┐
-│                    BACKEND (Express + DDD-Lite)             │
+│                    BACKEND (Express + DDD-Lite)            │
 │                                                            │
 │  ┌────────────────────────────────────────────────────┐    │
-│  │  interfaces/ (Controladores + Rutas + Middlewares)  │    │
+│  │  interfaces/ (Controladores + Rutas + Middlewares) │    │
 │  └────────────────────────────────────────────────────┘    │
 │                          │                                 │
 │                          ▼                                 │
 │  ┌────────────────────────────────────────────────────┐    │
-│  │            application/ (Casos de Uso)              │    │
+│  │            application/ (Casos de Uso)             │    │
 │  └────────────────────────────────────────────────────┘    │
 │                          │                                 │
 │              ┌───────────┴───────────┐                     │
 │              ▼                       ▼                     │
-│  ┌─────────────────────┐  ┌──────────────────────────┐    │
-│  │      domain/        │  │    infrastructure/        │    │
-│  │  Entidades + IRepo  │◀─│  PrismaRepositories       │    │
-│  └─────────────────────┘  └──────────────────────────┘    │
+│  ┌─────────────────────┐  ┌──────────────────────────┐     │
+│  │      domain/        │  │    infrastructure/       │     │
+│  │  Entidades + IRepo  │─ │  PrismaRepositories      │     │
+│  └─────────────────────┘  └──────────────────────────┘     │
 │                                       │                    │
 │                                       ▼                    │
-│                           ┌──────────────────────────┐    │
-│                           │       PostgreSQL           │    │
-│                           └──────────────────────────┘    │
+│                           ┌──────────────────────────┐     │
+│                           │       PostgreSQL         │     │
+│                           └──────────────────────────┘     │
 └────────────────────────────────────────────────────────────┘
 ```
 
@@ -383,10 +383,10 @@ Sinergy opera en plantas industriales donde la conectividad puede ser intermiten
          ▼
 2. ¿Hay conexión? (useOnline de VueUse)
    │
-   ├── SÍ ──▶ POST /api/inspecciones → Backend → PostgreSQL
+   ├── SÍ ── POST /api/inspecciones → Backend → PostgreSQL
    │          → toast.success()
    │
-   └── NO ──▶ Dexie: db.inspeccionesPendientes.add(datos)
+   └── NO ── Dexie: db.inspeccionesPendientes.add(datos)
               → toast.warning('Guardado localmente')
               → Al reconectarse: sincronizar()
                  → POST /api/inspecciones/batch

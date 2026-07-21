@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>🏭 Sinergy</h1>
+  <h1> Sinergy</h1>
   <p><strong>Sistema Avanzado de Gestión de Mantenimiento Industrial</strong></p>
 </div>
 
@@ -7,7 +7,7 @@ Sinergy es una aplicación web enfocada en la recolección de datos y control de
 
 ---
 
-## 🛠 Stack Tecnológico
+##  Stack Tecnológico
 
 Sinergy está estructurado como un **Monorepo** gestionado con `pnpm workspaces`. Se compone de dos proyectos independientes:
 
@@ -26,7 +26,7 @@ Sinergy está estructurado como un **Monorepo** gestionado con `pnpm workspaces`
 
 ---
 
-## 🚀 Inicio Rápido
+##  Inicio Rápido
 
 ### Requisitos
 - Node.js >= 20.x
@@ -48,23 +48,23 @@ pnpm dev
 
 ---
 
-## 📚 Centro de Documentación
+##  Centro de Documentación
 
 Toda la inteligencia, reglas de negocio y directrices del proyecto se encuentran en la carpeta `docs/`. **Es imprescindible leer la documentación antes de modificar la arquitectura.**
 
-### 🗺 Documentos Principales
+###  Documentos Principales
 
 | Documento | Descripción |
 |---|---|
-| 📐 **[Arquitectura](file:///c:/xampp/htdocs/Sinergy/docs/architecture.md)** | Visión general del monorepo, flujo HTTP, diseño DDD-Lite y diagramas de capas. |
-| 🧑‍💻 **[Guía del Desarrollador](file:///c:/xampp/htdocs/Sinergy/docs/guia-desarrollador.md)** | Tutorial cronológico para crear features completos de principio a fin. |
-| 📦 **[Librerías (Extensions)](file:///c:/xampp/htdocs/Sinergy/docs/extensions/extensions.md)** | Documentación y ejemplos de uso de cada librería instalada (Axios, Prisma, Pinia, etc.). |
-| ⚙️ **[Configuración (Setup)](file:///c:/xampp/htdocs/Sinergy/docs/setup.md)** | Cómo instalar y arrancar el proyecto desde cero sin errores. |
-| 🛡️ **[Seguridad](file:///c:/xampp/htdocs/Sinergy/docs/security.md)** | Políticas de JWT, protección XSS, Rate Limiting y contraseñas. |
-| 🗺️ **[Roadmap y Tareas](file:///c:/xampp/htdocs/Sinergy/docs/todo.md)** | Lista maestra de tareas completadas, en progreso y planificadas (To-Do). |
-| 📝 **[Historial (Changelog)](file:///c:/xampp/htdocs/Sinergy/docs/changelog.md)** | Registro formal de todos los cambios de código realizados. |
+|  **[Arquitectura](file:///c:/xampp/htdocs/Sinergy/docs/architecture.md)** | Visión general del monorepo, flujo HTTP, diseño DDD-Lite y diagramas de capas. |
+| ‍ **[Guía del Desarrollador](file:///c:/xampp/htdocs/Sinergy/docs/guia-desarrollador.md)** | Tutorial cronológico para crear features completos de principio a fin. |
+|  **[Librerías (Extensions)](file:///c:/xampp/htdocs/Sinergy/docs/extensions/extensions.md)** | Documentación y ejemplos de uso de cada librería instalada (Axios, Prisma, Pinia, etc.). |
+| ️ **[Configuración (Setup)](file:///c:/xampp/htdocs/Sinergy/docs/setup.md)** | Cómo instalar y arrancar el proyecto desde cero sin errores. |
+| ️ **[Seguridad](file:///c:/xampp/htdocs/Sinergy/docs/security.md)** | Políticas de JWT, protección XSS, Rate Limiting y contraseñas. |
+| ️ **[Roadmap y Tareas](file:///c:/xampp/htdocs/Sinergy/docs/todo.md)** | Lista maestra de tareas completadas, en progreso y planificadas (To-Do). |
+|  **[Historial (Changelog)](file:///c:/xampp/htdocs/Sinergy/docs/changelog.md)** | Registro formal de todos los cambios de código realizados. |
 
-### 📁 Documentación de Negocio y Dominio
+###  Documentación de Negocio y Dominio
 
 - **`docs/sinergy/`**: Contiene todo el levantamiento de requisitos.
   - [Vision y Alcance](file:///c:/xampp/htdocs/Sinergy/docs/sinergy/visionAlcance.md)
@@ -74,7 +74,7 @@ Toda la inteligencia, reglas de negocio y directrices del proyecto se encuentran
 
 ---
 
-## ⌨️ Scripts del Monorepo
+## ️ Scripts del Monorepo
 
 | Comando | Acción |
 |---|---|
