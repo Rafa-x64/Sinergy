@@ -1,63 +1,331 @@
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// =============================================================================
+// PRISMA SCHEMA DEFINITIVO Y COMPLETO — SISTEMA SINERGY (TUBRICA)
+// Engine: PostgreSQL 14+
+// =============================================================================
 
 generator client {
-  provider = "prisma-client-js"
+  provider   = "prisma-client-js"
   engineType = "binary"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-// --- Modelos Iniciales de Sinergy ---
-// Estos modelos son un punto de partida. Se deben ajustar
-// durante el levantamiento de información con el equipo.
+// -----------------------------------------------------------------------------
+// ENUMS DE DOMINIO Y SISTEMA
+// -----------------------------------------------------------------------------
+
+enum Rol {
+  ADMINISTRADOR
+  SUPERVISOR
+  TECNICO
+}
+
+enum TipoEquipo {
+  MAQUINARIA
+  MONTACARGAS
+  COMPRESOR
+  GENERADOR
+  CHILLER
+}
+
+enum EstadoOperativo {
+  OPERATIVO
+  INOPERATIVO
+  EN_MANTENIMIENTO
+}
+
+enum TipoEvaluacion {
+  NUMERICO_ENTERO
+  NUMERICO_DECIMAL
+  TEMPERATURA
+  SELECCION
+}
+
+enum TipoInspeccion {
+  VARIABLES_CRITICAS
+  MONTACARGAS
+  COMPRESOR
+  GENERADOR
+  CHILLER
+}
+
+enum EstadoInspeccion {
+  BORRADOR
+  PENDIENTE
+  APROBADO
+  RECHAZADO
+}
+
+enum OrigenDatos {
+  ONLINE
+  OFFLINE_SYNC
+}
+
+// -----------------------------------------------------------------------------
+// CAPA 1: SEGURIDAD, AUTENTICACIÓN Y ROLES (RBAC)
+// -----------------------------------------------------------------------------
+
+model Usuario {
+  id           Int       @id @default(autoincrement())
+  nombre       String    @db.VarChar(100)
+  apellido     String    @db.VarChar(100)
+  email        String    @unique @db.VarChar(150)
+  passwordHash String    @map("password_hash") @db.VarChar(255)
+  rol          Rol       @default(TECNICO)
+  activo       Boolean   @default(true)
+  ultimoAcceso DateTime? @map("ultimo_acceso")
+  creadoEn     DateTime  @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  // Relaciones de auditoría e inspección
+  inspeccionesElaboradas Inspeccion[]  @relation("ElaboradoPor")
+  inspeccionesRevisadas  Inspeccion[]  @relation("RevisadoPor")
+  inspeccionesAprobadas  Inspeccion[]  @relation("AprobadoPor")
+  logsAuditoria          AuditoriaLog[]
+
+  @@map("usuarios")
+}
+
+// -----------------------------------------------------------------------------
+// CAPA 2: INFRAESTRUCTURA Y MAESTROS DE PLANTA (DATA-DRIVEN UI)
+// -----------------------------------------------------------------------------
+
+model UbicacionTecnica {
+  id          Int      @id @default(autoincrement())
+  codigo      String   @unique @db.VarChar(50)
+  nombre      String   @db.VarChar(255)
+  descripcion String?  @db.Text
+  creadoEn    DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  plantas Planta[]
+
+  @@map("ubicaciones_tecnicas")
+}
 
 model Planta {
-  id        Int      @id @default(autoincrement())
-  nombre    String   @unique
-  ubicacion String
-  equipos   Equipo[]
-  creadoEn  DateTime @default(now())
+  id                  Int               @id @default(autoincrement())
+  codigo              String            @unique @db.VarChar(50)
+  nombre              String            @unique @db.VarChar(255)
+  ubicacionTecnicaId Int?              @map("ubicacion_tecnica_id")
+  ubicacionTecnica   UbicacionTecnica? @relation(fields: [ubicacionTecnicaId], references: [id], onDelete: SetNull)
+  activa              Boolean           @default(true)
+  creadoEn            DateTime          @default(now()) @map("creado_en")
+  actualizadoEn       DateTime          @updatedAt @map("actualizado_en")
+
+  lineas Linea[]
+
+  @@index([ubicacionTecnicaId])
+  @@map("plantas")
+}
+
+model Linea {
+  id            Int      @id @default(autoincrement())
+  codigo        String   @db.VarChar(50)
+  nombre        String   @db.VarChar(255)
+  plantaId      Int      @map("planta_id")
+  planta        Planta   @relation(fields: [plantaId], references: [id], onDelete: Restrict)
+  activa        Boolean  @default(true)
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  equipos Equipo[]
+
+  @@unique([codigo, plantaId], name: "uq_linea_planta")
+  @@index([plantaId])
+  @@map("lineas")
 }
 
 model Equipo {
-  id           Int          @id @default(autoincrement())
-  codigo       String       @unique
-  nombre       String
-  tipo         String
-  planta       Planta       @relation(fields: [plantaId], references: [id])
-  plantaId     Int
-  inspecciones Inspeccion[]
+  id              Int             @id @default(autoincrement())
+  codigo          String          @unique @db.VarChar(100)
+  nombre          String          @db.VarChar(255)
+  tipoEquipo      TipoEquipo      @map("tipo_equipo")
+  lineaId         Int?            @map("linea_id")
+  linea           Linea?          @relation(fields: [lineaId], references: [id], onDelete: SetNull)
+  serial          String?         @db.VarChar(100)
+  marca           String?         @db.VarChar(100)
+  modelo          String?         @db.VarChar(100)
+  estadoOperativo EstadoOperativo @default(OPERATIVO) @map("estado_operativo")
+  observacion     String?         @db.Text
+  creadoEn        DateTime        @default(now()) @map("creado_en")
+  actualizadoEn   DateTime        @updatedAt @map("actualizado_en")
 
-  @@index([plantaId])
+  montacargasDetalle MontacargasDetalle?
+  componentes        Componente[]
+  inspecciones       Inspeccion[]
+
+  @@index([lineaId])
+  @@index([tipoEquipo])
+  @@index([estadoOperativo])
+  @@map("equipos")
 }
 
-model Usuario {
-  id           Int          @id @default(autoincrement())
-  nombre       String
-  email        String       @unique
-  rol          Rol
-  inspecciones Inspeccion[]
-  creadoEn     DateTime     @default(now())
+model MontacargasDetalle {
+  id                      Int    @id @default(autoincrement())
+  equipoId                Int    @unique @map("equipo_id")
+  equipo                  Equipo @relation(fields: [equipoId], references: [id], onDelete: Cascade)
+  denominacion            String @db.VarChar(255)
+  tipoMontacarga          String @default("Montacarga") @map("tipo_montacarga") @db.VarChar(100)
+  marca                   String @db.VarChar(100)
+  modelo                  String @db.VarChar(100)
+  identificacionAbreviada String @map("identificacion_abreviada") @db.VarChar(50)
+  ubicacionTecnicaTexto   String @map("ubicacion_tecnica_texto") @db.VarChar(100)
+  denominacion2           String? @map("denominacion_2") @db.Text
+
+  @@map("montacargas_detalles")
 }
 
-enum Rol {
-  TECNICO
-  SUPERVISOR
-  ADMIN
-}
+model Componente {
+  id            Int      @id @default(autoincrement())
+  equipoId      Int      @map("equipo_id")
+  equipo        Equipo   @relation(fields: [equipoId], references: [id], onDelete: Cascade)
+  nombre        String   @db.VarChar(255)
+  descripcion   String?  @db.Text
+  activo        Boolean  @default(true)
+  ordenPosicion Int      @default(0) @map("orden_posicion")
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
 
-model Inspeccion {
-  id          Int      @id @default(autoincrement())
-  equipo      Equipo   @relation(fields: [equipoId], references: [id])
-  equipoId    Int
-  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
-  usuarioId   Int
-  datos       Json
-  observacion String?
-  realizadaEn DateTime @default(now())
+  variables Variable[]
 
   @@index([equipoId])
-  @@index([realizadaEn])
+  @@index([activo])  // D-05: filtro frecuente en carga de formulario Data-Driven
+  @@map("componentes")
 }
+
+model Variable {
+  id            Int            @id @default(autoincrement())
+  componenteId  Int            @map("componente_id")
+  componente    Componente     @relation(fields: [componenteId], references: [id], onDelete: Cascade)
+  nombre        String         @db.VarChar(255)
+  tipoEvaluacion TipoEvaluacion @map("tipo_evaluacion")
+  unidad        String?        @db.VarChar(20)
+  valorMinimo   Decimal?       @map("valor_minimo") @db.Decimal(12, 4)
+  valorMaximo   Decimal?       @map("valor_maximo") @db.Decimal(12, 4)
+  ordenPosicion Int            @default(0) @map("orden_posicion")
+  activa        Boolean        @default(true)
+  creadoEn      DateTime       @default(now()) @map("creado_en")
+  actualizadoEn DateTime       @updatedAt @map("actualizado_en")
+
+  opcionesSeleccion  OpcionSeleccion[]
+  inspeccionDetalles InspeccionDetalle[]
+
+  @@index([componenteId])
+  @@index([tipoEvaluacion]) // D-06: filtro al construir formulario Data-Driven por tipo de control
+  @@map("variables")
+}
+
+model OpcionSeleccion {
+  id            Int      @id @default(autoincrement())
+  variableId    Int      @map("variable_id")
+  variable      Variable @relation(fields: [variableId], references: [id], onDelete: Cascade)
+  clave         String   @db.VarChar(10)
+  etiqueta      String   @db.VarChar(100)
+  ordenPosicion Int      @default(0) @map("orden_posicion")
+
+  @@unique([variableId, clave], name: "uq_variable_clave")
+  @@index([variableId])
+  @@map("opciones_seleccion")
+}
+
+// -----------------------------------------------------------------------------
+// CAPA 3: REGISTRO TRANSACCIONAL DE INSPECCIONES
+// -----------------------------------------------------------------------------
+
+model Inspeccion {
+  // D-03: BIGINT — tabla de alto volumen. Inspecciones diarias pueden superar 2.1M registros.
+  id                     BigInt           @id @default(autoincrement())
+  codigoInspeccion       String           @unique @map("codigo_inspeccion") @db.VarChar(100)
+  tipoInspeccion         TipoInspeccion   @map("tipo_inspeccion")
+  equipoId               Int              @map("equipo_id")
+  equipo                 Equipo           @relation(fields: [equipoId], references: [id], onDelete: Restrict)
+  elaboradoPorId         Int              @map("elaborado_por")
+  elaboradoPor           Usuario          @relation("ElaboradoPor", fields: [elaboradoPorId], references: [id], onDelete: Restrict)
+  revisadoPorId          Int?             @map("revisado_por")
+  revisadoPor            Usuario?         @relation("RevisadoPor", fields: [revisadoPorId], references: [id], onDelete: SetNull)
+  aprobadoPorId          Int?             @map("aprobado_por")
+  aprobadoPor            Usuario?         @relation("AprobadoPor", fields: [aprobadoPorId], references: [id], onDelete: SetNull)
+  fechaRegistro          DateTime         @default(now()) @map("fecha_registro")
+  fechaSincronizacion    DateTime?        @map("fecha_sincronizacion")
+  estadoInspeccion       EstadoInspeccion @default(PENDIENTE) @map("estado_inspeccion")
+  origenDatos            OrigenDatos      @default(ONLINE) @map("origen_datos")
+  observacionesGenerales String?          @map("observaciones_generales") @db.Text
+  creadoEn               DateTime         @default(now()) @map("creado_en")
+  actualizadoEn          DateTime         @updatedAt @map("actualizado_en")
+
+  detalles InspeccionDetalle[]
+  adjuntos InspeccionAdjunto[]
+
+  @@index([equipoId])
+  @@index([elaboradoPorId])
+  @@index([fechaRegistro])
+  @@index([estadoInspeccion])
+  @@index([tipoInspeccion])
+  @@index([origenDatos]) // D-07: Dashboard de sincronización OFFLINE_SYNC pendientes
+  @@map("inspecciones")
+}
+
+model InspeccionDetalle {
+  // D-03: BIGINT — puede tener N filas por inspección, volumen aún mayor que inspecciones.
+  id               BigInt     @id @default(autoincrement())
+  inspeccionId     BigInt     @map("inspeccion_id") // FK a Inspeccion.id (BigInt)
+  inspeccion       Inspeccion @relation(fields: [inspeccionId], references: [id], onDelete: Cascade)
+  variableId       Int        @map("variable_id")
+  variable         Variable   @relation(fields: [variableId], references: [id], onDelete: Restrict)
+  valorNumerico    Decimal?   @map("valor_numerico") @db.Decimal(12, 4)
+  valorSeleccion   String?    @map("valor_seleccion") @db.VarChar(10)
+  observaciones    String?    @db.Text
+  estadoComponente Boolean    @default(true) @map("estado_componente")
+
+  adjuntos InspeccionAdjunto[]
+
+  @@index([inspeccionId])
+  @@index([variableId])
+  @@map("inspeccion_detalles")
+}
+
+model InspeccionAdjunto {
+  // D-03: BIGINT — volumen proporcional a inspeccion_detalles.
+  id            BigInt             @id @default(autoincrement())
+  inspeccionId  BigInt             @map("inspeccion_id") // FK a Inspeccion.id (BigInt)
+  inspeccion    Inspeccion         @relation(fields: [inspeccionId], references: [id], onDelete: Cascade)
+  detalleId     BigInt?            @map("detalle_id")    // FK a InspeccionDetalle.id (BigInt)
+  detalle       InspeccionDetalle? @relation(fields: [detalleId], references: [id], onDelete: Cascade)
+  rutaArchivo   String             @map("ruta_archivo") @db.VarChar(500)
+  nombreArchivo String             @map("nombre_archivo") @db.VarChar(255)
+  tipoMime      String             @map("tipo_mime") @db.VarChar(100)
+  tamanoBytes   BigInt             @map("tamano_bytes")
+  creadoEn      DateTime           @default(now()) @map("creado_en")
+
+  @@index([inspeccionId])
+  @@index([detalleId]) // D-04: índice para queries por variable específica
+  @@map("inspeccion_adjuntos")
+}
+
+// -----------------------------------------------------------------------------
+// CAPA 4: AUDITORÍA Y TRAZABILIDAD ISO
+// -----------------------------------------------------------------------------
+
+model AuditoriaLog {
+  // D-03: registro_id como BigInt para cubrir IDs de tablas transaccionales que cambian a BigInt.
+  id            BigInt   @id @default(autoincrement())
+  usuarioId     Int?     @map("usuario_id")
+  usuario       Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  accion        String   @db.VarChar(100)
+  tablaAfectada String   @map("tabla_afectada") @db.VarChar(100)
+  registroId    BigInt   @map("registro_id") // D-03: cubre IDs de cualquier tabla, incluidas las BIGINT
+  datosPrevios  Json?    @map("datos_previos")
+  datosNuevos   Json?    @map("datos_nuevos")
+  ipOrigen      String?  @map("ip_origen") @db.VarChar(45)
+  creadoEn      DateTime @default(now()) @map("creado_en")
+
+  @@index([usuarioId])
+  @@index([tablaAfectada, registroId])
+  @@index([creadoEn])
+  @@map("auditoria_logs")
+}
+

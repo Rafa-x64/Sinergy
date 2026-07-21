@@ -96,9 +96,27 @@ Aquí se registran las anotaciones, palabras clave y requerimientos solicitados 
 
 #### 1. Montacargas
 *Días de inspección: Lunes, miércoles y viernes.*
-*Estado actual:* No funcional (no registra ni lista chequeos).
+*Estado actual:* No funcional en sistema heredado (no registra ni lista chequeos de estado, tampoco lista los montacargas).
 
-**Datos requeridos:**
+**Estructura y Atributos de Datos del Montacargas (Catálogo / Maestro):**
+- **Código de Equipo (Ej. `1000MTC00009`):**
+  - `1000`: Empresa / Planta (Tubrica).
+  - `MTC00009`: Identificación correlativa.
+- **Denominación (Ej. `Montacarga Yale GLP090 M09`):**
+  - Tipo: `Montacarga`
+  - Marca: `Yale`
+  - Modelo: `GLP090`
+  - Identificación abreviada: `M09`
+- **Serial:** Número de serie del equipo.
+- **Ubicación Técnica (Ej. `1000-DES-MT01`):**
+  - `1000`: Tubrica.
+  - `DES`: Ubicación / Área física.
+  - `MT01`: Identificador de montacargas en área.
+- **Denominación 2:** Descripción detallada de la ubicación técnica.
+- **Estado Operativo (`¿Operativo?`):** Estado del equipo (Operativo / Inoperativo).
+- **Descripción:** Texto explicativo del equipo.
+
+**Datos de Inspección Requeridos:**
 - **Motor:** Nivel aceite (N/A), Temperatura (°C), Presión (PSI), Fugas (E/NE), Alternador (N/A).
 - **Caja:** Nivel aceite (N/B), Fugas (E/NE).
 - **Radiador:** Refrigerante (N/B), Mangueras (N/A), Fugas (E/NE).
@@ -107,7 +125,7 @@ Aquí se registran las anotaciones, palabras clave y requerimientos solicitados 
 - **Extras:** Observación general, Elaborado por, Revisado por.
 *(Leyenda: N=Normal, E=Existe, A=Anormal, B=Bajo, NE=No existe, N/A=No aplica).*
 
-> **Desarrollo:** Gestión CRUD de montacargas. Permitir adjuntar imágenes por componente. Agregar filtros y barra de búsqueda en historiales. Control de roles (supervisores asignan privilegios mediante checks).
+> **Desarrollo Requerido:** Gestión CRUD de montacargas (listado de equipos con Serial, Código, Ubicación Técnica, Denominación y Estado Operativo). Formulario de captura funcional. Listado e historial de chequeos realizados. Permitir adjuntar imágenes por componente. Agregar filtros y barra de búsqueda en historiales. Control de roles (supervisores asignan privilegios mediante checks).
 
 #### 2. Compresor
 *Estado actual:* Funcional (muestra registros en solo lectura).
@@ -139,6 +157,73 @@ Aquí se registran las anotaciones, palabras clave y requerimientos solicitados 
 
 **Sección: Observaciones**
 - Área de texto para detalles adicionales.
+
+---
+
+## Módulo: Variables Críticas (Tubrica)
+
+> [!IMPORTANT]
+> Este módulo reemplaza el registro manual en Excel. El sistema debe ser agnóstico a la cantidad de plantas, líneas y equipos. Ningún cambio físico en la planta debe requerir modificación de código fuente.
+
+### Jerarquía Física (Relaciones 1:N)
+
+```
+Ubicación Técnica → Planta → Línea (6-17 por planta) → Equipo → Componente → Variable
+```
+
+- La **Ubicación Técnica** puede ser nula para una planta (soporte explícito en DB).
+- Densidad esperada: 15 a 17 líneas por planta.
+
+### Metadatos Obligatorios por Inspección (Cabecera)
+
+Todo registro de inspección debe capturar:
+- Elaborado por (operador autenticado, extraído del JWT).
+- Revisado por (nullable).
+- Aprobado por (nullable).
+- Fecha de registro (ISO 8601).
+- Planta, Ubicación Técnica, Línea de Producción, Equipo.
+
+### Tipos de Evaluación de Variables
+
+| Código interno | Descripción | UI a renderizar |
+|---|---|---|
+| `numerico_entero` | Valor entero (ej. RPM, PSI) | `<input type="number" step="1">` |
+| `numerico_decimal` | Valor decimal (ej. voltaje, amperaje) | `<input type="number" step="0.01">` |
+| `temperatura` | Grados C o F (con unidad definida en DB) | `<input type="number">` + badge unidad |
+| `seleccion` | Conjunto predefinido de opciones | `<select>` con opciones de la DB |
+
+**Leyenda oficial del sistema (tipo `seleccion`):**
+
+| Clave | Significado |
+|---|---|
+| `N` | Normal |
+| `E` | Existe |
+| `A` | Anormal |
+| `B` | Bajo |
+| `NE` | No Existe |
+| `N/A` | No Aplica |
+
+> Las opciones del tipo `seleccion` deben estar almacenadas en la base de datos, no hardcodeadas en el frontend. Esto permite agregar nuevas opciones sin tocar el código.
+
+### Arquitectura de la Solución (Data-Driven UI)
+
+- **Una sola vista genérica**: `MachineInspectionView`. No se crean vistas por línea ni por equipo.
+- **Carga Lazy (perezosa)**: Al seleccionar Planta + Línea → fetch de Equipos. Al seleccionar Equipo → fetch de Componentes y Variables. Nunca se carga el árbol completo.
+- **Componente polimórfico**: `VariableInput.vue` recibe un prop `VariableEvaluacion` y decide qué nodo del DOM renderizar según `tipo_evaluacion`.
+- **Limpieza de memoria**: Toda suscripción asíncrona se destruye en `onUnmounted()`.
+
+### Separación de Tablas en Base de Datos
+
+- **Tablas Maestras** (CRUD administrativo): `ubicaciones_tecnicas`, `plantas`, `lineas`, `equipos`, `componentes`, `variables`.
+- **Tablas Transaccionales** (registro operacional diario): `inspecciones`, `inspeccion_detalles`.
+
+### Campos de `inspeccion_detalles`
+
+Por cada variable evaluada se persiste:
+- `valor_numerico` (NUMERIC, nullable) — para tipos numérico/temperatura.
+- `observaciones` (TEXT, nullable) — texto libre por variable.
+- `estado_componente` (BOOLEAN, default TRUE) — Activo / Inactivo.
+- `valor_seleccion` (VARCHAR, nullable) — para tipo `seleccion` (ej. `N`, `NE`, `B`).
 
 ---
 
