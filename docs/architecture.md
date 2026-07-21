@@ -485,3 +485,211 @@ refactor: extract PDF export to composable
 **Razón:** Soporte maduro para JSON (campo `datos` en la tabla `Inspeccion`), transacciones ACID robustas, excelente integración con Prisma, y capacidad de escalar horizontalmente.
 
 **Alternativas descartadas:** MySQL (menor soporte para JSON), SQLite (no apto para producción multi-usuario), MongoDB (modelo documental no se alinea bien con las relaciones del dominio).
+
+---
+
+### ADR-006 — Data-Driven UI para el módulo de Variables Críticas
+
+**Decisión:** Implementar el módulo de inspección de variables críticas como una interfaz generada dinámicamente desde la base de datos, en lugar de crear vistas hardcodeadas por línea, máquina o componente.
+
+**Razón:** Tubrica tiene 3 plantas, entre 6 y 17 líneas por planta, múltiples equipos por línea y decenas de componentes con variables heterogéneas. Crear una vista por configuración física implica que cualquier cambio operacional (nuevo equipo, renombrar una variable) requeriría modificación de código fuente, compilación y un nuevo despliegue. Esto es deuda técnica inviable.
+
+**Alternativas descartadas:** Vistas estáticas por línea/equipo (acoplamiento insostenible, cero escalabilidad), generación de código automático desde la DB (complejidad innecesaria en esta fase).
+
+**Trade-off asumido:** El módulo CRUD administrativo requiere un esfuerzo de configuración inicial mayor. Se acepta a cambio de que cualquier cambio físico futuro de la planta sea una operación de datos, no de código.
+
+---
+
+## Módulo: Variables Críticas (Tubrica)
+
+Esta sección documenta la arquitectura específica de este módulo dentro del sistema Sinergy.
+
+### Jerarquía de Datos (Relaciones 1:N)
+
+```
+ubicaciones_tecnicas (nullable)
+    └── plantas
+            └── lineas (6-17 por planta)
+                    └── equipos
+                            └── componentes
+                                    └── variables  ← tipo_evaluacion define el control de UI
+```
+
+### Esquema de Base de Datos
+
+> El esquema canónico y completo reside en [`sinergy_schema.sql`](file:///c:/xampp/htdocs/Sinergy/apps/backend/prisma/sinergy_schema.sql) y en [`schema.prisma`](file:///c:/xampp/htdocs/Sinergy/apps/backend/prisma/schema.prisma). A continuación se documenta el extracto conceptual relevante para la arquitectura.
+
+```sql
+-- 7 ENUMs de dominio (controlados a nivel de motor de BD)
+CREATE TYPE rol_enum            AS ENUM ('ADMINISTRADOR', 'SUPERVISOR', 'TECNICO');
+CREATE TYPE tipo_equipo_enum    AS ENUM ('MAQUINARIA', 'MONTACARGAS', 'COMPRESOR', 'GENERADOR', 'CHILLER');
+CREATE TYPE tipo_evaluacion_enum AS ENUM ('NUMERICO_ENTERO', 'NUMERICO_DECIMAL', 'TEMPERATURA', 'SELECCION');
+CREATE TYPE tipo_inspeccion_enum AS ENUM ('VARIABLES_CRITICAS', 'MONTACARGAS', 'COMPRESOR', 'GENERADOR', 'CHILLER');
+CREATE TYPE estado_inspeccion_enum AS ENUM ('BORRADOR', 'PENDIENTE', 'APROBADO', 'RECHAZADO');
+CREATE TYPE estado_operativo_enum  AS ENUM ('OPERATIVO', 'INOPERATIVO', 'EN_MANTENIMIENTO');
+CREATE TYPE origen_datos_enum      AS ENUM ('ONLINE', 'OFFLINE_SYNC');
+
+-- TABLAS MAESTRAS (SERIAL: bajo volumen, crecimiento controlado)
+CREATE TABLE ubicaciones_tecnicas (id SERIAL PRIMARY KEY, codigo VARCHAR(50) UNIQUE NOT NULL, nombre VARCHAR(255) NOT NULL);
+
+CREATE TABLE plantas (
+    id SERIAL PRIMARY KEY,
+    codigo VARCHAR(50) UNIQUE NOT NULL,
+    nombre VARCHAR(255) UNIQUE NOT NULL,
+    ubicacion_tecnica_id INTEGER NULL REFERENCES ubicaciones_tecnicas(id) ON DELETE SET NULL  -- Nullable por diseño de negocio
+);
+
+CREATE TABLE lineas  (id SERIAL PRIMARY KEY, codigo VARCHAR(50) NOT NULL, nombre VARCHAR(255) NOT NULL, planta_id INTEGER NOT NULL REFERENCES plantas(id) ON DELETE RESTRICT, UNIQUE (codigo, planta_id));
+CREATE TABLE equipos (id SERIAL PRIMARY KEY, codigo VARCHAR(100) UNIQUE NOT NULL, tipo_equipo tipo_equipo_enum NOT NULL, linea_id INTEGER NULL REFERENCES lineas(id) ON DELETE SET NULL, estado_operativo estado_operativo_enum NOT NULL DEFAULT 'OPERATIVO');
+CREATE TABLE componentes (id SERIAL PRIMARY KEY, nombre VARCHAR(255) NOT NULL, equipo_id INTEGER NOT NULL REFERENCES equipos(id) ON DELETE CASCADE, activo BOOLEAN NOT NULL DEFAULT TRUE, orden_posicion INTEGER NOT NULL DEFAULT 0);
+
+CREATE TABLE variables (
+    id SERIAL PRIMARY KEY,
+    componente_id INTEGER NOT NULL REFERENCES componentes(id) ON DELETE CASCADE,
+    nombre VARCHAR(255) NOT NULL,
+    tipo_evaluacion tipo_evaluacion_enum NOT NULL, -- Controla el control de UI renderizado
+    unidad VARCHAR(20) NULL,           -- '°C', '°F', 'PSI', 'RPM', 'A', 'V'
+    valor_minimo NUMERIC(12, 4) NULL,  -- Umbral inferior para alertas
+    valor_maximo NUMERIC(12, 4) NULL,  -- Umbral superior para alertas
+    orden_posicion INTEGER NOT NULL DEFAULT 0,
+    activa BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE opciones_seleccion (
+    id SERIAL PRIMARY KEY,
+    variable_id INTEGER NOT NULL REFERENCES variables(id) ON DELETE CASCADE,
+    clave VARCHAR(10) NOT NULL,    -- 'N', 'E', 'A', 'B', 'NE', 'N/A'
+    etiqueta VARCHAR(100) NOT NULL, -- 'Normal', 'Existe', 'Anormal', 'Bajo', 'No Existe', 'No Aplica'
+    orden_posicion INTEGER NOT NULL DEFAULT 0,
+    UNIQUE (variable_id, clave)
+);
+
+-- TABLAS TRANSACCIONALES (BIGSERIAL: alto volumen, inspecciones diarias)
+CREATE TABLE inspecciones (
+    id BIGSERIAL PRIMARY KEY,          -- 64-bit: evita desbordamiento en sistemas industriales
+    codigo_inspeccion VARCHAR(100) UNIQUE NOT NULL,
+    tipo_inspeccion tipo_inspeccion_enum NOT NULL,
+    equipo_id INTEGER NOT NULL REFERENCES equipos(id) ON DELETE RESTRICT,
+    elaborado_por INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE RESTRICT, -- JWT: inalterable
+    revisado_por  INTEGER NULL REFERENCES usuarios(id) ON DELETE SET NULL,
+    aprobado_por  INTEGER NULL REFERENCES usuarios(id) ON DELETE SET NULL,
+    fecha_registro TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    fecha_sincronizacion TIMESTAMPTZ NULL,   -- Timestamp de llegada al servidor (captura offline)
+    estado_inspeccion estado_inspeccion_enum NOT NULL DEFAULT 'PENDIENTE',
+    origen_datos origen_datos_enum NOT NULL DEFAULT 'ONLINE'
+);
+
+CREATE TABLE inspeccion_detalles (
+    id BIGSERIAL PRIMARY KEY,           -- 64-bit: N filas por inspección
+    inspeccion_id BIGINT NOT NULL REFERENCES inspecciones(id) ON DELETE CASCADE,
+    variable_id INTEGER NOT NULL REFERENCES variables(id) ON DELETE RESTRICT,
+    valor_numerico NUMERIC(12, 4) NULL,
+    valor_seleccion VARCHAR(10) NULL,
+    observaciones TEXT NULL,
+    estado_componente BOOLEAN NOT NULL DEFAULT TRUE
+);
+```
+
+### Interfaces TypeScript (Contrato Frontend ↔ Backend)
+
+> **Nota importante sobre BigInt:** Los campos `id` de `inspecciones`, `inspeccion_detalles`, `inspeccion_adjuntos` y `auditoria_logs` son `BIGSERIAL`/`BIGINT` en la BD y `BigInt` en Prisma. En el frontend y en los payloads JSON se serializan como `string` para evitar pérdida de precisión en JavaScript (JS no soporta enteros de 64-bit de forma nativa).
+
+```typescript
+// Tipos escalares para IDs de tablas transaccionales
+type InspeccionId = bigint;     // Serializado como string en JSON
+type DetalleId    = bigint;
+
+export interface VariableEvaluacion {
+  id: number;                    // SERIAL (32-bit) — tablas maestras
+  variable_id: number;
+  nombre: string;
+  tipo_evaluacion: 'NUMERICO_ENTERO' | 'NUMERICO_DECIMAL' | 'TEMPERATURA' | 'SELECCION';
+  unidad: string | null;
+  valor_minimo: number | null;   // Umbral inferior para alerta de UI
+  valor_maximo: number | null;   // Umbral superior para alerta de UI
+  opciones: OpcionSeleccion[];   // Solo poblado si tipo_evaluacion === 'SELECCION'
+  valor_numerico: number | null;
+  valor_seleccion: string | null;
+  observaciones: string;
+  estado_componente: boolean;
+}
+
+export interface OpcionSeleccion {
+  clave: string;                 // 'N' | 'E' | 'A' | 'B' | 'NE' | 'N/A'
+  etiqueta: string;              // 'Normal' | 'Existe' | 'Anormal' | 'Bajo' | 'No Existe' | 'No Aplica'
+}
+
+export interface ComponenteInspeccion {
+  id: number;
+  nombre: string;
+  variables: VariableEvaluacion[];
+}
+
+export interface PayloadRegistroInspeccion {
+  equipo_id: number;
+  elaborado_por: number;
+  revisado_por: number | null;
+  aprobado_por: number | null;
+  fecha_registro: string;        // ISO 8601
+  origen_datos: 'ONLINE' | 'OFFLINE_SYNC';
+  componentes: ComponenteInspeccion[];
+}
+```
+
+### Flujo de Carga Lazy (Peticiones en Cascada)
+
+```
+1. Usuario selecciona Planta
+         │
+         ▼
+2. GET /api/plantas/:id/lineas
+   → appStore.lineas = data
+         │
+         ▼ (usuario selecciona Línea)
+3. GET /api/lineas/:id/equipos
+   → appStore.equipos = data
+         │
+         ▼ (usuario selecciona Equipo)
+4. GET /api/equipos/:id/componentes-variables
+   → inspeccionActual.componentes = data
+         │
+         ▼
+5. VariableInput.vue renderiza el control según tipo_evaluacion
+   sin conocer la planta, línea ni equipo concreto
+```
+
+### Mapa de Archivos del Módulo
+
+```
+frontend/src/
+├── views/
+│   └── variables-criticas/
+│       ├── MachineInspectionView.vue       ← Vista única de inspección
+│       └── PlantAdminView.vue              ← CRUD administrativo de jerarquía
+├── components/
+│   └── modules/variables-criticas/
+│       ├── VariableInput.vue               ← Componente polimórfico (Data-Driven)
+│       ├── ComponenteCard.vue              ← Agrupa variables por componente
+│       └── InspeccionHeader.vue            ← Cabecera: elaborado/revisado/aprobado por
+├── composables/
+│   └── useVariablesCriticas.ts            ← Fetch lazy, construcción del payload
+├── types/
+│   └── VariablesCriticas.ts               ← Interfaces TypeScript del módulo
+└── schemas/
+    └── inspeccionSchema.ts                ← Validación Yup del payload
+
+backend/src/
+├── domain/entities/
+│   └── Inspeccion.ts                      ← Entidades del módulo
+├── domain/repositories/
+│   └── IInspeccionRepository.ts
+├── application/usecases/
+│   ├── RegistrarInspeccion.ts
+│   └── ObtenerComponentesPorEquipo.ts
+├── infrastructure/repositories/
+│   └── PrismaInspeccionRepository.ts
+└── interfaces/
+    ├── controllers/InspeccionController.ts
+    └── routes/inspeccionRoutes.ts
+```
+
