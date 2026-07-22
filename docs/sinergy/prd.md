@@ -57,7 +57,7 @@ La plataforma asegura que el 100% de la información capturada en planta sea con
    - Los datos se guardan en el dispositivo móvil y se envían de forma transparente a la base de datos central en cuanto se detecta conexión WiFi o de red.
 2. **Seguridad y Control de Acceso:**
    - Acceso restringido por usuario y contraseña.
-   - Distinción clara de roles: Operadores (carga de datos) y Supervisores (autorización, configuración y reportes).
+   - Distinción clara de 3 roles en RBAC: Técnicos (captura de datos), Supervisores (verificación, aprobación y estructura de planta) y Jefe de Mantenimiento / Dirección (Administrador del Sistema, gestión de usuarios y tablero directivo).
 3. **Facilidad de Uso (Mobile First):**
    - Diseñado para su uso intuitivo en teléfonos inteligentes y tabletas de trabajo pesado.
 

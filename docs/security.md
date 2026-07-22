@@ -13,7 +13,7 @@ Este documento describe las prácticas, configuraciones y reglas de seguridad im
 - **Secreto Fuerte:** La firma de los tokens (`JWT_SECRET`) debe ser una cadena aleatoria criptográficamente segura, guardada exclusivamente en las variables de entorno (`.env`) del servidor.
 
 ### 1.2 Control Basado en Roles (RBAC)
-- Existen tres roles en el sistema: `TECNICO`, `SUPERVISOR`, `ADMIN`.
+- Existen tres roles en el sistema: `TECNICO`, `SUPERVISOR`, `ADMINISTRADOR` (asignado al Jefe de Mantenimiento / Gerencia).
 - **Backend:** Toda ruta protegida debe verificar el JWT mediante el `authMiddleware`. Las rutas sensibles deben ser validadas adicionalmente por el `roleGuard`.
 - **Frontend:** Vue Router utiliza Meta Fields (`meta.roles`) para redirigir a los usuarios que intenten acceder a vistas no permitidas. Sin embargo, la seguridad real **siempre debe validarse en el backend**.
 

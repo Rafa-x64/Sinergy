@@ -47,9 +47,9 @@ Permite a los técnicos registrar variables operativas y chequeos desde disposit
 - **Entorno:** Computadoras de escritorio y tablets.
 - **Beneficio:** Verificación y aprobación de inspecciones, control de equipos inoperativos, alertas de desviación de variables críticas.
 
-### C. Gerencia General y de Planta
-- **Entorno:** Panel directivo (Dashboard).
-- **Beneficio:** Indicadores clave en tiempo real, histórico centralizado y exportación inmediata de reportes para auditorías ISO/Calidad.
+### C. Jefe de Mantenimiento / Gerencia General (Administrador del Sistema)
+- **Entorno:** Panel directivo (Dashboard) y módulo de administración.
+- **Beneficio:** Gestión integral de usuarios y permisos, indicadores clave en tiempo real, histórico centralizado y exportación inmediata de reportes para auditorías ISO/Calidad.
 
 ---
 
