@@ -43,8 +43,9 @@ Aquí se registran las anotaciones, palabras clave y requerimientos solicitados 
 
 ### Roles y Control de Acceso
 - **Interfaces Personalizadas:** Cada usuario tendrá módulos e interfaces específicas tras iniciar sesión, priorizando una buena UX.
-- **Técnicos:** Módulo para llenar datos. Registro de técnicos para cada módulo.
-- **Jefe / Supervisor:** Panel con estadísticas, seguimiento de ejecución y tendencias de variables.
+- **Técnicos (`TECNICO`):** Módulo para capturar inspecciones y datos operativos en planta.
+- **Supervisores (`SUPERVISOR`):** Panel de revisión, aprobación de inspecciones y gestión de la estructura de planta.
+- **Jefe de Mantenimiento / Dirección (`ADMINISTRADOR`):** Administración integral del sistema (usuarios, credenciales, asignación de roles), monitoreo y acceso al Dashboard Directivo.
 
 ### Gestión de Planta y Activos
 - **Alcance:** 3 plantas.

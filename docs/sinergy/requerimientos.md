@@ -14,7 +14,8 @@
 | **REQ-SEG-01** | Inicio de sesión seguro mediante credenciales individuales (correo y contraseña). | Todos | Alta |
 | **REQ-SEG-02** | Perfil de Operador / Técnico: Permite registrar inspecciones de equipos en asignación y guardar datos locales en planta. | Técnico | Alta |
 | **REQ-SEG-03** | Perfil de Supervisor: Permite revisar, aprobar, configurar la estructura de la planta y exportar reportes ejecutivos. | Supervisor | Alta |
-| **REQ-SEG-04** | Bloqueo automático por inactividad y resguardo seguro de la sesión de trabajo. | Todos | Media |
+| **REQ-SEG-04** | Perfil de Jefe de Mantenimiento / Administrador del Sistema: Gestión integral de usuarios, asignación de roles, credenciales, monitoreo del sistema y acceso completo al tablero directivo. | Administrador | Alta |
+| **REQ-SEG-05** | Bloqueo automático por inactividad y resguardo seguro de la sesión de trabajo. | Todos | Media |
 
 ---
 
