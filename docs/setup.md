@@ -208,7 +208,7 @@ Invoke-RestMethod http://localhost:3000/api/health
 
 Respuesta esperada:
 ```json
-{ "status": "ok", "message": "Backend DDD-Lite running" }
+{ "status": "ok", "message": "Sinergy Backend running", "db": "connected" }
 ```
 
 ### Frontend

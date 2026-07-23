@@ -35,9 +35,11 @@ El formato sigue el estándar [Keep a Changelog](https://keepachangelog.com/es/1
 - Documento `docs/schemas/modelo-entidad-relacion.md` (v3.0): ERM completo con diagrama Mermaid, catálogo de tablas y columnas, 23 índices y matriz de integridad.
 
 ### Changed
+- **Migración Arquitectónica a Feature-Based Architecture (ADR-002)**: Reemplazo de la estructura DDD-Lite (4 capas: domain, application, infrastructure, interfaces) por una arquitectura modular basada en funcionalidades aisladas (`src/modules/auth`, `src/modules/equipment`, `src/modules/maintenance`).
+- **Directorio Compartido Monorepo (`apps/shared`)**: Creación de `apps/shared/types` y `apps/shared/constants` para compartir interfaces y tipos de TypeScript de forma centralizada entre el frontend (Vue 3) y el backend (Express/Prisma).
 - Configuración de fuente de datos Prisma (`apps/backend/prisma.config.ts`): parametrización dinámica mediante variables de entorno individuales de PostgreSQL (`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`).
-- Middleware global de errores (`apps/backend/src/infrastructure/middlewares/errorHandler.ts`): filtrado de propiedad `stack` en respuestas HTTP restringiéndolo a entorno de desarrollo y únicamente para errores de servidor con estado HTTP >= 500.
-- Configuración CORS en backend (`apps/backend/src/index.ts`): restricción explícita de orígenes permitidos a `http://localhost:3000` y `http://localhost:5173`.
+- Middleware global de errores (`apps/backend/src/core/middlewares/errorHandler.ts`): filtrado de propiedad `stack` en respuestas HTTP restringiéndolo a entorno de desarrollo y únicamente para errores de servidor con estado HTTP >= 500.
+- Configuración CORS en backend (`apps/backend/src/core/server.ts`): restricción explícita de orígenes permitidos a `http://localhost:3000` y `http://localhost:5173`.
 - `inspecciones.id`, `inspeccion_detalles.id`, `inspeccion_adjuntos.id` y `auditoria_logs.id`: cambiados de `SERIAL` (32-bit) a `BIGSERIAL` (64-bit) para escalar sin riesgo de desbordamiento de ID en sistemas industriales con inspecciones diarias. (D-03)
 - `auditoria_logs.registro_id`: cambiado de `INTEGER` a `BIGINT` para cubrir IDs de cualquier tabla, incluidas las `BIGSERIAL`. (D-03)
 - Interfaces TypeScript en `architecture.md`: actualizadas para reflejar los valores de ENUM en mayúsculas, los campos `valor_minimo`/`valor_maximo`, `estado_componente` y `origen_datos`. El esquema conceptual de BD fue corregido para incluir ENUMs, `BIGSERIAL`, `TIMESTAMPTZ` y políticas `ON DELETE` explícitas.

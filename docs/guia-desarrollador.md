@@ -17,31 +17,24 @@ Sinergy es un sistema de gestión de mantenimiento industrial construido como mo
 - [3. Variables de entorno](#3-variables-de-entorno)
 - [4. Arrancar el sistema](#4-arrancar-el-sistema)
 
-### Parte A — Backend (DDD-Lite)
-- [A1. Entendiendo la arquitectura DDD-Lite](#a1-entendiendo-la-arquitectura-ddd-lite)
+### Parte A — Backend (Feature-Based Architecture)
+- [A1. Entendiendo la arquitectura Feature-Based](#a1-entendiendo-la-arquitectura-feature-based)
 - [A2. Crear un modelo en Prisma](#a2-crear-un-modelo-en-prisma)
-- [A3. Crear una entidad de dominio](#a3-crear-una-entidad-de-dominio)
-- [A4. Crear la interfaz del repositorio](#a4-crear-la-interfaz-del-repositorio)
-- [A5. Implementar el repositorio con Prisma](#a5-implementar-el-repositorio-con-prisma)
-- [A6. Crear un caso de uso](#a6-crear-un-caso-de-uso)
-- [A7. Crear el controlador HTTP](#a7-crear-el-controlador-http)
-- [A8. Registrar la ruta en Express](#a8-registrar-la-ruta-en-express)
-- [A9. Manejo global de errores](#a9-manejo-global-de-errores)
+- [A3. Crear un módulo (Routes, Controller, Service)](#a3-crear-un-módulo-routes-controller-service)
+- [A4. Registrar el módulo en Express](#a4-registrar-el-módulo-en-express)
+- [A5. Manejo global de errores](#a5-manejo-global-de-errores)
 
 ### Parte B — Frontend (Vue 3 SPA)
 - [B1. Entendiendo la estructura del frontend](#b1-entendiendo-la-estructura-del-frontend)
-- [B2. Crear una nueva vista (página)](#b2-crear-una-nueva-vista-página)
+- [B2. Crear una vista dentro de un módulo](#b2-crear-una-vista-dentro-de-un-módulo)
 - [B3. Registrar la ruta en Vue Router](#b3-registrar-la-ruta-en-vue-router)
-- [B4. Crear un componente base reutilizable](#b4-crear-un-componente-base-reutilizable)
-- [B5. Crear un store de Pinia](#b5-crear-un-store-de-pinia)
-- [B6. Crear un composable (lógica reutilizable)](#b6-crear-un-composable-lógica-reutilizable)
-- [B7. Consumir la API del backend](#b7-consumir-la-api-del-backend)
-- [B8. Crear un formulario con validación](#b8-crear-un-formulario-con-validación)
-- [B9. Mostrar notificaciones al usuario](#b9-mostrar-notificaciones-al-usuario)
-- [B10. Exportar datos (PDF y Excel)](#b10-exportar-datos-pdf-y-excel)
+- [B4. Crear un store de Pinia en el módulo](#b4-crear-un-store-de-pinia-en-el-módulo)
+- [B5. Consumir la API del backend](#b5-consumir-la-api-del-backend)
+- [B6. Crear un formulario con validación](#b6-crear-un-formulario-con-validación)
+- [B7. Mostrar notificaciones al usuario](#b7-mostrar-notificaciones-al-usuario)
 
 ### Flujo Completo
-- [C. Ejemplo end-to-end: módulo de Inspección](#c-ejemplo-end-to-end-módulo-de-inspección)
+- [C. Ejemplo end-to-end: módulo de Maquinaria (Equipment)](#c-ejemplo-end-to-end-módulo-de-maquinaria-equipment)
 
 ---
 
@@ -82,22 +75,20 @@ El frontend y el backend son proyectos independientes que se comunican únicamen
 ```
 Sinergy/                          ← Raíz del monorepo
 ├── apps/
+│   ├── shared/                   ← Tipos e interfaces comunes (TS)
+│   │   ├── types/                ← Interfaces TS compartidas
+│   │   └── constants/            ← Constantes globales (roles, estados)
 │   ├── frontend/                 ← Vue 3 + TypeScript + Bootstrap
 │   │   └── src/
-│   │       ├── components/       ← Componentes reutilizables
-│   │       ├── composables/      ← Lógica reutilizable
-│   │       ├── router/           ← Rutas de la SPA
-│   │       ├── stores/           ← Estado global (Pinia)
-│   │       ├── utils/            ← http.ts, helpers
-│   │       └── views/            ← Páginas de la app
+│   │       ├── core/             ← router.ts, api.ts
+│   │       ├── shared/           ← componentes y layouts reutilizables
+│   │       └── modules/          ← auth/, equipment/, maintenance/
 │   └── backend/                  ← Node.js + Express + Prisma
-│       ├── prisma/               ← Migraciones, DDL y schema.prisma
-│       ├── prisma.config.ts      ← Configuración de conexión dinámica PostgreSQL
+│       ├── prisma/               ← DDL, schema.prisma y migraciones
 │       └── src/
-│           ├── domain/           ← Entidades, excepciones (AppError) e interfaces
-│           ├── application/      ← Casos de uso
-│           ├── infrastructure/   ← Repositorios Prisma, DB, middlewares (errorHandler, notFoundHandler)
-│           └── interfaces/       ← Controladores HTTP, rutas
+│           ├── core/             ← server.ts, prisma.ts, errors/, middlewares/
+│           ├── modules/          ← auth/, equipment/, maintenance/
+│           └── index.ts          ← Punto de entrada (listen & shutdown)
 ├── docs/                         ← Documentación del proyecto
 ├── package.json                  ← Scripts globales del monorepo
 └── pnpm-workspace.yaml           ← Declaración de workspaces
@@ -201,43 +192,41 @@ pnpm dev:backend
 
 La respuesta del health check debe ser:
 ```json
-{ "status": "ok", "message": "Backend DDD-Lite running" }
+{ "status": "ok", "message": "Sinergy Backend running", "db": "connected" }
 ```
 
 ---
 
 ---
 
-# Parte A — Backend (DDD-Lite)
+# Parte A — Backend (Feature-Based Architecture)
 
-La arquitectura del backend sigue **DDD-Lite**: una simplificación práctica de Domain-Driven Design con 4 capas. La regla de oro es **las dependencias siempre fluyen hacia adentro**:
+La arquitectura del backend agrupa el código por **contexto de negocio (módulos aislados)**. Cada módulo contiene sus propias rutas, controlador y servicio en una misma carpeta:
 
 ```
-interfaces/ → application/ → domain/
-                  ↑
-          infrastructure/
+src/modules/equipment/
+├── equipment.routes.ts     ← Enrutamiento y middlewares de la feature
+├── equipment.controller.ts ← Extracción de parámetros HTTP y llamadas al servicio
+└── equipment.service.ts    ← Lógica de negocio y consultas directas a Prisma
 ```
-
-Esto significa que `domain/` no sabe que existe Prisma, ni Express. Es código puro de negocio.
 
 ---
 
-## A1. Entendiendo la Arquitectura DDD-Lite
+## A1. Entendiendo la Arquitectura Feature-Based
 
-| Capa | Carpeta | Responsabilidad |
+| Componente | Archivo | Responsabilidad |
 |---|---|---|
-| Dominio | `src/domain/` | Entidades, interfaces de repositorios, reglas de negocio puras |
-| Aplicación | `src/application/` | Casos de uso (orquestan el flujo de una operación) |
-| Infraestructura | `src/infrastructure/` | Repositorios Prisma, conexión a DB, servicios externos |
-| Interfaces | `src/interfaces/` | Controladores Express, rutas HTTP, middlewares |
+| Rutas | `*.routes.ts` | Define endpoints HTTP y delega la ejecución al controlador |
+| Controlador | `*.controller.ts` | Extrae `req.params`, `req.body` y llama al servicio |
+| Servicio | `*.service.ts` | Contiene la lógica de negocio y realiza consultas mediante Prisma Client |
+| Core | `src/core/` | Conexión a BD (`prisma.ts`), servidor Express (`server.ts`) y middlewares globales |
 
 **Flujo de una petición HTTP:**
 
 ```
-Request → Router (interfaces/) → Controller (interfaces/)
-        → UseCase (application/) → Repository Interface (domain/)
-        → PrismaRepository (infrastructure/) → PostgreSQL
-        → Response
+Request → Routes (modules/) → Controller (modules/)
+        → Service (modules/) → Prisma Client (core/prisma.ts)
+        → PostgreSQL → Response
 ```
 
 ---
@@ -275,257 +264,121 @@ Esto crea el archivo de migración en `prisma/migrations/` y regenera el cliente
 
 ---
 
-## A3. Crear una Entidad de Dominio
+## A3. Crear un Módulo (Routes, Controller, Service)
 
-La entidad vive en `src/domain/entities/` y no tiene dependencias externas.
+Crea la carpeta del módulo en `apps/backend/src/modules/equipment/`:
 
-```typescript
-// apps/backend/src/domain/entities/Tecnico.ts
-
-export interface Tecnico {
-  id: number
-  nombre: string
-  cedula: string
-  plantaId: number
-  creadoEn: Date
-}
-
-// Tipo para crear un técnico (sin id ni fecha, los asigna la DB)
-export type CrearTecnicoDTO = Omit<Tecnico, 'id' | 'creadoEn'>
-```
-
-> [!TIP]
-> Usa interfaces, no clases, para las entidades en DDD-Lite. Las clases con lógica compleja se reservan para dominios más ricos. En este nivel, los DTOs son suficientes y más simples de mantener.
-
----
-
-## A4. Crear la Interfaz del Repositorio
-
-Define el "contrato" que describe qué operaciones existen, sin decir cómo se implementan.
+### 1. El Servicio (`equipment.service.ts`)
 
 ```typescript
-// apps/backend/src/domain/repositories/ITecnicoRepository.ts
-import type { Tecnico, CrearTecnicoDTO } from '../entities/Tecnico'
+// apps/backend/src/modules/equipment/equipment.service.ts
+import prisma from '../../core/prisma';
 
-export interface ITecnicoRepository {
-  findAll(): Promise<Tecnico[]>
-  findById(id: number): Promise<Tecnico | null>
-  findByPlanta(plantaId: number): Promise<Tecnico[]>
-  create(datos: CrearTecnicoDTO): Promise<Tecnico>
-}
-```
-
-Esta interfaz es lo único que conoce la capa de aplicación. **Nunca** importes Prisma directamente en un caso de uso.
-
----
-
-## A5. Implementar el Repositorio con Prisma
-
-La implementación concreta vive en `src/infrastructure/repositories/`.
-
-```typescript
-// apps/backend/src/infrastructure/repositories/PrismaTecnicoRepository.ts
-import prisma from '../prisma/prismaClient'
-import type { ITecnicoRepository } from '../../domain/repositories/ITecnicoRepository'
-import type { Tecnico, CrearTecnicoDTO } from '../../domain/entities/Tecnico'
-
-export class PrismaTecnicoRepository implements ITecnicoRepository {
-  async findAll(): Promise<Tecnico[]> {
-    return prisma.tecnico.findMany({
+export class EquipmentService {
+  async obtenerTodos() {
+    return prisma.equipo.findMany({
       orderBy: { nombre: 'asc' }
-    })
+    });
   }
 
-  async findById(id: number): Promise<Tecnico | null> {
-    return prisma.tecnico.findUnique({ where: { id } })
+  async obtenerPorId(id: number) {
+    return prisma.equipo.findUnique({ where: { id } });
   }
 
-  async findByPlanta(plantaId: number): Promise<Tecnico[]> {
-    return prisma.tecnico.findMany({
-      where: { plantaId },
-      orderBy: { nombre: 'asc' }
-    })
-  }
-
-  async create(datos: CrearTecnicoDTO): Promise<Tecnico> {
-    return prisma.tecnico.create({ data: datos })
+  async crear(datos: { nombre: string; codigo: string; plantaId: number }) {
+    return prisma.equipo.create({ data: datos });
   }
 }
+
+export const equipmentService = new EquipmentService();
 ```
 
----
-
-## A6. Crear un Caso de Uso
-
-El caso de uso orquesta la lógica de negocio usando el repositorio (a través de su interfaz).
+### 2. El Controlador (`equipment.controller.ts`)
 
 ```typescript
-// apps/backend/src/application/usecases/ObtenerTecnicosPorPlanta.ts
-import type { ITecnicoRepository } from '../../domain/repositories/ITecnicoRepository'
-import type { Tecnico } from '../../domain/entities/Tecnico'
+// apps/backend/src/modules/equipment/equipment.controller.ts
+import { Request, Response, NextFunction } from 'express';
+import { equipmentService } from './equipment.service';
 
-export class ObtenerTecnicosPorPlanta {
-  // Inyección de dependencias: recibe la interfaz, no la implementación
-  constructor(private readonly tecnicoRepo: ITecnicoRepository) {}
-
-  async execute(plantaId: number): Promise<Tecnico[]> {
-    if (!plantaId || plantaId <= 0) {
-      throw new Error('El ID de planta no es válido.')
-    }
-    return this.tecnicoRepo.findByPlanta(plantaId)
-  }
-}
-```
-
-```typescript
-// apps/backend/src/application/usecases/CrearTecnico.ts
-import type { ITecnicoRepository } from '../../domain/repositories/ITecnicoRepository'
-import type { CrearTecnicoDTO, Tecnico } from '../../domain/entities/Tecnico'
-
-export class CrearTecnico {
-  constructor(private readonly tecnicoRepo: ITecnicoRepository) {}
-
-  async execute(datos: CrearTecnicoDTO): Promise<Tecnico> {
-    // Regla de negocio: la cédula no puede estar vacía
-    if (!datos.cedula?.trim()) {
-      throw new Error('La cédula del técnico es obligatoria.')
-    }
-    return this.tecnicoRepo.create(datos)
-  }
-}
-```
-
----
-
-## A7. Crear el Controlador HTTP
-
-El controlador traduce entre HTTP (request/response) y los casos de uso.
-
-```typescript
-// apps/backend/src/interfaces/controllers/TecnicoController.ts
-import type { Request, Response, NextFunction } from 'express'
-import { PrismaTecnicoRepository } from '../../infrastructure/repositories/PrismaTecnicoRepository'
-import { ObtenerTecnicosPorPlanta } from '../../application/usecases/ObtenerTecnicosPorPlanta'
-import { CrearTecnico } from '../../application/usecases/CrearTecnico'
-
-// Instanciación de dependencias (en un proyecto grande esto iría en un contenedor IoC)
-const repo = new PrismaTecnicoRepository()
-const obtenerPorPlanta = new ObtenerTecnicosPorPlanta(repo)
-const crearTecnico = new CrearTecnico(repo)
-
-export const TecnicoController = {
-  async listarPorPlanta(req: Request, res: Response, next: NextFunction) {
+export const equipmentController = {
+  async listar(req: Request, res: Response, next: NextFunction) {
     try {
-      const plantaId = Number(req.params.plantaId)
-      const tecnicos = await obtenerPorPlanta.execute(plantaId)
-      res.json(tecnicos)
+      const equipos = await equipmentService.obtenerTodos();
+      res.json({ success: true, data: equipos });
     } catch (error) {
-      next(error) // Delega al manejador global de errores
+      next(error);
     }
   },
 
   async crear(req: Request, res: Response, next: NextFunction) {
     try {
-      const tecnico = await crearTecnico.execute(req.body)
-      res.status(201).json(tecnico)
+      const nuevoEquipo = await equipmentService.crear(req.body);
+      res.status(201).json({ success: true, data: nuevoEquipo });
     } catch (error) {
-      next(error)
+      next(error);
     }
   }
-}
+};
+```
+
+### 3. Las Rutas (`equipment.routes.ts`)
+
+```typescript
+// apps/backend/src/modules/equipment/equipment.routes.ts
+import { Router } from 'express';
+import { equipmentController } from './equipment.controller';
+
+const router = Router();
+
+router.get('/', equipmentController.listar);
+router.post('/', equipmentController.crear);
+
+export default router;
 ```
 
 ---
 
-## A8. Registrar la Ruta en Express
+## A4. Registrar el Módulo en Express
+
+Edita `apps/backend/src/core/server.ts` para importar y montar las rutas del módulo:
 
 ```typescript
-// apps/backend/src/interfaces/routes/tecnicoRoutes.ts
-import { Router } from 'express'
-import { TecnicoController } from '../controllers/TecnicoController'
+import equipmentRoutes from '../modules/equipment/equipment.routes';
 
-const router = Router()
+// ... otros middlewares ...
 
-router.get('/planta/:plantaId', TecnicoController.listarPorPlanta)
-router.post('/', TecnicoController.crear)
-
-export default router
-```
-
-Luego regístrala en el punto de entrada del servidor:
-
-```typescript
-// apps/backend/src/index.ts
-import express from 'express'
-import cors from 'cors'
-import tecnicoRoutes from './interfaces/routes/tecnicoRoutes'
-
-const app = express()
-const port = process.env.PORT || 3000
-
-app.use(cors())
-app.use(express.json())
-
-// Rutas de la API
-app.use('/api/tecnicos', tecnicoRoutes)
-
-// Health check
-app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', message: 'Backend DDD-Lite running' })
-})
-
-// Manejador global de errores (SIEMPRE al final)
-app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  console.error(`[ERROR] ${err.message}`)
-  res.status(500).json({ error: err.message })
-})
-
-app.listen(port, () => {
-  console.log(` Backend running at http://localhost:${port}`)
-})
+app.use('/api/equipment', equipmentRoutes);
 ```
 
 ---
 
-## A9. Manejo Global de Errores
+## A5. Manejo Global de Errores
 
-El middleware de errores de Express centraliza todas las respuestas de error. Los controladores **nunca** envían el error directamente al cliente; siempre llaman a `next(error)`.
+El error handler centralizado vive en `apps/backend/src/core/middlewares/errorHandler.ts`:
 
 ```typescript
-// apps/backend/src/interfaces/middlewares/errorHandler.ts
-import type { Request, Response, NextFunction } from 'express'
+import { Request, Response, NextFunction } from 'express';
+import { AppError } from '../errors/AppError';
 
-interface AppError extends Error {
-  statusCode?: number
-}
+export const errorHandler = (err: Error, req: Request, res: Response, next: NextFunction) => {
+  let statusCode = 500;
+  let message = 'Error interno del servidor';
 
-export const errorHandler = (
-  err: AppError,
-  _req: Request,
-  res: Response,
-  _next: NextFunction
-) => {
-  const statusCode = err.statusCode ?? 500
-  const message = statusCode === 500 ? 'Error interno del servidor.' : err.message
-
-  // Nunca expongas el stack trace en producción
-  if (process.env.NODE_ENV === 'development') {
-    console.error(err.stack)
+  if (err instanceof AppError) {
+    statusCode = err.statusCode;
+    message = err.message;
   }
+
+  const isDev = process.env.NODE_ENV !== 'production';
 
   res.status(statusCode).json({
     success: false,
-    error: message
-  })
-}
-```
-
-Registralo en `src/index.ts` al final de todos los middlewares y rutas:
-
-```typescript
-import { errorHandler } from './interfaces/middlewares/errorHandler'
-// ... todas las rutas ...
-app.use(errorHandler)
+    error: {
+      message,
+      ...(isDev && statusCode >= 500 && { stack: err.stack })
+    }
+  });
+};
 ```
 
 ---
@@ -542,50 +395,41 @@ El frontend es una SPA construida con Vue 3, TypeScript, Bootstrap 5 y Pinia. Si
 
 ```
 src/
-├── components/     ← Piezas de UI reutilizables (BaseButton, BaseCard, InspectionForm...)
-├── composables/    ← Lógica reutilizable (useInspecciones, useExportPDF, useSync...)
-├── router/         ← Definición de rutas (index.ts)
-├── stores/         ← Estado global (authStore.ts, inspeccionStore.ts...)
-├── utils/          ← http.ts (Axios), helpers
-├── views/          ← Páginas completas (LoginView, DashboardView, InspeccionView...)
-├── App.vue         ← Componente raíz
-└── main.ts         ← Punto de entrada: registra plugins
+├── core/           ← Router (router.ts) e instancia de API/Axios (api.ts)
+├── shared/         ← Componentes reutilizables UI (BaseButton, BaseCard...) y Layouts
+└── modules/        ← Módulos aislados por negocio
+    ├── auth/       ← views/, auth.store.ts
+    ├── equipment/  ← views/, components/, equipment.store.ts
+    └── maintenance/← views/, maintenance.store.ts
 ```
-
-**Regla:** Las vistas son orquestadoras. No tienen lógica de negocio propia. Delegan en composables y consumen stores.
 
 ---
 
-## B2. Crear una Nueva Vista (Página)
+## B2. Crear una Vista dentro de un Módulo
 
-Cada vista es un componente `.vue` en `src/views/`. Las vistas son el punto de entrada de una URL.
+Las vistas viven dentro de `src/modules/<modulo>/views/`:
 
 ```vue
-<!-- apps/frontend/src/views/TecnicosView.vue -->
+<!-- apps/frontend/src/modules/equipment/views/EquipmentList.vue -->
 <script setup lang="ts">
 import { onMounted } from 'vue'
-import { useTecnicos } from '@/composables/useTecnicos'
+import { useEquipmentStore } from '../equipment.store'
 
-// La vista delega toda la lógica al composable
-const { tecnicos, cargando, error, cargarTecnicos } = useTecnicos()
+const store = useEquipmentStore()
 
-onMounted(() => cargarTecnicos())
+onMounted(() => store.cargarEquipos())
 </script>
 
 <template>
   <div class="container py-4">
-    <h1 class="mb-4">Técnicos</h1>
-
-    <div v-if="cargando" class="text-center">
-      <div class="spinner-border text-primary" role="status" />
-    </div>
-
-    <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
-
+    <h1 class="mb-4">Equipos de Maquinaria</h1>
+    <div v-if="store.cargando" class="spinner-border text-primary" />
     <div v-else class="row g-3">
-      <div v-for="tecnico in tecnicos" :key="tecnico.id" class="col-md-4">
-        <!-- Componente reutilizable -->
-        <BaseCard :titulo="tecnico.nombre" :subtitulo="tecnico.cedula" />
+      <div v-for="equipo in store.equipos" :key="equipo.id" class="col-md-4">
+        <div class="card p-3 shadow-sm">
+          <h5>{{ equipo.nombre }}</h5>
+          <p class="text-muted mb-0">{{ equipo.codigo }}</p>
+        </div>
       </div>
     </div>
   </div>
@@ -596,7 +440,7 @@ onMounted(() => cargarTecnicos())
 
 ## B3. Registrar la Ruta en Vue Router
 
-Agrega la nueva vista en `apps/frontend/src/router/index.ts`:
+Registra las vistas de los módulos en `apps/frontend/src/core/router.ts`:
 
 ```typescript
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
@@ -605,41 +449,18 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/',
     name: 'home',
-    component: () => import('@/views/HomeView.vue')
+    component: () => import('../modules/auth/views/HomeView.vue')
   },
   {
-    path: '/tecnicos',
-    name: 'tecnicos',
-    // Lazy loading: el bundle de esta vista se carga solo cuando se navega aquí
-    component: () => import('@/views/TecnicosView.vue'),
-    meta: { requiresAuth: true, roles: ['SUPERVISOR'] }
-  },
-  {
-    path: '/login',
-    name: 'login',
-    component: () => import('@/views/LoginView.vue')
+    path: '/equipment',
+    name: 'equipment-list',
+    component: () => import('../modules/equipment/views/EquipmentList.vue')
   }
 ]
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
-  routes,
-  scrollBehavior: (_to, _from, saved) => saved || { top: 0 }
-})
-
-// Guard de autenticación y autorización por rol
-router.beforeEach((to) => {
-  const token = localStorage.getItem('token')
-  const rol = localStorage.getItem('rol')
-
-  if (to.meta.requiresAuth && !token) {
-    return { name: 'login' }
-  }
-
-  const rolesPermitidos = to.meta.roles as string[] | undefined
-  if (rolesPermitidos && rol && !rolesPermitidos.includes(rol)) {
-    return { name: 'home' } // Redirige si no tiene el rol
-  }
+  routes
 })
 
 export default router
@@ -1001,94 +822,90 @@ const inspecciones = [
 
 ---
 
-# C. Ejemplo End-to-End: Módulo de Inspección
+# C. Ejemplo End-to-End: Módulo de Maquinaria (Equipment)
 
-Este ejemplo conecta todo lo anterior en un flujo completo.
+Este ejemplo conecta la arquitectura Feature-Based en un flujo completo de punta a punta.
 
-**Objetivo:** El técnico selecciona un equipo y registra una inspección. Si no hay conexión, se guarda localmente y se sincroniza al reconectarse.
-
-### Paso 1 — Backend: Caso de uso `RegistrarInspeccion`
+### Paso 1 — Shared: Tipo TypeScript (`apps/shared/types/index.ts`)
 
 ```typescript
-// apps/backend/src/application/usecases/RegistrarInspeccion.ts
-import type { IInspeccionRepository } from '../../domain/repositories/IInspeccionRepository'
-import type { CrearInspeccionDTO } from '../../domain/entities/Inspeccion'
-
-export class RegistrarInspeccion {
-  constructor(private readonly repo: IInspeccionRepository) {}
-
-  async execute(dto: CrearInspeccionDTO) {
-    if (!dto.equipoId || !dto.usuarioId) {
-      throw Object.assign(new Error('Equipo y usuario son requeridos.'), { statusCode: 400 })
-    }
-    return this.repo.create(dto)
-  }
+// apps/shared/types/index.ts
+export interface Equipment {
+  id: number;
+  nombre: string;
+  codigo: string;
+  plantaId: number;
 }
 ```
 
-### Paso 2 — Backend: Ruta `POST /api/inspecciones`
+### Paso 2 — Backend: Servicio y Controlador (`apps/backend/src/modules/equipment/`)
 
 ```typescript
-// En src/interfaces/routes/inspeccionRoutes.ts
-router.post('/', InspeccionController.registrar)
+// apps/backend/src/modules/equipment/equipment.service.ts
+import prisma from '../../core/prisma';
+
+export class EquipmentService {
+  async obtenerTodos() {
+    return prisma.equipo.findMany();
+  }
+}
+export const equipmentService = new EquipmentService();
 ```
 
-### Paso 3 — Frontend: Composable con soporte offline
-
 ```typescript
-// apps/frontend/src/composables/useInspecciones.ts
-import { useOnline } from '@vueuse/core'
-import { db } from '@/db/database'
-import http from '@/utils/http'
-import { useToast } from 'vue-toastification'
+// apps/backend/src/modules/equipment/equipment.controller.ts
+import { Request, Response, NextFunction } from 'express';
+import { equipmentService } from './equipment.service';
 
-export function useInspecciones() {
-  const isOnline = useOnline()
-  const toast = useToast()
-
-  const registrar = async (datos: object) => {
-    if (isOnline.value) {
-      await http.post('/inspecciones', datos)
-      toast.success('Inspección registrada.')
-    } else {
-      await db.inspeccionesPendientes.add({ datos, creadoEn: new Date() })
-      toast.warning('Sin conexión. Se guardó localmente.')
+export const equipmentController = {
+  async listar(_req: Request, res: Response, next: NextFunction) {
+    try {
+      const data = await equipmentService.obtenerTodos();
+      res.json({ success: true, data });
+    } catch (error) {
+      next(error);
     }
   }
-
-  const sincronizar = async () => {
-    if (!isOnline.value) return
-    const pendientes = await db.inspeccionesPendientes.toArray()
-    if (!pendientes.length) return
-
-    await http.post('/inspecciones/batch', pendientes)
-    await db.inspeccionesPendientes.clear()
-    toast.info(`${pendientes.length} inspecciones sincronizadas.`)
-  }
-
-  return { registrar, sincronizar }
-}
+};
 ```
 
-### Paso 4 — Frontend: Vista de captura
+### Paso 3 — Backend: Rutas (`apps/backend/src/modules/equipment/equipment.routes.ts`)
 
-```vue
-<!-- apps/frontend/src/views/InspeccionView.vue -->
-<script setup lang="ts">
-import { useInspecciones } from '@/composables/useInspecciones'
+```typescript
+import { Router } from 'express';
+import { equipmentController } from './equipment.controller';
 
-const { registrar } = useInspecciones()
+const router = Router();
+router.get('/', equipmentController.listar);
 
-const guardar = () => registrar({ equipoId: 1, usuarioId: 2, datos: { nivelAceite: 'Normal' } })
-</script>
+export default router;
+```
 
-<template>
-  <div class="container py-4">
-    <h1>Nueva Inspección</h1>
-    <!-- FormularioInspeccion llama a guardar() en su emit -->
-    <BaseButton label="Guardar Inspección" @click="guardar" />
-  </div>
-</template>
+### Paso 4 — Frontend: Store y Vista (`apps/frontend/src/modules/equipment/`)
+
+```typescript
+// apps/frontend/src/modules/equipment/equipment.store.ts
+import { defineStore } from 'pinia';
+import api from '../../core/api';
+import type { Equipment } from '@sinergy/shared/types';
+
+export const useEquipmentStore = defineStore('equipment', {
+  state: () => ({
+    equipos: [] as Equipment[],
+    cargando: false
+  }),
+  actions: {
+    async cargarEquipos() {
+      this.cargando = true;
+      try {
+        const { data } = await api.get('/equipment');
+        this.equipos = data.data;
+      } finally {
+        this.cargando = false;
+      }
+    }
+  }
+});
 ```
 
 ---
@@ -1097,13 +914,14 @@ const guardar = () => registrar({ equipoId: 1, usuarioId: 2, datos: { nivelAceit
 
 Usa esta lista cada vez que implementes una nueva funcionalidad:
 
-- `[ ]` **Prisma:** Modelo agregado en `schema.prisma` + migración ejecutada
-- `[ ]` **Dominio:** Entidad e interfaz de repositorio creadas en `domain/`
-- `[ ]` **Infraestructura:** Repositorio Prisma implementado en `infrastructure/`
-- `[ ]` **Aplicación:** Caso de uso creado en `application/usecases/`
-- `[ ]` **Interfaces:** Controlador y ruta registrada en Express
-- `[ ]` **Frontend:** Tipo TypeScript definido en `src/types/`
-- `[ ]` **Frontend:** Composable creado con manejo de estado (cargando, error)
-- `[ ]` **Frontend:** Vista creada y ruta registrada en Vue Router
-- `[ ]` **Frontend:** Formulario con esquema Yup + VeeValidate si aplica
-- `[ ]` **Docs:** Documentación actualizada (`api/`, `views/`, `schemas/`)
+- `[ ]` **Prisma:** Modelo agregado en `schema.prisma` + `npx prisma migrate dev`
+- `[ ]` **Shared:** Interfaces/Tipos agregados en `apps/shared/types/index.ts`
+- `[ ]` **Backend Service:** Lógica de negocio y consultas Prisma en `apps/backend/src/modules/<modulo>/<modulo>.service.ts`
+- `[ ]` **Backend Controller:** Handlers HTTP en `apps/backend/src/modules/<modulo>/<modulo>.controller.ts`
+- `[ ]` **Backend Routes:** Endpoints expuestos en `apps/backend/src/modules/<modulo>/<modulo>.routes.ts`
+- `[ ]` **Backend Server:** Módulo registrado en `apps/backend/src/core/server.ts`
+- `[ ]` **Frontend Store:** Pinia Store creado en `apps/frontend/src/modules/<modulo>/<modulo>.store.ts`
+- `[ ]` **Frontend Vista:** Componente `.vue` creado en `apps/frontend/src/modules/<modulo>/views/`
+- `[ ]` **Frontend Router:** Ruta de la vista registrada en `apps/frontend/src/core/router.ts`
+- `[ ]` **Docs:** Documentación sincronizada y actualizada
+
