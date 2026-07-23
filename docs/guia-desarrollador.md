@@ -91,10 +91,12 @@ Sinergy/                          ← Raíz del monorepo
 │   │       ├── utils/            ← http.ts, helpers
 │   │       └── views/            ← Páginas de la app
 │   └── backend/                  ← Node.js + Express + Prisma
+│       ├── prisma/               ← Migraciones, DDL y schema.prisma
+│       ├── prisma.config.ts      ← Configuración de conexión dinámica PostgreSQL
 │       └── src/
-│           ├── domain/           ← Entidades y reglas de negocio
+│           ├── domain/           ← Entidades, excepciones (AppError) e interfaces
 │           ├── application/      ← Casos de uso
-│           ├── infrastructure/   ← Repositorios Prisma, DB
+│           ├── infrastructure/   ← Repositorios Prisma, DB, middlewares (errorHandler, notFoundHandler)
 │           └── interfaces/       ← Controladores HTTP, rutas
 ├── docs/                         ← Documentación del proyecto
 ├── package.json                  ← Scripts globales del monorepo

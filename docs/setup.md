@@ -307,3 +307,20 @@ psql -U postgres -d sinergy_db -c "SELECT 1;"
 ```powershell
 pnpm install --ignore-scripts --filter @sinergy/frontend
 ```
+
+---
+
+### `Error: listen EADDRINUSE: address already in use :::3000`
+
+**Causa:** Ya existe una instancia previa del backend u otro proceso ocupando el puerto 3000.
+**Diagnóstico y Solución:**
+1. Identifica el ID de proceso (`PID`) escuchando en el puerto:
+```powershell
+Get-NetTCPConnection -LocalPort 3000 | Select-Object OwningProcess, State
+```
+2. Finaliza el proceso colgado:
+```powershell
+taskkill /F /PID <PID>
+```
+3. Opcionalmente, cambia la variable `PORT` en `apps/backend/.env` si necesitas ejecutar el servidor en un puerto alternativo.
+
