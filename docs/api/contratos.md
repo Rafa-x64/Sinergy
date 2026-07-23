@@ -19,14 +19,57 @@ Todas las respuestas exitosas o fallidas seguirán esta estructura base:
 {
   "success": false,
   "error": {
-    "code": "ERROR_CODE",
     "message": "Descripción amigable del error",
-    "details": [] 
+    "stack": "Error: ... (solo presente en desarrollo para errores 500+)"
   }
 }
 ```
 
+> [!NOTE]
+> En entorno de desarrollo (`NODE_ENV !== 'production'`), la propiedad `stack` solo se retorna para errores internos del servidor (`statusCode >= 500`). Los errores de cliente (4xx) omiten el rastreo de pila por seguridad y legibilidad.
+
 ---
+
+## 0. Estado del Sistema y Salud
+
+### `GET /`
+Retorna metadatos informativos sobre la API de Sinergy.
+
+**Response (200 OK):**
+```json
+{
+  "name": "Sinergy API Backend",
+  "version": "1.0",
+  "status": "online",
+  "healthCheck": "/api/health"
+}
+```
+
+### `GET /api/version`
+Consulta la versión activa del backend.
+
+**Response (200 OK):**
+```json
+{
+  "status": "ok",
+  "message": "Version 1.0"
+}
+```
+
+### `GET /api/health`
+Verifica la salud del servidor y la conectividad activa con la base de datos PostgreSQL mediante Prisma.
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "status": "ok",
+    "timestamp": "2026-07-23T19:30:00.000Z",
+    "database": "connected"
+  }
+}
+```
 
 ## 1. Autenticación
 

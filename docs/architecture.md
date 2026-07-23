@@ -143,10 +143,14 @@ Sinergy/
 │   └── backend/                           # @sinergy/backend
 │       ├── prisma/
 │       │   ├── migrations/                # Historial de migraciones de la DB
-│       │   └── schema.prisma              # Modelo de datos
+│       │   ├── schema.prisma              # Modelo de datos Prisma
+│       │   ├── sinergy_schema.sql         # DDL de PostgreSQL (v2.0 Enterprise)
+│       │   └── sinergy_drawdb.sql         # Respaldo visual del esquema
 │       ├── src/
 │       │   │
 │       │   ├── domain/                    # [CAPA 1] — Sin dependencias externas
+│       │   │   ├── exceptions/            # Excepciones personalizadas del dominio
+│       │   │   │   └── AppError.ts        # Clase base para errores controlados
 │       │   │   ├── entities/              # Tipos e interfaces de dominio
 │       │   │   │   ├── Tecnico.ts
 │       │   │   │   ├── Inspeccion.ts
@@ -162,9 +166,12 @@ Sinergy/
 │       │   │       └── CrearTecnico.ts
 │       │   │
 │       │   ├── infrastructure/            # [CAPA 3] — Implementaciones concretas
+│       │   │   ├── middlewares/           # Middlewares de infraestructura y HTTP
+│       │   │   │   ├── errorHandler.ts    # Manejador global de errores (filtra stack 500+)
+│       │   │   │   └── notFoundHandler.ts # Captura de rutas no encontradas (404)
 │       │   │   ├── prisma/
 │       │   │   │   └── prismaClient.ts    # Singleton de PrismaClient
-│       │   │   └── repositories/          # Implementaciones con Prisma
+│       │   │   └── repositories/          # Implementaciones de acceso a datos
 │       │   │       ├── PrismaTecnicoRepository.ts
 │       │   │       └── PrismaInspeccionRepository.ts
 │       │   │
@@ -173,16 +180,16 @@ Sinergy/
 │       │   │   │   ├── TecnicoController.ts
 │       │   │   │   └── InspeccionController.ts
 │       │   │   ├── middlewares/
-│       │   │   │   ├── errorHandler.ts    # Manejador global de errores
 │       │   │   │   └── authMiddleware.ts  # Validación de JWT
 │       │   │   └── routes/
 │       │   │       ├── tecnicoRoutes.ts
 │       │   │       └── inspeccionRoutes.ts
 │       │   │
-│       │   └── index.ts                   # Punto de entrada del servidor
+│       │   └── index.ts                   # Punto de entrada (Express server, CORS, EADDRINUSE handling)
 │       ├── dist/                          # Build de producción (ignorado en Git)
-│       ├── .env                           # DATABASE_URL, PORT (no en Git)
+│       ├── .env                           # DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME, PORT
 │       ├── package.json                   # name: @sinergy/backend
+│       ├── prisma.config.ts               # Configuración dinámica de conexión Prisma v6/v7
 │       └── tsconfig.json
 │
 ├── docs/                                  # Documentación del proyecto

@@ -20,9 +20,10 @@ Sinergy está estructurado como un **Monorepo** gestionado con `pnpm workspaces`
 
 ### Backend (`@sinergy/backend`)
 - **Entorno:** Node.js + Express + TypeScript
-- **Base de Datos:** PostgreSQL
-- **ORM:** Prisma
+- **Base de Datos:** PostgreSQL (Configuración dinámica vía `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`)
+- **ORM:** Prisma (`prisma.config.ts` + `schema.prisma`)
 - **Arquitectura:** DDD-Lite (Domain-Driven Design simplificado)
+- **Endpoints de Diagnóstico:** `GET /` (Info API), `GET /api/version`, `GET /api/health`
 
 ---
 

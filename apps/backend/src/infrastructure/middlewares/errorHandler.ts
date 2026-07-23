@@ -10,14 +10,15 @@ export const errorHandler = (err: Error, req: Request, res: Response, next: Next
     message = err.message;
   }
   
-  // En desarrollo mostramos el stack completo, en producción ocultamos detalles
+  // En desarrollo mostramos el stack solo para errores de servidor (500+), ocultándolo en errores del cliente (4xx)
   const isDev = process.env.NODE_ENV !== 'production';
+  const showStack = isDev && statusCode >= 500;
 
   res.status(statusCode).json({
     success: false,
     error: {
       message,
-      ...(isDev && { stack: err.stack })
+      ...(showStack && { stack: err.stack })
     }
   });
 };
