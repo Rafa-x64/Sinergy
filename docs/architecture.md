@@ -5,7 +5,7 @@
 - [Visión General](#visión-general)
 - [Stack Tecnológico](#stack-tecnológico)
 - [Estructura del Monorepo](#estructura-del-monorepo)
-- [Arquitectura del Backend (DDD-Lite)](#arquitectura-del-backend-ddd-lite)
+- [Arquitectura del Backend (Feature-Based)](#arquitectura-del-backend-feature-based)
 - [Arquitectura del Frontend (SPA)](#arquitectura-del-frontend-spa)
 - [Flujo de una Petición HTTP](#flujo-de-una-petición-http)
 - [Diagrama de Capas](#diagrama-de-capas)
@@ -21,20 +21,23 @@
 Sinergy es un sistema de gestión de mantenimiento industrial estructurado como un **monorepo** con `pnpm workspaces`. Contiene dos aplicaciones independientes que se comunican exclusivamente a través de HTTP:
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                         MONOREPO                            │
-│                                                             │
-│   ┌──────────────────┐        ┌──────────────────────────┐  │
-│   │   apps/frontend  │  HTTP  │     apps/backend         │  │
-│   │   Vue 3 + TS     │ ────── │   Express + Prisma       │  │
-│   │   Bootstrap 5    │  REST  │   PostgreSQL             │  │
-│   │   Pinia          │        │   DDD-Lite               │  │
-│   └──────────────────┘        └──────────────────────────┘  │
-│                                                             │
-│   ┌────────────────────────────────────────────────────┐    │
-│   │   docs/   ← Documentación centralizada del proyecto│    │
-│   └────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                           MONOREPO                               │
+│                                                                  │
+│   ┌──────────────────┐        ┌────────────────────────────────┐ │
+│   │   apps/frontend  │  HTTP  │     apps/backend               │ │
+│   │   Vue 3 + TS     │ ────── │   Express + Prisma             │ │
+│   │   Bootstrap 5    │  REST  │   PostgreSQL                   │ │
+│   │   Pinia          │        │   Feature-Based Architecture   │ │
+│   └──────────────────┘        └────────────────────────────────┘ │
+│                                                                  │
+│   ┌──────────────────────────────────────────────────────────┐   │
+│   │  apps/shared/   ← Tipos e interfaces TypeScript comunes  │   │
+│   └──────────────────────────────────────────────────────────┘   │
+│   ┌──────────────────────────────────────────────────────────┐   │
+│   │  docs/          ← Documentación centralizada             │   │
+│   └──────────────────────────────────────────────────────────┘   │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -43,96 +46,91 @@ Sinergy es un sistema de gestión de mantenimiento industrial estructurado como 
 
 ### Frontend
 
-| Tecnología | Versión | Rol |
-|---|---|---|
-| Vue 3 | 3.5.13 | Framework UI (Composition API) |
-| TypeScript | 5.4.5 | Tipado estático |
-| Bootstrap 5 | 5.3.3 | Sistema de grilla y utilidades CSS |
-| bootstrap-vue-next | 0.24.14 | Componentes Bootstrap para Vue |
-| Vite | 5.2.8 | Bundler y servidor de desarrollo |
-| Pinia | 2.1.7 | Gestión de estado global |
-| Vue Router | 4.3.0 | Enrutamiento SPA |
-| Axios | 1.6.8 | Cliente HTTP con interceptores |
-| VeeValidate + Yup | 4.12.4 / 1.4.0 | Validación de formularios |
-| Dexie | 4.0.1 | IndexedDB (almacenamiento offline) |
-| VueUse | 10.9.0 | Composables de utilidad |
-| date-fns | 3.6.0 | Manipulación de fechas |
-| Vue Toastification | 2.0.0-rc.5 | Sistema de notificaciones |
-| ApexCharts | 3.49.1 | Gráficas interactivas (dashboard) |
-| Chart.js | 4.4.2 | Gráficas ligeras embebidas |
-| ECharts | 5.4.3 | Gráficas avanzadas |
-| SheetJS (xlsx) | 0.18.5 | Exportación a Excel |
-| jsPDF + html2canvas | 2.5.1 / 1.4.1 | Exportación a PDF |
-| FontAwesome | 6.5.1 | Iconografía SVG |
+| Tecnología          | Versión        | Rol                                |
+| ------------------- | -------------- | ---------------------------------- |
+| Vue 3               | 3.5.13         | Framework UI (Composition API)     |
+| TypeScript          | 5.4.5          | Tipado estático                    |
+| Bootstrap 5         | 5.3.3          | Sistema de grilla y utilidades CSS |
+| bootstrap-vue-next  | 0.24.14        | Componentes Bootstrap para Vue     |
+| Vite                | 5.2.8          | Bundler y servidor de desarrollo   |
+| Pinia               | 2.1.7          | Gestión de estado global           |
+| Vue Router          | 4.3.0          | Enrutamiento SPA                   |
+| Axios               | 1.6.8          | Cliente HTTP con interceptores     |
+| VeeValidate + Yup   | 4.12.4 / 1.4.0 | Validación de formularios          |
+| Dexie               | 4.0.1          | IndexedDB (almacenamiento offline) |
+| VueUse              | 10.9.0         | Composables de utilidad            |
+| date-fns            | 3.6.0          | Manipulación de fechas             |
+| Vue Toastification  | 2.0.0-rc.5     | Sistema de notificaciones          |
+| ApexCharts          | 3.49.1         | Gráficas interactivas (dashboard)  |
+| Chart.js            | 4.4.2          | Gráficas ligeras embebidas         |
+| ECharts             | 5.4.3          | Gráficas avanzadas                 |
+| SheetJS (xlsx)      | 0.18.5         | Exportación a Excel                |
+| jsPDF + html2canvas | 2.5.1 / 1.4.1  | Exportación a PDF                  |
+| FontAwesome         | 6.5.1          | Iconografía SVG                    |
 
 ### Backend
 
-| Tecnología | Versión | Rol |
-|---|---|---|
-| Node.js | 20.x | Runtime |
-| TypeScript | 5.4.5 | Tipado estático |
-| Express | 4.19.2 | Framework HTTP |
-| Prisma ORM | 7.8.0 | Acceso a datos y migraciones |
-| PostgreSQL | 14+ | Base de datos relacional |
-| ts-node-dev | 2.0.0 | Dev server con hot-reload |
+| Tecnología  | Versión | Rol                          |
+| ----------- | ------- | ---------------------------- |
+| Node.js     | 20.x    | Runtime                      |
+| TypeScript  | 5.4.5   | Tipado estático              |
+| Express     | 4.19.2  | Framework HTTP               |
+| Prisma ORM  | 7.8.0   | Acceso a datos y migraciones |
+| PostgreSQL  | 14+     | Base de datos relacional     |
+| ts-node-dev | 2.0.0   | Dev server con hot-reload    |
 
 ### Monorepo
 
-| Tecnología | Rol |
-|---|---|
-| pnpm 8+ | Gestor de paquetes y workspaces |
-| concurrently | Ejecución paralela de scripts |
+| Tecnología   | Rol                             |
+| ------------ | ------------------------------- |
+| pnpm 8+      | Gestor de paquetes y workspaces |
+| concurrently | Ejecución paralela de scripts   |
 
 ---
 
 ## Estructura del Monorepo
+
+> **ADR-002 — Migración de DDD-Lite a Feature-Based Architecture**
+> Fecha: 2026-07-23. Motivo: DDD-Lite genera sobreingeniería y código repetitivo para un sistema de gestión de mantenimiento. La arquitectura por módulos aislados es más cohesiva, reduce el tiempo de navegación entre archivos y cumple el principio de modularidad total. Ver sección [Decisiones Arquitectónicas](#decisiones-arquitectónicas-adr) para el análisis completo de trade-offs.
 
 ```
 Sinergy/
 │
 ├── apps/
 │   │
+│   ├── shared/                            # Tipos e interfaces comunes al mono-repo
+│   │   ├── types/
+│   │   │   └── index.ts                   # Interfaces TS consumidas por front y back
+│   │   └── constants/
+│   │       └── index.ts                   # Roles de usuario, estados de maquinaria, etc.
+│   │
 │   ├── frontend/                          # @sinergy/frontend
 │   │   ├── public/
-│   │   │   ├── favicon.svg
-│   │   │   └── icons.svg
+│   │   │   └── favicon.svg
 │   │   ├── src/
 │   │   │   ├── assets/                    # Imágenes, fuentes, íconos estáticos
-│   │   │   ├── components/                # Componentes Vue reutilizables
-│   │   │   │   ├── base/                  # Átomos: BaseButton, BaseCard, BaseInput...
-│   │   │   │   ├── layout/                # NavBar, Sidebar, AppFooter...
-│   │   │   │   └── modules/               # Componentes de dominio: InspeccionForm, TecnicoCard...
-│   │   │   ├── composables/               # Lógica reutilizable sin UI
-│   │   │   │   ├── useInspecciones.ts
-│   │   │   │   ├── useExportPDF.ts
-│   │   │   │   ├── useExportExcel.ts
-│   │   │   │   └── useSync.ts
-│   │   │   ├── db/                        # Configuración Dexie (IndexedDB offline)
-│   │   │   │   └── database.ts
-│   │   │   ├── router/                    # Vue Router
-│   │   │   │   └── index.ts
-│   │   │   ├── schemas/                   # Esquemas de validación Yup
-│   │   │   │   ├── loginSchema.ts
-│   │   │   │   └── crearTecnicoSchema.ts
-│   │   │   ├── stores/                    # Pinia stores
-│   │   │   │   ├── authStore.ts
-│   │   │   │   └── appStore.ts
-│   │   │   ├── types/                     # Interfaces TypeScript compartidas del frontend
-│   │   │   │   ├── Tecnico.ts
-│   │   │   │   ├── Inspeccion.ts
-│   │   │   │   └── Planta.ts
-│   │   │   ├── utils/                     # Funciones utilitarias
-│   │   │   │   ├── http.ts                # Instancia Axios centralizada
-│   │   │   │   └── formatters.ts          # Formateo de fechas, monedas, etc.
-│   │   │   ├── views/                     # Páginas (una por ruta)
-│   │   │   │   ├── LoginView.vue
-│   │   │   │   ├── DashboardView.vue
-│   │   │   │   └── InspeccionView.vue
+│   │   │   ├── core/                      # Configuración global del cliente
+│   │   │   │   ├── router.ts              # vue-router: todas las rutas de la SPA
+│   │   │   │   └── api.ts                 # Instancia Axios con interceptor de JWT
+│   │   │   ├── shared/                    # Componentes e interfaces genéricas del UI
+│   │   │   │   ├── components/            # BaseButton, BaseCard, BaseInput, BaseTable…
+│   │   │   │   └── layouts/               # AppLayout.vue (sidebar + navbar)
+│   │   │   ├── modules/                   # Funcionalidades aisladas (Feature-Based)
+│   │   │   │   ├── auth/
+│   │   │   │   │   ├── views/             # Login.vue, HomeView.vue
+│   │   │   │   │   └── auth.store.ts      # Pinia: JWT y estado del usuario
+│   │   │   │   ├── equipment/
+│   │   │   │   │   ├── views/             # EquipmentList.vue
+│   │   │   │   │   ├── components/        # Formularios específicos de maquinaria
+│   │   │   │   │   └── equipment.store.ts
+│   │   │   │   └── maintenance/
+│   │   │   │       ├── views/             # Reports.vue, CriticalVariables.vue
+│   │   │   │       └── maintenance.store.ts
 │   │   │   ├── App.vue                    # Componente raíz
 │   │   │   ├── env.d.ts                   # Tipos de variables de entorno Vite
 │   │   │   └── main.ts                    # Punto de entrada: registra plugins
 │   │   ├── .env                           # Variables locales (no en Git)
-│   │   ├── .env.example                   # Plantilla de variables requeridas
+│   │   ├── .env.example
 │   │   ├── index.html
 │   │   ├── package.json                   # name: @sinergy/frontend
 │   │   ├── tsconfig.app.json
@@ -142,80 +140,38 @@ Sinergy/
 │   │
 │   └── backend/                           # @sinergy/backend
 │       ├── prisma/
-│       │   ├── migrations/                # Historial de migraciones de la DB
 │       │   ├── schema.prisma              # Modelo de datos Prisma
-│       │   ├── sinergy_schema.sql         # DDL de PostgreSQL (v2.0 Enterprise)
+│       │   ├── sinergy_schema.sql         # DDL de PostgreSQL
 │       │   └── sinergy_drawdb.sql         # Respaldo visual del esquema
 │       ├── src/
-│       │   │
-│       │   ├── domain/                    # [CAPA 1] — Sin dependencias externas
-│       │   │   ├── exceptions/            # Excepciones personalizadas del dominio
+│       │   ├── core/                      # Configuración que arranca la aplicación
+│       │   │   ├── server.ts              # Instancia Express: middlewares y rutas base
+│       │   │   ├── prisma.ts              # Singleton PrismaClient (evita fugas de memoria)
+│       │   │   ├── errors/
 │       │   │   │   └── AppError.ts        # Clase base para errores controlados
-│       │   │   ├── entities/              # Tipos e interfaces de dominio
-│       │   │   │   ├── Tecnico.ts
-│       │   │   │   ├── Inspeccion.ts
-│       │   │   │   └── Planta.ts
-│       │   │   └── repositories/          # Contratos (interfaces) de acceso a datos
-│       │   │       ├── ITecnicoRepository.ts
-│       │   │       └── IInspeccionRepository.ts
-│       │   │
-│       │   ├── application/               # [CAPA 2] — Depende solo de domain/
-│       │   │   └── usecases/
-│       │   │       ├── ObtenerTecnicosPorPlanta.ts
-│       │   │       ├── RegistrarInspeccion.ts
-│       │   │       └── CrearTecnico.ts
-│       │   │
-│       │   ├── infrastructure/            # [CAPA 3] — Implementaciones concretas
-│       │   │   ├── middlewares/           # Middlewares de infraestructura y HTTP
-│       │   │   │   ├── errorHandler.ts    # Manejador global de errores (filtra stack 500+)
-│       │   │   │   └── notFoundHandler.ts # Captura de rutas no encontradas (404)
-│       │   │   ├── prisma/
-│       │   │   │   └── prismaClient.ts    # Singleton de PrismaClient
-│       │   │   └── repositories/          # Implementaciones de acceso a datos
-│       │   │       ├── PrismaTecnicoRepository.ts
-│       │   │       └── PrismaInspeccionRepository.ts
-│       │   │
-│       │   ├── interfaces/                # [CAPA 4] — HTTP (Express)
-│       │   │   ├── controllers/
-│       │   │   │   ├── TecnicoController.ts
-│       │   │   │   └── InspeccionController.ts
-│       │   │   ├── middlewares/
-│       │   │   │   └── authMiddleware.ts  # Validación de JWT
-│       │   │   └── routes/
-│       │   │       ├── tecnicoRoutes.ts
-│       │   │       └── inspeccionRoutes.ts
-│       │   │
-│       │   └── index.ts                   # Punto de entrada (Express server, CORS, EADDRINUSE handling)
-│       ├── dist/                          # Build de producción (ignorado en Git)
+│       │   │   └── middlewares/
+│       │   │       ├── errorHandler.ts    # Manejador global de errores (filtra stack 500+)
+│       │   │       └── notFoundHandler.ts # Captura de rutas no encontradas (404)
+│       │   ├── modules/                   # Funcionalidades aisladas (Feature-Based)
+│       │   │   ├── auth/
+│       │   │   │   ├── auth.routes.ts
+│       │   │   │   ├── auth.controller.ts # Extrae datos del request, llama al service
+│       │   │   │   └── auth.service.ts    # Lógica de negocio + acceso a Prisma
+│       │   │   ├── equipment/             # Montacargas, Generador, Chiller, Compresor
+│       │   │   │   ├── equipment.routes.ts
+│       │   │   │   ├── equipment.controller.ts
+│       │   │   │   └── equipment.service.ts
+│       │   │   └── maintenance/
+│       │   │       ├── maintenance.routes.ts
+│       │   │       ├── maintenance.controller.ts
+│       │   │       └── maintenance.service.ts
+│       │   └── index.ts                   # Arranque: listen, graceful shutdown, EADDRINUSE
 │       ├── .env                           # DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME, PORT
 │       ├── package.json                   # name: @sinergy/backend
-│       ├── prisma.config.ts               # Configuración dinámica de conexión Prisma v6/v7
+│       ├── prisma.config.ts
 │       └── tsconfig.json
 │
 ├── docs/                                  # Documentación del proyecto
-│   ├── api/                               # Contratos de la API REST
-│   ├── components/                        # Diccionario de componentes Vue
-│   ├── composables/                       # Documentación de composables
-│   ├── extensions/
-│   │   └── extensions.md                  # Guía de cada librería instalada
-│   ├── model/                             # Modelos de dominio del negocio
-│   ├── repository/                        # Patrones de acceso a datos
-│   ├── schemas/                           # Esquemas de validación y DB
-│   ├── sinergy/                           # Documentación del negocio
-│   │   ├── casosUso.md
-│   │   ├── prd.md
-│   │   ├── requerimientos.md
-│   │   └── visionAlcance.md
-│   ├── stores/                            # Documentación de stores de Pinia
-│   ├── views/                             # Documentación de vistas
-│   ├── architecture.md                    # ← Este archivo
-│   ├── changelog.md                       # Historial de cambios por versión
-│   ├── guia-desarrollador.md              # Guía paso a paso para desarrollar features
-│   ├── notas.md                           # Notas de levantamiento de requisitos
-│   ├── security.md                        # Políticas de seguridad
-│   ├── setup.md                           # Instalación y configuración inicial
-│   └── todo.md                            # Lista de tareas y roadmap
-│
 ├── node_modules/                          # Dependencias del workspace raíz
 ├── .gitignore
 ├── package.json                           # Scripts globales del monorepo
@@ -225,87 +181,49 @@ Sinergy/
 
 ---
 
-## Arquitectura del Backend (DDD-Lite)
+## Arquitectura del Backend (Feature-Based)
 
-El backend aplica una versión pragmática de DDD con 4 capas. La regla fundamental es que **las dependencias siempre apuntan hacia el dominio**, nunca al revés.
+El backend agrupa el código por **contexto de negocio**, no por rol técnico. Cada módulo es autónomo: contiene sus rutas, controlador y servicio en la misma carpeta. Esto elimina la necesidad de saltar entre 4 directorios para entender una funcionalidad.
 
-### Regla de Dependencias
+### Estructura de un Módulo
 
 ```
-interfaces/ ── application/ ── domain/
-                     ▲
-             infrastructure/ ── domain/
+modules/
+└── equipment/
+    ├── equipment.routes.ts     ← Define endpoints, delega al controller
+    ├── equipment.controller.ts ← Extrae datos del Request, llama al service
+    └── equipment.service.ts    ← Lógica de negocio + acceso a Prisma
 ```
 
-`domain/` no importa nada de capas externas. Es código TypeScript puro.
+### Flujo estricto dentro de un módulo
 
-### Responsabilidades por Capa
+```
+Request → routes → controller → service → Prisma → PostgreSQL → Response
+```
 
-#### `domain/` — Núcleo del negocio
-- **Qué contiene:** Interfaces de entidades, tipos DTO, interfaces de repositorios.
-- **Qué NO contiene:** Ninguna importación de Prisma, Express, Axios ni ninguna librería externa.
-- **Regla:** Si cambias el ORM de Prisma a otro, esta capa NO se toca.
+### Configuración compartida en `core/`
 
-#### `application/` — Casos de uso
-- **Qué contiene:** Clases de casos de uso que orquestan el flujo de una operación.
-- **Qué NO contiene:** Lógica de HTTP, acceso directo a la DB, `PrismaClient`.
-- **Regla:** Un caso de uso recibe interfaces del dominio por constructor (inyección de dependencias).
-
-#### `infrastructure/` — Implementaciones concretas
-- **Qué contiene:** `PrismaClient` singleton, clases que implementan los `IRepository` del dominio.
-- **Qué NO contiene:** Lógica de negocio ni validaciones de dominio.
-- **Regla:** Si cambia la base de datos, solo cambia esta capa.
-
-#### `interfaces/` — Capa HTTP
-- **Qué contiene:** Controladores Express, definición de rutas, middlewares (auth, error handler).
-- **Qué NO contiene:** Lógica de negocio. Los controladores solo traducen entre HTTP y casos de uso.
-- **Regla:** Un controlador que hace más de 3 cosas necesita refactorizarse.
+| Archivo                               | Responsabilidad                                                               |
+| ------------------------------------- | ----------------------------------------------------------------------------- |
+| `core/server.ts`                      | Instancia Express, registra middlewares globales y rutas de módulos           |
+| `core/prisma.ts`                      | Singleton de `PrismaClient` (evita fugas de memoria por múltiples instancias) |
+| `core/errors/AppError.ts`             | Clase base para errores controlados con `statusCode`                          |
+| `core/middlewares/errorHandler.ts`    | Manejador global de errores (filtra stack trace en producción)                |
+| `core/middlewares/notFoundHandler.ts` | Captura de rutas no encontradas (404)                                         |
 
 ---
 
 ## Arquitectura del Frontend (SPA)
 
-El frontend sigue el patrón **Composable → Store → View**.
+El frontend sigue una estructura basada en módulos aislados combinada con `shared/` y `core/`.
+
+### Estructura
 
 ```
-View (orquesta)
-  ├── Composables (lógica y efectos secundarios)
-  ├── Stores (estado compartido entre vistas)
-  └── Components (presentación)
-```
-
-### Reglas del Frontend
-
-| Elemento | Responsabilidad | Importa de |
-|---|---|---|
-| `views/` | Orquesta composables y renderiza | composables, stores, components |
-| `composables/` | Lógica reutilizable, llamadas HTTP | `utils/http.ts`, stores |
-| `stores/` | Estado global compartido entre vistas | nada externo, solo `vue` y `pinia` |
-| `components/` | Presentación pura, recibe props | nada externo (solo emits y props) |
-| `utils/` | Funciones puras sin estado | nada del proyecto |
-| `schemas/` | Validación de formularios | solo `yup` |
-
----
-
-## Flujo de una Petición HTTP
-
-Ejemplo: `GET /api/tecnicos/planta/1`
-
-```
-1. Vue Router      → Navega a /tecnicos
-2. TecnicosView    → onMounted: llama a cargarTecnicos(1)
-3. useTecnicos     → http.get('/tecnicos/planta/1')
-4. Axios           → Adjunta JWT → envía al backend
-5. Express Router  → GET /api/tecnicos/planta/:plantaId
-6. authMiddleware  → Verifica JWT
-7. TecnicoController.listarPorPlanta()
-8. ObtenerTecnicosPorPlanta.execute(1)
-9. PrismaTecnicoRepository.findByPlanta(1)
-10. Prisma         → SELECT * FROM "Tecnico" WHERE "plantaId" = 1
-11. PostgreSQL     → Retorna filas
-12. Response       → JSON array de técnicos
-13. useTecnicos    → tecnicos.value = data
-14. TecnicosView   → v-for renderiza las tarjetas
+src/
+├── core/           ← router.ts, api.ts
+├── shared/         ← componentes y layouts reutilizables UI
+└── modules/        ← auth/, equipment/, maintenance/
 ```
 
 ---
@@ -314,46 +232,47 @@ Ejemplo: `GET /api/tecnicos/planta/1`
 
 ```
 ┌────────────────────────────────────────────────────────────┐
-│                     FRONTEND (Vue 3 SPA)                   │
+│                    FRONTEND (Vue 3 SPA)                    │
 │                                                            │
-│  ┌──────────┐   ┌─────────────┐   ┌──────────────────────┐ │
-│  │  Views   │── │ Composables │── │    utils/http.ts     │ │
-│  └──────────┘   └─────────────┘   │    (Axios + JWT)     │ │
-│       │                           └──────────────────────┘ │
-│       ▼                                        │           │
-│  ┌──────────┐   ┌─────────────┐                │ HTTP      │
-│  │Components│   │   Stores    │                │           │
-│  │  (UI)    │   │  (Pinia)    │                ▼           │
-│  └──────────┘   └─────────────┘   ┌──────────────────────┐ │
-│                                   │  Dexie / IndexedDB   │ │
-│                                   │  (Offline storage)   │ │
-│                                   └──────────────────────┘ │
-└────────────────────────────────────────────────────────────┘
-                              │ REST API
-                              ▼
-┌────────────────────────────────────────────────────────────┐
-│                    BACKEND (Express + DDD-Lite)            │
-│                                                            │
-│  ┌────────────────────────────────────────────────────┐    │
-│  │  interfaces/ (Controladores + Rutas + Middlewares) │    │
-│  └────────────────────────────────────────────────────┘    │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │   core/ (router.ts · api.ts)                         │  │
+│  └──────────────────────────────────────────────────────┘  │
 │                          │                                 │
 │                          ▼                                 │
-│  ┌────────────────────────────────────────────────────┐    │
-│  │            application/ (Casos de Uso)             │    │
-│  └────────────────────────────────────────────────────┘    │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │   modules/ (auth/ · equipment/ · maintenance/)       │  │
+│  │   views/ · store.ts · components/                    │  │
+│  └──────────────────────────────────────────────────────┘  │
 │                          │                                 │
-│              ┌───────────┴───────────┐                     │
-│              ▼                       ▼                     │
-│  ┌─────────────────────┐  ┌──────────────────────────┐     │
-│  │      domain/        │  │    infrastructure/       │     │
-│  │  Entidades + IRepo  │─ │  PrismaRepositories      │     │
-│  └─────────────────────┘  └──────────────────────────┘     │
-│                                       │                    │
-│                                       ▼                    │
-│                           ┌──────────────────────────┐     │
-│                           │       PostgreSQL         │     │
-│                           └──────────────────────────┘     │
+│                          ▼                                 │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │   shared/ (componentes UI base y layouts)            │  │
+│  └──────────────────────────────────────────────────────┘  │
+└────────────────────────────────────────────────────────────┘
+                               │ REST API (HTTP / JWT)
+                               ▼
+┌────────────────────────────────────────────────────────────┐
+│             BACKEND (Express + Feature-Based)              │
+│                                                            │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │   core/ (server.ts · prisma.ts · middlewares/)       │  │
+│  └──────────────────────────────────────────────────────┘  │
+│                          │                                 │
+│                          ▼                                 │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │   modules/                                           │  │
+│  │   ┌───────────┐  ┌─────────────┐  ┌──────────────┐   │  │
+│  │   │   auth/   │  │ equipment/  │  │ maintenance/ │   │  │
+│  │   │ routes    │  │ routes      │  │ routes       │   │  │
+│  │   │ controller│  │ controller  │  │ controller   │   │  │
+│  │   │ service   │  │ service     │  │ service      │   │  │
+│  │   └───────────┘  └─────────────┘  └──────────────┘   │  │
+│  └──────────────────────────────────────────────────────┘  │
+│                          │                                 │
+│                          ▼                                 │
+│                  ┌──────────────────┐                      │
+│                  │    PostgreSQL    │                      │
+│                  └──────────────────┘                      │
 └────────────────────────────────────────────────────────────┘
 ```
 
@@ -363,20 +282,21 @@ Ejemplo: `GET /api/tecnicos/planta/1`
 
 ### ¿Cuándo usar cada mecanismo?
 
-| Mecanismo | Cuándo usarlo |
-|---|---|
-| `ref` / `reactive` local | Estado que solo necesita el componente actual |
-| `composable` (ref interno) | Estado local a una funcionalidad (ej. lista de técnicos para una vista) |
-| `Pinia store` | Estado que múltiples vistas necesitan leer o modificar (usuario autenticado, configuración global) |
-| `localStorage` vía `useLocalStorage` | Estado que debe persistir entre sesiones (token, preferencias) |
-| `Dexie / IndexedDB` | Datos estructurados offline (inspecciones pendientes de sincronizar) |
+| Mecanismo                            | Cuándo usarlo                                                                                      |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| `ref` / `reactive` local             | Estado que solo necesita el componente actual                                                      |
+| `composable` (ref interno)           | Estado local a una funcionalidad (ej. lista de técnicos para una vista)                            |
+| `Pinia store`                        | Estado que múltiples vistas necesitan leer o modificar (usuario autenticado, configuración global) |
+| `localStorage` vía `useLocalStorage` | Estado que debe persistir entre sesiones (token, preferencias)                                     |
+| `Dexie / IndexedDB`                  | Datos estructurados offline (inspecciones pendientes de sincronizar)                               |
 
 ### Stores actuales
 
-| Store | Archivo | Responsabilidad |
-|---|---|---|
-| `authStore` | `stores/authStore.ts` | Token JWT, datos del usuario, rol, login/logout |
-| `appStore` | `stores/appStore.ts` | Estado global de la UI (sidebar, tema, planta activa) |
+| Store               | Archivo                                    | Responsabilidad                                         |
+| ------------------- | ------------------------------------------ | ------------------------------------------------------- |
+| `auth.store`        | `modules/auth/auth.store.ts`               | Token JWT, datos del usuario, rol, login/logout         |
+| `equipment.store`   | `modules/equipment/equipment.store.ts`     | Lista de equipos, filtros activos, detalle seleccionado |
+| `maintenance.store` | `modules/maintenance/maintenance.store.ts` | Variables críticas, reportes, estado de inspección      |
 
 ---
 
@@ -401,7 +321,7 @@ Sinergy opera en plantas industriales donde la conectividad puede ser intermiten
                  → toast.info('Sincronizadas N inspecciones')
 ```
 
-**Implementación:** Ver `src/composables/useSync.ts` y `src/db/database.ts`.
+**Implementación:** Ver `src/modules/maintenance/maintenance.store.ts` (lógica de sincronización) y la integración con Dexie que se definirá en una fase posterior del proyecto.
 
 ---
 
@@ -409,18 +329,16 @@ Sinergy opera en plantas industriales donde la conectividad puede ser intermiten
 
 ### Archivos
 
-| Tipo | Convención | Ejemplo |
-|---|---|---|
-| Componente Vue | PascalCase | `BaseButton.vue`, `InspeccionForm.vue` |
-| Vista Vue | PascalCase + `View` | `LoginView.vue`, `DashboardView.vue` |
-| Composable | camelCase + `use` | `useTecnicos.ts`, `useExportPDF.ts` |
-| Store Pinia | camelCase + `Store` | `authStore.ts`, `appStore.ts` |
-| Entidad dominio | PascalCase | `Tecnico.ts`, `Inspeccion.ts` |
-| Repositorio interfaz | PascalCase + `I` prefix | `ITecnicoRepository.ts` |
-| Repositorio Prisma | `Prisma` + PascalCase | `PrismaTecnicoRepository.ts` |
-| Caso de uso | PascalCase, verbo | `CrearTecnico.ts`, `RegistrarInspeccion.ts` |
-| Controlador | PascalCase + `Controller` | `TecnicoController.ts` |
-| Ruta Express | camelCase + `Routes` | `tecnicoRoutes.ts` |
+| Tipo                | Convención                         | Ejemplo                                |
+| ------------------- | ---------------------------------- | -------------------------------------- |
+| Componente Vue      | PascalCase                         | `BaseButton.vue`, `EquipmentForm.vue`  |
+| Vista Vue           | PascalCase + `View` o descriptivo  | `Login.vue`, `EquipmentList.vue`       |
+| Store Pinia         | kebab-case + `.store`              | `auth.store.ts`, `equipment.store.ts`  |
+| Interfaz TypeScript | PascalCase                         | `Equipment.ts`, `MaintenanceReport.ts` |
+| Servicio            | camelCase + `.service`             | `equipment.service.ts`                 |
+| Controlador         | camelCase + `.controller`          | `equipment.controller.ts`              |
+| Ruta Express        | camelCase + `.routes`              | `equipment.routes.ts`                  |
+| Tipo compartido     | PascalCase en `apps/shared/types/` | `EquipmentType`, `UserRole`            |
 
 ### Commits (Semánticos)
 
@@ -434,6 +352,7 @@ test:     adición o corrección de pruebas
 ```
 
 Ejemplos:
+
 ```
 feat: add offline inspection capture with Dexie
 fix: correct token expiry redirect on 401
@@ -455,15 +374,26 @@ refactor: extract PDF export to composable
 
 ---
 
-### ADR-002 — DDD-Lite sobre MVC tradicional para el backend
+### ADR-002 — Feature-Based Architecture sobre DDD-Lite para el backend
 
-**Decisión:** Implementar arquitectura DDD-Lite (4 capas) en lugar del patrón MVC convencional de Express.
+**Decisión:** Migrar de la arquitectura DDD-Lite de 4 capas a una arquitectura basada en funcionalidades (Feature-Based / Módulos Aislados). Fecha de migración: 2026-07-23.
 
-**Razón:** El dominio de Sinergy tiene reglas de negocio específicas (validación por roles, lógica de inspección por tipo de equipo) que justifican aislar la lógica de negocio de la infraestructura. Permite cambiar el ORM o la base de datos sin tocar la lógica de negocio.
+**Razón:** DDD-Lite es la arquitectura correcta para sistemas con lógica de negocio compleja y múltiples equipos de desarrollo. Sin embargo, para un sistema de gestión de mantenimiento con una estructura de dominio predecible y un equipo reducido, introduce sobreingeniería: genera código boilerplate excesivo (interfaces de repositorios, casos de uso, implementaciones concretas) para operaciones que son directamente CRUD con Prisma. Viola el principio de minimalismo extremo del proyecto.
 
-**Alternativas descartadas:** MVC puro (mezcla la lógica de negocio con los controladores), NestJS (curva de aprendizaje mayor, overhead innecesario en esta fase).
+La arquitectura Feature-Based agrupa el código por contexto de negocio en lugar de por rol técnico. Para modificar la lógica de `equipment`, se abre una sola carpeta y se encuentran sus rutas, controlador y servicio juntos, sin saltar entre 4 directorios.
 
-**Trade-off asumido:** Mayor cantidad de archivos y boilerplate por feature. Se acepta a cambio de mayor testeabilidad y mantenibilidad.
+**Estructura de cada módulo:**
+
+- `*.routes.ts` — Define los endpoints y los delega al controlador.
+- `*.controller.ts` — Extrae datos del `Request`, llama al servicio, devuelve la respuesta HTTP. No contiene lógica de negocio.
+- `*.service.ts` — Contiene la lógica de negocio y es el único que interactúa con Prisma.
+
+**Alternativas descartadas:**
+
+- DDD-Lite 4 capas (sobreingeniería para este contexto, deuda técnica por boilerplate).
+- MVC puro sin separación de capas dentro del módulo (mezcla responsabilidades en el controlador).
+
+**Trade-off asumido:** Se pierde la capacidad de cambiar el ORM sin tocar el servicio, ya que el servicio importa Prisma directamente. Se acepta porque la probabilidad de cambiar el ORM en este proyecto es prácticamente nula, y el beneficio en velocidad de desarrollo y legibilidad supera ese riesgo.
 
 ---
 
@@ -603,18 +533,22 @@ CREATE TABLE inspeccion_detalles (
 
 ```typescript
 // Tipos escalares para IDs de tablas transaccionales
-type InspeccionId = bigint;     // Serializado como string en JSON
-type DetalleId    = bigint;
+type InspeccionId = bigint; // Serializado como string en JSON
+type DetalleId = bigint;
 
 export interface VariableEvaluacion {
-  id: number;                    // SERIAL (32-bit) — tablas maestras
+  id: number; // SERIAL (32-bit) — tablas maestras
   variable_id: number;
   nombre: string;
-  tipo_evaluacion: 'NUMERICO_ENTERO' | 'NUMERICO_DECIMAL' | 'TEMPERATURA' | 'SELECCION';
+  tipo_evaluacion:
+    | "NUMERICO_ENTERO"
+    | "NUMERICO_DECIMAL"
+    | "TEMPERATURA"
+    | "SELECCION";
   unidad: string | null;
-  valor_minimo: number | null;   // Umbral inferior para alerta de UI
-  valor_maximo: number | null;   // Umbral superior para alerta de UI
-  opciones: OpcionSeleccion[];   // Solo poblado si tipo_evaluacion === 'SELECCION'
+  valor_minimo: number | null; // Umbral inferior para alerta de UI
+  valor_maximo: number | null; // Umbral superior para alerta de UI
+  opciones: OpcionSeleccion[]; // Solo poblado si tipo_evaluacion === 'SELECCION'
   valor_numerico: number | null;
   valor_seleccion: string | null;
   observaciones: string;
@@ -622,8 +556,8 @@ export interface VariableEvaluacion {
 }
 
 export interface OpcionSeleccion {
-  clave: string;                 // 'N' | 'E' | 'A' | 'B' | 'NE' | 'N/A'
-  etiqueta: string;              // 'Normal' | 'Existe' | 'Anormal' | 'Bajo' | 'No Existe' | 'No Aplica'
+  clave: string; // 'N' | 'E' | 'A' | 'B' | 'NE' | 'N/A'
+  etiqueta: string; // 'Normal' | 'Existe' | 'Anormal' | 'Bajo' | 'No Existe' | 'No Aplica'
 }
 
 export interface ComponenteInspeccion {
@@ -637,8 +571,8 @@ export interface PayloadRegistroInspeccion {
   elaborado_por: number;
   revisado_por: number | null;
   aprobado_por: number | null;
-  fecha_registro: string;        // ISO 8601
-  origen_datos: 'ONLINE' | 'OFFLINE_SYNC';
+  fecha_registro: string; // ISO 8601
+  origen_datos: "ONLINE" | "OFFLINE_SYNC";
   componentes: ComponenteInspeccion[];
 }
 ```
@@ -699,4 +633,3 @@ backend/src/
     ├── controllers/InspeccionController.ts
     └── routes/inspeccionRoutes.ts
 ```
-
