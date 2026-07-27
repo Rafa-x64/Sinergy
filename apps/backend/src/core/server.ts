@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import prisma from './prisma';
 import { errorHandler } from './middlewares/errorHandler';
 import { notFoundHandler } from './middlewares/notFoundHandler';
+import authRoutes from '../modules/auth/auth.routes'
 
 const app = express();
 
@@ -36,19 +37,12 @@ app.get('/api/health', async (_req, res, next) => {
   }
 });
 
-app.get('/api/version', (_req, res, next) => {
-  try {
-    res.json({ status: 'ok', message: 'Version 1.0' });
-  } catch (error) {
-    next(error);
-  }
-});
-
 // ─── Módulos de funcionalidades ───────────────────────────────────────────────
 // Aquí se registrarán las rutas de cada módulo a medida que se desarrollen:
 // app.use('/api/auth',        authRoutes);
 // app.use('/api/equipment',   equipmentRoutes);
 // app.use('/api/maintenance', maintenanceRoutes);
+app.use('/api/usuarios', authRoutes)
 
 // Manejo de rutas no encontradas y errores globales (deben ir al final)
 app.use(notFoundHandler);

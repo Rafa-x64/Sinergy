@@ -102,11 +102,11 @@ model UsuarioRol {
 // -----------------------------------------------------------------------------
 
 model UbicacionTecnica {
-  id          Int      @id @default(autoincrement())
-  codigo      String   @unique @db.VarChar(50)
-  nombre      String   @db.VarChar(255)
-  descripcion String?  @db.Text
-  creadoEn    DateTime @default(now()) @map("creado_en")
+  id            Int      @id @default(autoincrement())
+  codigo        String   @unique @db.VarChar(50)
+  nombre        String   @db.VarChar(255)
+  descripcion   String?  @db.Text
+  creadoEn      DateTime @default(now()) @map("creado_en")
   actualizadoEn DateTime @updatedAt @map("actualizado_en")
 
   plantas Planta[]
@@ -115,14 +115,14 @@ model UbicacionTecnica {
 }
 
 model Planta {
-  id                  Int               @id @default(autoincrement())
-  codigo              String            @unique @db.VarChar(50)
-  nombre              String            @unique @db.VarChar(255)
+  id                 Int               @id @default(autoincrement())
+  codigo             String            @unique @db.VarChar(50)
+  nombre             String            @unique @db.VarChar(255)
   ubicacionTecnicaId Int?              @map("ubicacion_tecnica_id")
   ubicacionTecnica   UbicacionTecnica? @relation(fields: [ubicacionTecnicaId], references: [id], onDelete: SetNull)
-  activa              Boolean           @default(true)
-  creadoEn            DateTime          @default(now()) @map("creado_en")
-  actualizadoEn       DateTime          @updatedAt @map("actualizado_en")
+  activa             Boolean           @default(true)
+  creadoEn           DateTime          @default(now()) @map("creado_en")
+  actualizadoEn      DateTime          @updatedAt @map("actualizado_en")
 
   lineas Linea[]
 
@@ -185,17 +185,16 @@ model TipoEquipo {
   @@map("tipos_equipo")
 }
 
-
 model MontacargasDetalle {
-  id                      Int    @id @default(autoincrement())
-  equipoId                Int    @unique @map("equipo_id")
-  equipo                  Equipo @relation(fields: [equipoId], references: [id], onDelete: Cascade)
-  denominacion            String @db.VarChar(255)
-  tipoMontacarga          String @default("Montacarga") @map("tipo_montacarga") @db.VarChar(100)
-  marca                   String @db.VarChar(100)
-  modelo                  String @db.VarChar(100)
-  identificacionAbreviada String @map("identificacion_abreviada") @db.VarChar(50)
-  ubicacionTecnicaTexto   String @map("ubicacion_tecnica_texto") @db.VarChar(100)
+  id                      Int     @id @default(autoincrement())
+  equipoId                Int     @unique @map("equipo_id")
+  equipo                  Equipo  @relation(fields: [equipoId], references: [id], onDelete: Cascade)
+  denominacion            String  @db.VarChar(255)
+  tipoMontacarga          String  @default("Montacarga") @map("tipo_montacarga") @db.VarChar(100)
+  marca                   String  @db.VarChar(100)
+  modelo                  String  @db.VarChar(100)
+  identificacionAbreviada String  @map("identificacion_abreviada") @db.VarChar(50)
+  ubicacionTecnicaTexto   String  @map("ubicacion_tecnica_texto") @db.VarChar(100)
   denominacion2           String? @map("denominacion_2") @db.Text
 
   @@map("montacargas_detalles")
@@ -215,23 +214,23 @@ model Componente {
   variables Variable[]
 
   @@index([equipoId])
-  @@index([activo])  // D-05: filtro frecuente en carga de formulario Data-Driven
+  @@index([activo]) // D-05: filtro frecuente en carga de formulario Data-Driven
   @@map("componentes")
 }
 
 model Variable {
-  id            Int            @id @default(autoincrement())
-  componenteId  Int            @map("componente_id")
-  componente    Componente     @relation(fields: [componenteId], references: [id], onDelete: Cascade)
-  nombre        String         @db.VarChar(255)
+  id             Int            @id @default(autoincrement())
+  componenteId   Int            @map("componente_id")
+  componente     Componente     @relation(fields: [componenteId], references: [id], onDelete: Cascade)
+  nombre         String         @db.VarChar(255)
   tipoEvaluacion TipoEvaluacion @map("tipo_evaluacion")
-  unidad        String?        @db.VarChar(20)
-  valorMinimo   Decimal?       @map("valor_minimo") @db.Decimal(12, 4)
-  valorMaximo   Decimal?       @map("valor_maximo") @db.Decimal(12, 4)
-  ordenPosicion Int            @default(0) @map("orden_posicion")
-  activa        Boolean        @default(true)
-  creadoEn      DateTime       @default(now()) @map("creado_en")
-  actualizadoEn DateTime       @updatedAt @map("actualizado_en")
+  unidad         String?        @db.VarChar(20)
+  valorMinimo    Decimal?       @map("valor_minimo") @db.Decimal(12, 4)
+  valorMaximo    Decimal?       @map("valor_maximo") @db.Decimal(12, 4)
+  ordenPosicion  Int            @default(0) @map("orden_posicion")
+  activa         Boolean        @default(true)
+  creadoEn       DateTime       @default(now()) @map("creado_en")
+  actualizadoEn  DateTime       @updatedAt @map("actualizado_en")
 
   opcionesSeleccion  OpcionSeleccion[]
   inspeccionDetalles InspeccionDetalle[]
@@ -315,7 +314,7 @@ model InspeccionAdjunto {
   id            BigInt             @id @default(autoincrement())
   inspeccionId  BigInt             @map("inspeccion_id") // FK a Inspeccion.id (BigInt)
   inspeccion    Inspeccion         @relation(fields: [inspeccionId], references: [id], onDelete: Cascade)
-  detalleId     BigInt?            @map("detalle_id")    // FK a InspeccionDetalle.id (BigInt)
+  detalleId     BigInt?            @map("detalle_id") // FK a InspeccionDetalle.id (BigInt)
   detalle       InspeccionDetalle? @relation(fields: [detalleId], references: [id], onDelete: Cascade)
   rutaArchivo   String             @map("ruta_archivo") @db.VarChar(500)
   nombreArchivo String             @map("nombre_archivo") @db.VarChar(255)
@@ -350,4 +349,3 @@ model AuditoriaLog {
   @@index([creadoEn])
   @@map("auditoria_logs")
 }
-
