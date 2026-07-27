@@ -5,7 +5,7 @@ allowBuilds:
   '@fortawesome/fontawesome-svg-core': set this to true or false
   '@fortawesome/free-solid-svg-icons': set this to true or false
   '@prisma/engines': set this to true or false
-  bcrypt: set this to true or false
+  bcrypt: true
   browser-tabs-lock: set this to true or false
   core-js: set this to true or false
   esbuild: set this to true or false
