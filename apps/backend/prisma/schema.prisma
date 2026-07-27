@@ -16,20 +16,6 @@ datasource db {
 // ENUMS DE DOMINIO Y SISTEMA
 // -----------------------------------------------------------------------------
 
-enum Rol {
-  ADMINISTRADOR
-  SUPERVISOR
-  TECNICO
-}
-
-enum TipoEquipo {
-  MAQUINARIA
-  MONTACARGAS
-  COMPRESOR
-  GENERADOR
-  CHILLER
-}
-
 enum EstadoOperativo {
   OPERATIVO
   INOPERATIVO
@@ -68,24 +54,47 @@ enum OrigenDatos {
 // -----------------------------------------------------------------------------
 
 model Usuario {
-  id           Int       @id @default(autoincrement())
-  nombre       String    @db.VarChar(100)
-  apellido     String    @db.VarChar(100)
-  email        String    @unique @db.VarChar(150)
-  passwordHash String    @map("password_hash") @db.VarChar(255)
-  rol          Rol       @default(TECNICO)
-  activo       Boolean   @default(true)
-  ultimoAcceso DateTime? @map("ultimo_acceso")
-  creadoEn     DateTime  @default(now()) @map("creado_en")
-  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+  id            Int       @id @default(autoincrement())
+  nombre        String    @db.VarChar(100)
+  apellido      String    @db.VarChar(100)
+  email         String    @unique @db.VarChar(150)
+  passwordHash  String    @map("password_hash") @db.VarChar(255)
+  activo        Boolean   @default(true)
+  ultimoAcceso  DateTime? @map("ultimo_acceso")
+  creadoEn      DateTime  @default(now()) @map("creado_en")
+  actualizadoEn DateTime  @updatedAt @map("actualizado_en")
 
   // Relaciones de auditoría e inspección
-  inspeccionesElaboradas Inspeccion[]  @relation("ElaboradoPor")
-  inspeccionesRevisadas  Inspeccion[]  @relation("RevisadoPor")
-  inspeccionesAprobadas  Inspeccion[]  @relation("AprobadoPor")
+  inspeccionesElaboradas Inspeccion[]   @relation("ElaboradoPor")
+  inspeccionesRevisadas  Inspeccion[]   @relation("RevisadoPor")
+  inspeccionesAprobadas  Inspeccion[]   @relation("AprobadoPor")
   logsAuditoria          AuditoriaLog[]
 
+  rolesUsuario UsuarioRol[]
+
   @@map("usuarios")
+}
+
+model Rol {
+  id          Int     @id @default(autoincrement())
+  nombre      String  @unique @db.VarChar(50)
+  descripcion String? @db.Text
+
+  rolesUsuario UsuarioRol[]
+
+  @@map("roles")
+}
+
+model UsuarioRol {
+  id        Int @id @default(autoincrement())
+  rolId     Int @map("rol_id")
+  usuarioId Int @map("usuario_id")
+
+  rol     Rol     @relation(fields: [rolId], references: [id], onDelete: Cascade)
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([rolId, usuarioId], name: "uq_usuario_rol")
+  @@map("roles_usuario")
 }
 
 // -----------------------------------------------------------------------------
@@ -142,9 +151,6 @@ model Equipo {
   id              Int             @id @default(autoincrement())
   codigo          String          @unique @db.VarChar(100)
   nombre          String          @db.VarChar(255)
-  tipoEquipo      TipoEquipo      @map("tipo_equipo")
-  lineaId         Int?            @map("linea_id")
-  linea           Linea?          @relation(fields: [lineaId], references: [id], onDelete: SetNull)
   serial          String?         @db.VarChar(100)
   marca           String?         @db.VarChar(100)
   modelo          String?         @db.VarChar(100)
@@ -153,15 +159,32 @@ model Equipo {
   creadoEn        DateTime        @default(now()) @map("creado_en")
   actualizadoEn   DateTime        @updatedAt @map("actualizado_en")
 
+  lineaId      Int? @map("linea_id")
+  tipoEquipoId Int  @map("tipo_equipo_id")
+
+  linea      Linea?     @relation(fields: [lineaId], references: [id], onDelete: SetNull)
+  tipoEquipo TipoEquipo @relation(fields: [tipoEquipoId], references: [id], onDelete: Restrict)
+
   montacargasDetalle MontacargasDetalle?
   componentes        Componente[]
   inspecciones       Inspeccion[]
 
   @@index([lineaId])
-  @@index([tipoEquipo])
+  @@index([tipoEquipoId])
   @@index([estadoOperativo])
   @@map("equipos")
 }
+
+model TipoEquipo {
+  id          Int     @id @default(autoincrement())
+  nombre      String  @unique @db.VarChar(50)
+  descripcion String? @db.Text
+
+  equipos Equipo[]
+
+  @@map("tipos_equipo")
+}
+
 
 model MontacargasDetalle {
   id                      Int    @id @default(autoincrement())
