@@ -17,6 +17,12 @@ El formato sigue el estándar [Keep a Changelog](https://keepachangelog.com/es/1
 ## [Unreleased]
 
 ### Added
+- **Autenticación Segura mediante Doble Token JWT (Access Token + Refresh Cookie)**: Implementación de Access Token de vida corta (15 min) retornado en JSON y Refresh Token de vida larga (7 días) cifrado en HttpOnly Cookie con `SameSite: strict`. (`apps/backend/src/infrastructure/security/jwt.ts`, `apps/backend/src/core/middlewares/autenticar.ts`, `apps/backend/src/core/middlewares/refreshToken.ts`)
+- **Validación de Payloads con Zod**: Middleware factory `validarSchema` que ejecuta validación estricta de esquemas Zod en tiempo de ejecución (`loginSchema`, `crearUsuarioSchema`, `actualizarUsuarioSchema`). (`apps/backend/src/core/middlewares/validarSchema.ts`, `apps/backend/src/modules/auth/auth.schemas.ts`)
+- **Contratos de API Actualizados (`docs/api/contratos.md`)**: Documentación detallada de contratos HTTP, headers, cookies, esquemas Zod y códigos de respuesta para todos los endpoints de autenticación y gestión de usuarios.
+
+### Changed
+- **Consolidación de Arquitectura Modular basada en Módulos (`routes`, `controller`, `service`, `schemas`)**: Eliminación completa de carpetas DDD-Lite (`src/domain/`, `src/application/`, `src/interfaces/`) en favor de módulos aislados y autocontenidos en `src/modules/auth/`.
 - Endpoints de diagnóstico y estado en el backend (`apps/backend/src/index.ts`):
   - `GET /`: Información base de la API (`name`, `version`, `status`, `healthCheck`).
   - `GET /api/version`: Consulta directa de versión activa.

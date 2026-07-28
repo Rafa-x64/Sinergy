@@ -2,9 +2,14 @@
 trigger: always_on
 ---
 
-# Reglas de Backend (Arquitectura DDD-Lite)
-1. Separación de Capas: Mantén una separación estricta entre Dominio (lógica de negocio, entidades), Aplicación (casos de uso) e Infraestructura (controladores, repositorios, bases de datos).
-2. Seguridad y Autenticación: Implementa autenticación robusta mediante Access Tokens (JWT). Protege todas las rutas privadas.
-3. Middlewares: Utiliza middlewares para la validación de peticiones, sanitización de entradas, verificación de roles y manejo de errores globales. Los controladores deben permanecer limpios y solo orquestar el flujo.
-4. Rendimiento: Las consultas a la base de datos deben estar optimizadas. Prevé cuellos de botella y explica cómo la arquitectura soporta el crecimiento exponencial del sistema.
-5. Fiabilidad: El código debe ser funcional, estar probado lógicamente y manejar excepciones de manera controlada sin exponer información sensible en los mensajes de error (Stack traces).
+# Reglas de Backend (Arquitectura Modular Basada en Módulos / Features)
+1. Estructura por Módulos: Cada módulo (`src/modules/<modulo>/`) debe ser autocontenido y agrupar sus piezas: `<modulo>.routes.ts`, `<modulo>.controller.ts`, `<modulo>.service.ts` y `<modulo>.schemas.ts` (Zod). Queda prohibida la arquitectura DDD-Lite o capas globales dispersas (`domain`, `application`, `interfaces`).
+2. Capa Core Transversal: La carpeta `src/core/` aloja únicamente utilidades globales y transversales como la conexión a BD (`prisma.ts`), configuración del servidor HTTP (`server.ts`), middlewares globales (`autenticar.ts`, `validarSchema.ts`, `errorHandler.ts`) y tipos globales (`types/auth.types.ts`, `types/express.d.ts`).
+3. Separación de Responsabilidades:
+   - **Routes**: Define las rutas y aplica middlewares de seguridad y validación de schema Zod.
+   - **Controller**: Recibe la petición HTTP (`req`), delega al servicio correspondiente, gestiona cookies/headers y envía la respuesta HTTP (`res`). Sin lógica de BD ni reglas de negocio extensas.
+   - **Service**: Concentra las reglas de negocio y las consultas/modificaciones a la base de datos a través de Prisma.
+   - **Schemas**: Define las validaciones de entrada con Zod y exporta los tipos DTO correspondientes.
+4. Seguridad y Autenticación: Autenticación mediante estrategia de doble token JWT (Access Token en memoria de vida corta + Refresh Token en HttpOnly Cookie). Protege todas las rutas privadas con el middleware `validarJWT`.
+5. Middlewares: Utilizar middlewares para la validación de peticiones, sanitización de entradas, verificación de roles y manejo de errores globales.
+6. Rendimiento y Fiabilidad: Consultas a la base de datos optimizadas con Prisma. Manejo explícito de excepciones lanzando `AppError` sin exponer stack traces sensibles en producción.

@@ -40,15 +40,17 @@ Lista de tareas organizada por fases. Marca las tareas a medida que se completan
 ## Fase 1 — Autenticación y Gestión de Usuarios
 
 ### Backend
-- `[ ]` Modelo `Usuario` completo en Prisma con hash de contraseña (bcrypt)
-- `[ ]` `POST /api/auth/login` — Genera JWT con payload `{ id, email, rol }`
-- `[ ]` `POST /api/auth/logout` — Invalida el token (blacklist o refresh token)
-- `[ ]` Middleware `authMiddleware.ts` — Verifica JWT en rutas protegidas
-- `[ ]` Middleware `roleGuard.ts` — Valida que el rol del usuario tenga acceso a la ruta
-- `[ ]` `GET /api/usuarios` — Lista usuarios (solo SUPERVISOR y ADMIN)
-- `[ ]` `POST /api/usuarios` — Crear usuario técnico (solo SUPERVISOR)
-- `[ ]` `PATCH /api/usuarios/:id` — Actualizar datos y rol
-- `[ ]` `DELETE /api/usuarios/:id` — Desactivar usuario (soft delete)
+- `[x]` Modelo `Usuario` completo en Prisma con hash de contraseña (bcrypt)
+- `[x]` `POST /api/auth/login` — Genera JWT Access Token (15 min) + Refresh Cookie (7 días)
+- `[x]` `POST /api/auth/logout` — Invalida la cookie HttpOnly de Refresh Token
+- `[x]` `POST /api/auth/refresh` — Renueva el Access Token usando la HttpOnly Cookie
+- `[x]` Middleware `autenticar.ts` (`validarJWT`) — Verifica JWT en rutas protegidas
+- `[x]` Middleware `validarSchema.ts` — Valida esquemas Zod en tiempo de ejecución
+- `[x]` `GET /api/auth/` — Lista todos los usuarios (protegido con JWT)
+- `[x]` `GET /api/auth/listar` — Lista usuarios activos (protegido con JWT)
+- `[x]` `POST /api/auth/crear` — Crear usuario (protegido con JWT)
+- `[x]` `PATCH /api/auth/editar/:id` — Actualizar datos (protegido con JWT)
+- `[x]` `DELETE /api/auth/eliminar/:id` — Deshabilitar usuario (protegido con JWT)
 
 ### Frontend
 - `[ ]` Vista `LoginView.vue` — Formulario con VeeValidate + Yup
@@ -148,7 +150,7 @@ Lista de tareas organizada por fases. Marca las tareas a medida que se completan
 - `[ ]` Pipeline CI/CD básico en GitHub Actions
 - `[ ]` Script de seed con datos reales de Maestros.xlsx para staging
 - `[ ]` Monitoreo de errores del backend (Sentry u otro)
-- `[ ]` Documentar API REST en `docs/api/` (contratos de endpoints)
+- `[x]` Documentar API REST en `docs/api/contratos.md` (contratos de endpoints, esquemas Zod, cookies y respuestas)
 
 ---
 

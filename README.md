@@ -22,7 +22,7 @@ Sinergy está estructurado como un **Monorepo** gestionado con `pnpm workspaces`
 - **Entorno:** Node.js + Express + TypeScript
 - **Base de Datos:** PostgreSQL (Configuración dinámica vía `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`)
 - **ORM:** Prisma (`prisma.config.ts` + `schema.prisma`)
-- **Arquitectura:** DDD-Lite (Domain-Driven Design simplificado)
+- **Arquitectura:** Modular / Feature-Based (Routes, Controller, Service, Schemas)
 - **Endpoints de Diagnóstico:** `GET /` (Info API), `GET /api/version`, `GET /api/health`
 
 ---
@@ -57,7 +57,7 @@ Toda la inteligencia, reglas de negocio y directrices del proyecto se encuentran
 
 | Documento | Descripción |
 |---|---|
-|  **[Arquitectura](file:///c:/xampp/htdocs/Sinergy/docs/architecture.md)** | Visión general del monorepo, flujo HTTP, diseño DDD-Lite y diagramas de capas. |
+|  **[Arquitectura](file:///c:/xampp/htdocs/Sinergy/docs/architecture.md)** | Visión general del monorepo, flujo HTTP, diseño por Módulos (Routes-Controller-Service-Schemas) y diagramas. |
 | ‍ **[Guía del Desarrollador](file:///c:/xampp/htdocs/Sinergy/docs/guia-desarrollador.md)** | Tutorial cronológico para crear features completos de principio a fin. |
 |  **[Librerías (Extensions)](file:///c:/xampp/htdocs/Sinergy/docs/extensions/extensions.md)** | Documentación y ejemplos de uso de cada librería instalada (Axios, Prisma, Pinia, etc.). |
 | ️ **[Configuración (Setup)](file:///c:/xampp/htdocs/Sinergy/docs/setup.md)** | Cómo instalar y arrancar el proyecto desde cero sin errores. |
