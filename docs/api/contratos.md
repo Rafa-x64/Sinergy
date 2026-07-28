@@ -1,194 +1,273 @@
 # Contratos de API (API Contracts)
 
-Este documento define la estructura de las peticiones y respuestas para los endpoints principales de la API de Sinergy. Se utiliza como referencia para asegurar que el Frontend (Vue) y el Backend (Express) se comuniquen correctamente.
+Este documento define la estructura oficial de las peticiones, validaciones y respuestas para los endpoints de la API de Sinergy. Se utiliza como referencia estricta para la comunicación entre Frontend (Vue 3) y Backend (Express + TypeScript).
 
-## Formato de Respuestas (Estándar)
-Todas las respuestas exitosas o fallidas seguirán esta estructura base:
+---
 
-**Éxito (2xx):**
+## Formato Estándar de Respuestas
+
+Todas las respuestas de la API siguen una estructura JSON uniforme:
+
+### Petición Exitosa (2xx)
 ```json
 {
   "success": true,
-  "data": { ... },
-  "message": "Operación exitosa" 
+  "message": "Mensaje descriptivo opcional",
+  "data": { ... }
 }
 ```
 
-**Error (4xx, 5xx):**
+### Petición Fallida (4xx, 5xx)
 ```json
 {
   "success": false,
   "error": {
-    "message": "Descripción amigable del error",
-    "stack": "Error: ... (solo presente en desarrollo para errores 500+)"
+    "message": "Descripción del error para el usuario o desarrollador",
+    "stack": "Error: ... (únicamente en desarrollo para errores HTTP 500+)"
   }
 }
 ```
 
 > [!NOTE]
-> En entorno de desarrollo (`NODE_ENV !== 'production'`), la propiedad `stack` solo se retorna para errores internos del servidor (`statusCode >= 500`). Los errores de cliente (4xx) omiten el rastreo de pila por seguridad y legibilidad.
+> En entorno de desarrollo (`NODE_ENV !== 'production'`), la propiedad `stack` solo se incluye en respuestas con código HTTP 500+. Los errores de cliente (4xx) omiten el rastreo de pila.
 
 ---
 
-## 0. Estado del Sistema y Salud
+## 0. Diagnóstico y Salud del Servidor
 
 ### `GET /`
-Retorna metadatos informativos sobre la API de Sinergy.
-
-**Response (200 OK):**
-```json
-{
-  "name": "Sinergy API Backend",
-  "version": "1.0",
-  "status": "online",
-  "healthCheck": "/api/health"
-}
-```
-
-### `GET /api/version`
-Consulta la versión activa del backend.
-
-**Response (200 OK):**
-```json
-{
-  "status": "ok",
-  "message": "Version 1.0"
-}
-```
+Retorna metadatos del estado general de la API.
+- **Acceso:** Público
+- **Response (200 OK):**
+  ```json
+  {
+    "name": "Sinergy API Backend",
+    "version": "1.0",
+    "status": "online",
+    "healthCheck": "/api/health"
+  }
+  ```
 
 ### `GET /api/health`
-Verifica la salud del servidor y la conectividad activa con la base de datos PostgreSQL mediante Prisma.
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
+Verifica la conectividad activa con la base de datos PostgreSQL mediante Prisma.
+- **Acceso:** Público
+- **Response (200 OK):**
+  ```json
+  {
     "status": "ok",
-    "timestamp": "2026-07-23T19:30:00.000Z",
-    "database": "connected"
+    "message": "Sinergy Backend running",
+    "db": "connected"
   }
-}
-```
+  ```
 
-## 1. Autenticación
+---
+
+## 1. Módulo de Autenticación (`/api/auth`)
 
 ### `POST /api/auth/login`
-Autentica a un usuario y devuelve un JSON Web Token (JWT).
+Autentica al usuario contra la base de datos (hashing bcrypt) y emite un Access Token en el body más un Refresh Token cifrado en una HttpOnly Cookie.
 
-**Request Body:**
-```json
-{
-  "email": "tecnico@sinergy.com",
-  "password": "mypassword123"
-}
-```
+- **Acceso:** Público
+- **Request Headers:** `Content-Type: application/json`
+- **Request Body (Zod `loginSchema`):**
+  ```json
+  {
+    "email": "alvarezrafaelat@gmail.com",
+    "password": "rafa123"
+  }
+  ```
+  *Validaciones:*
+  - `email`: Cadena requerida, formato válido de correo electrónico. Se le aplica `.trim()` y `.toLowerCase()` automáticamente.
+  - `password`: Cadena requerida.
 
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "user": {
-      "id": "uuid-1234",
-      "email": "tecnico@sinergy.com",
-      "nombre": "Juan Pérez",
-      "rol": "TECNICO",
-      "plantaId": "planta-xyz"
+- **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "message": "Sesión iniciada correctamente",
+    "data": {
+      "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
     }
   }
-}
-```
+  ```
+- **Set-Cookie (Header):**
+  `refreshToken=<jwt>; Path=/; HttpOnly; SameSite=Strict; Max-Age=604800` (7 días)
+
+- **Respuestas de Error:**
+  - `401 Unauthorized`: `"Credenciales inválidas"` (si el correo o la contraseña son incorrectos o el usuario está inactivo).
+  - `422 Unprocessable Entity`: `"Datos de entrada inválidos: El formato del email no es válido"`.
 
 ---
 
-## 2. Maestros (Plantas, Equipos, Técnicos)
+### `POST /api/auth/refresh`
+Renueva el Access Token utilizando la HttpOnly Cookie del Refresh Token.
 
-### `GET /api/equipos`
-Obtiene la lista de equipos, opcionalmente filtrada por planta.
-
-**Query Parameters:**
-- `plantaId` (opcional): ID de la planta.
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": "eq-1",
-      "codigo": "MC-01",
-      "tipo": "MONTACARGAS",
-      "marca": "Toyota",
-      "plantaId": "planta-xyz"
+- **Acceso:** Requiere Cookie `refreshToken`
+- **Request Headers:** `Cookie: refreshToken=<token>`
+- **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
     }
-  ]
-}
-```
+  }
+  ```
+- **Respuestas de Error:**
+  - `401 Unauthorized`: `"No se proporcionó refresh token"` o `"La sesión ha expirado, inicie sesión nuevamente"`.
 
 ---
 
-## 3. Inspecciones
+### `POST /api/auth/logout`
+Cierra la sesión del usuario eliminando la cookie HttpOnly de Refresh Token.
 
-### `POST /api/inspecciones/montacargas`
-Registra una nueva inspección de montacargas.
+- **Acceso:** Público / Autenticado
+- **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "message": "Sesión cerrada correctamente"
+  }
+  ```
+- **Set-Cookie (Header):** Limpia la cookie `refreshToken`.
 
-**Headers:**
-- `Authorization: Bearer <token>`
+---
 
-**Request Body:**
-```json
-{
-  "equipoId": "eq-1",
-  "fechaInspeccion": "2026-07-20T10:00:00Z",
-  "turno": "MAÑANA",
-  "horometro": 1500,
-  "nivelesAceite": "NORMAL",
-  "frenos": "NORMAL",
-  "fugas": "REVISION",
-  "observaciones": "Pequeña fuga de aceite hidráulico detectada.",
-  "isOfflineSync": false
-}
-```
+## 2. Gestión de Usuarios (`/api/auth`)
 
-**Response (201 Created):**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "insp-100",
-    "status": "GUARDADO"
-  },
-  "message": "Inspección registrada con éxito."
-}
-```
+### `GET /api/auth/`
+Obtiene la lista completa de todos los usuarios registrados en el sistema, ordenados por nombre de forma ascendente.
 
-### `POST /api/inspecciones/batch`
-Endpoint utilizado por el Frontend para sincronizar los registros guardados en offline (Dexie.js) cuando se recupera la conexión.
+- **Acceso:** Protegido (`Authorization: Bearer <accessToken>`)
+- **Request Headers:** `Authorization: Bearer <accessToken>`
+- **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "data": [
+      {
+        "id": 4,
+        "nombre": "Rafael",
+        "apellido": "Alvarez",
+        "email": "alvarezrafaelat@gmail.com",
+        "activo": true,
+        "ultimoAcceso": "2026-07-28T14:32:23.875Z",
+        "creadoEn": "2026-07-28T13:39:50.698Z",
+        "actualizadoEn": "2026-07-28T14:32:23.876Z"
+      }
+    ]
+  }
+  ```
+- **Respuestas de Error:**
+  - `401 Unauthorized`: `"No se proporcionó un token de autenticación"` o `"Token de sesión inválido"`.
 
-**Request Body:**
-```json
-{
-  "inspecciones": [
-    {
-      "tipo": "MONTACARGAS",
-      "payload": { /* Datos de la inspección */ },
-      "offlineId": "local-uuid-1"
+---
+
+### `GET /api/auth/listar`
+Obtiene la lista exclusiva de usuarios **activos** (habilitados) en el sistema.
+
+- **Acceso:** Protegido (`Authorization: Bearer <accessToken>`)
+- **Request Headers:** `Authorization: Bearer <accessToken>`
+- **Response (200 OK):** Mismo formato que `GET /api/auth/`, filtrando únicamente `activo: true`.
+
+---
+
+### `POST /api/auth/crear`
+Registra un nuevo usuario en la base de datos con contraseña encriptada mediante bcrypt.
+
+- **Acceso:** Protegido (`Authorization: Bearer <accessToken>`)
+- **Request Headers:** `Authorization: Bearer <accessToken>`, `Content-Type: application/json`
+- **Request Body (Zod `crearUsuarioSchema`):**
+  ```json
+  {
+    "nombre": "Carlos",
+    "apellido": "Mendoza",
+    "email": "carlos.mendoza@sinergy.com",
+    "password": "Password123!",
+    "activo": true
+  }
+  ```
+  *Validaciones:*
+  - `nombre` / `apellido`: Cadena de 2 a 100 caracteres.
+  - `email`: Formato válido de email (max 150 caracteres).
+  - `password`: Mínimo 8 caracteres, debe contener al menos 1 mayúscula, 1 minúscula y 1 número.
+  - `activo`: Booleano opcional (por defecto `true`).
+
+- **Response (201 Created):**
+  ```json
+  {
+    "success": true,
+    "message": "Usuario creado correctamente",
+    "data": {
+      "id": 5,
+      "nombre": "Carlos",
+      "apellido": "Mendoza",
+      "email": "carlos.mendoza@sinergy.com",
+      "activo": true,
+      "ultimoAcceso": "2026-07-28T14:35:00.000Z",
+      "creadoEn": "2026-07-28T14:35:00.000Z",
+      "actualizadoEn": "2026-07-28T14:35:00.000Z"
     }
-  ]
-}
-```
+  }
+  ```
+- **Respuestas de Error:**
+  - `409 Conflict`: `"Ya existe un usuario registrado con el correo carlos.mendoza@sinergy.com"`.
+  - `422 Unprocessable Entity`: Error de validación Zod.
 
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "procesadas": 1,
-    "fallidas": 0,
-    "errores": []
-  },
-  "message": "Sincronización completada."
-}
-```
+---
+
+### `PATCH /api/auth/editar/:id`
+Actualiza parcialmente los datos de un usuario existente.
+
+- **Acceso:** Protegido (`Authorization: Bearer <accessToken>`)
+- **URL Parameters:** `id` (Número entero de usuario)
+- **Request Body (Zod `actualizarUsuarioSchema`):**
+  ```json
+  {
+    "nombre": "Carlos Alberto",
+    "activo": false
+  }
+  ```
+- **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "message": "Usuario actualizado correctamente",
+    "data": {
+      "id": 5,
+      "nombre": "Carlos Alberto",
+      "apellido": "Mendoza",
+      "email": "carlos.mendoza@sinergy.com",
+      "activo": false,
+      "actualizadoEn": "2026-07-28T14:36:00.000Z"
+    }
+  }
+  ```
+- **Respuestas de Error:**
+  - `400 Bad Request`: `"El ID proporcionado no es válido"` o `"Debe proporcionar al menos un campo para actualizar"`.
+  - `404 Not Found`: `"El usuario con el ID 999 no existe"`.
+
+---
+
+### `DELETE /api/auth/eliminar/:id`
+Deshabilita lógicamente a un usuario en el sistema (`activo = false`).
+
+- **Acceso:** Protegido (`Authorization: Bearer <accessToken>`)
+- **URL Parameters:** `id` (Número entero de usuario)
+- **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "message": "Usuario deshabilitado correctamente",
+    "data": {
+      "id": 5,
+      "nombre": "Carlos Alberto",
+      "email": "carlos.mendoza@sinergy.com",
+      "activo": false
+    }
+  }
+  ```
+- **Respuestas de Error:**
+  - `400 Bad Request`: `"El ID proporcionado no es válido"`.
+  - `409 Conflict`: `"El usuario con id 5 ya fue deshabilitado"`.
+  - `404 Not Found`: `"Usuario con id 999 no encontrado"`.

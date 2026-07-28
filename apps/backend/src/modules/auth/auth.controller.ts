@@ -1,137 +1,164 @@
-import { Request, Response, NextFunction } from "express";
-import { Prisma } from "@prisma/client";
-import { authService } from "./auth.service";
+import { Request, Response, NextFunction } from 'express'
+import { Prisma } from '@prisma/client'
+import { authService } from './auth.service'
+
+const IS_PRODUCTION = process.env.NODE_ENV === 'production'
+
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: IS_PRODUCTION,
+  sameSite: 'strict' as const,
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días en ms
+}
 
 export const authController = {
   async registrar(req: Request, res: Response, next: NextFunction) {
     try {
-      const fechaActual: Date = new Date();
-      const { nombre, apellido, email, password, activo } = req.body;
-      const usuarioExistente = await authService.buscarEmail(email);
+      const usuarioExistente = await authService.buscarPorEmail(req.body.email)
 
       if (usuarioExistente !== null) {
         return res.status(409).json({
-          status: "error",
-          message: `el usuario con el correo ${email} ya existe`,
-        });
+          success: false,
+          error: { message: `Ya existe un usuario registrado con el correo ${req.body.email}` },
+        })
       }
 
-      const usuario = {
-        nombre,
-        apellido,
-        email,
-        password: password,
-        activo: activo ?? true,
-        ultimoAcceso: fechaActual,
-        creadoEn: fechaActual,
-        actualizadoEn: fechaActual,
-      };
+      const usuario = await authService.crear(req.body)
 
-      const crear = await authService.crear(usuario);
-
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
-        message: "Usuario creado correctamente",
-        data: crear,
-      });
+        message: 'Usuario creado correctamente',
+        data: usuario,
+      })
     } catch (error) {
-      next(error);
+      next(error)
     }
   },
 
   async actualizar(req: Request, res: Response, next: NextFunction) {
     try {
-      const actualizaciones = req.body;
-      const id = parseInt(req.params.id, 10);
-      const parsedId = Number.isNaN(id) ? null : id;
+      const id = parseInt(req.params.id, 10)
 
-      if (parsedId === null) {
+      if (Number.isNaN(id)) {
         return res.status(400).json({
-          status: "error",
-          message: "El ID proporcionado no es válido",
-        });
+          success: false,
+          error: { message: 'El ID proporcionado no es válido' },
+        })
       }
 
-      if (Object.keys(actualizaciones).length === 0) {
+      if (Object.keys(req.body).length === 0) {
         return res.status(400).json({
-          status: "error",
-          message: "Debe proporcionar al menos un campo para actualizar",
-        });
+          success: false,
+          error: { message: 'Debe proporcionar al menos un campo para actualizar' },
+        })
       }
 
-      const actualizado = await authService.actualizar(
-        parsedId,
-        actualizaciones,
-      );
+      const actualizado = await authService.actualizar(id, req.body)
 
       return res.status(200).json({
         success: true,
-        message: "Usuario actualizado correctamente",
+        message: 'Usuario actualizado correctamente',
         data: actualizado,
-      });
+      })
     } catch (error: unknown) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2025"
+        error.code === 'P2025'
       ) {
         return res.status(404).json({
-          status: "error",
-          message: `El usuario con el ID ${req.params.id} no existe`,
-        });
+          success: false,
+          error: { message: `El usuario con el ID ${req.params.id} no existe` },
+        })
       }
-      next(error);
+      next(error)
     }
   },
 
   async listarTodos(req: Request, res: Response, next: NextFunction) {
     try {
-      const usuarios = await authService.obtenerTodos();
-      res.status(202).json({ success: true, data: usuarios });
+      const usuarios = await authService.obtenerTodos()
+      return res.status(200).json({ success: true, data: usuarios })
     } catch (error) {
-      next(error);
+      next(error)
     }
   },
 
   async listar(req: Request, res: Response, next: NextFunction) {
     try {
-      const usuarios = await authService.obtenerHabilitados();
-      res.status(202).json({ success: true, data: usuarios });
+      const usuarios = await authService.obtenerHabilitados()
+      return res.status(200).json({ success: true, data: usuarios })
     } catch (error) {
-      next(error);
+      next(error)
     }
   },
 
   async deshabilitar(req: Request, res: Response, next: NextFunction) {
     try {
-      const id = parseInt(req.params.id);
-      const parsedId = Number.isNaN(id) ? null : id;
-      if (parsedId === null) {
-        return res
-          .status(400)
-          .json({ status: "error", message: "id inválido" });
+      const id = parseInt(req.params.id, 10)
+
+      if (Number.isNaN(id)) {
+        return res.status(400).json({
+          success: false,
+          error: { message: 'El ID proporcionado no es válido' },
+        })
       }
 
-      const yaInactivo = await authService.validarActivo(parsedId);
+      const yaInactivo = await authService.estaInactivo(id)
       if (yaInactivo) {
         return res.status(409).json({
-          status: "warning",
-          message: `usuario con id ${parsedId} ya fue eliminado`,
-        });
+          success: false,
+          error: { message: `El usuario con id ${id} ya fue deshabilitado` },
+        })
       }
 
-      const eliminado = await authService.deshabilitar(parsedId);
+      const eliminado = await authService.deshabilitar(id)
       if (eliminado === null) {
         return res.status(404).json({
-          status: "error",
-          message: `usuario con id ${parsedId} no encontrado`,
-        });
+          success: false,
+          error: { message: `Usuario con id ${id} no encontrado` },
+        })
       }
 
-      return res
-        .status(200)
-        .json({ status: "ok", message: "usuario eliminado", data: eliminado });
+      return res.status(200).json({
+        success: true,
+        message: 'Usuario deshabilitado correctamente',
+        data: eliminado,
+      })
     } catch (error) {
-      next(error);
+      next(error)
     }
   },
-};
+
+  async iniciarSesion(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { accessToken, refreshToken } = await authService.iniciarSesion(req.body)
+
+      res.cookie('refreshToken', refreshToken, COOKIE_OPTIONS)
+
+      return res.status(200).json({
+        success: true,
+        message: 'Sesión iniciada correctamente',
+        data: { accessToken },
+      })
+    } catch (error) {
+      next(error)
+    }
+  },
+
+  async cerrarSesion(req: Request, res: Response, next: NextFunction) {
+    try {
+      res.clearCookie('refreshToken', {
+        httpOnly: true,
+        secure: IS_PRODUCTION,
+        sameSite: 'strict',
+      })
+
+      return res.status(200).json({
+        success: true,
+        message: 'Sesión cerrada correctamente',
+      })
+    } catch (error) {
+      next(error)
+    }
+  },
+}

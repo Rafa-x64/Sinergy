@@ -1,84 +1,140 @@
 # Políticas de Seguridad — Sinergy
 
-Este documento describe las prácticas, configuraciones y reglas de seguridad implementadas en el sistema Sinergy, cubriendo tanto el backend como el frontend. Todas las nuevas funcionalidades deben adherirse a estas pautas.
+Este documento describe las prácticas, configuraciones y reglas de seguridad implementadas en el sistema Sinergy. Todas las nuevas funcionalidades deben adherirse a estas pautas.
 
 ---
 
 ## 1. Autenticación y Autorización
 
-### 1.1 JSON Web Tokens (JWT)
-- Se utiliza JWT para mantener la sesión de los usuarios de forma stateless.
-- **Vida útil corta (Access Token):** Los tokens de acceso deben expirar en un tiempo corto (ej. 15-30 minutos).
-- **Refresh Tokens:** Para mantener la sesión del usuario en planta sin que tenga que loguearse constantemente, se debe implementar una estrategia de Refresh Tokens almacenados en cookies seguras (HttpOnly, Secure) o rotación de tokens.
-- **Secreto Fuerte:** La firma de los tokens (`JWT_SECRET`) debe ser una cadena aleatoria criptográficamente segura, guardada exclusivamente en las variables de entorno (`.env`) del servidor.
+### 1.1 JSON Web Tokens (JWT) — Implementación Actual
 
-### 1.2 Control Basado en Roles (RBAC)
-- Existen tres roles en el sistema: `TECNICO`, `SUPERVISOR`, `ADMINISTRADOR` (asignado al Jefe de Mantenimiento / Gerencia).
-- **Backend:** Toda ruta protegida debe verificar el JWT mediante el `authMiddleware`. Las rutas sensibles deben ser validadas adicionalmente por el `roleGuard`.
-- **Frontend:** Vue Router utiliza Meta Fields (`meta.roles`) para redirigir a los usuarios que intenten acceder a vistas no permitidas. Sin embargo, la seguridad real **siempre debe validarse en el backend**.
+El sistema usa una estrategia de doble token:
+
+| Token | Vida útil | Transporte | Almacenamiento |
+|-------|-----------|------------|----------------|
+| **Access Token** | 15 minutos | Header `Authorization: Bearer <token>` | Memoria del cliente (no localStorage) |
+| **Refresh Token** | 7 días | HttpOnly Cookie (`refreshToken`) | Cookie del navegador |
+
+**Archivos clave:**
+- `apps/backend/src/infrastructure/security/jwt.ts` — firma y verificación
+- `apps/backend/src/application/auth/IniciarSesionUseCase.ts` — emisión de tokens tras login exitoso
+- `apps/backend/src/core/middlewares/autenticar.ts` — middleware `validarJWT`
+- `apps/backend/src/core/middlewares/refreshToken.ts` — endpoint de renovación
+
+**Variables de entorno requeridas:**
+```
+JWT_ACCESS_SECRET=<string aleatorio, mínimo 64 chars>
+JWT_REFRESH_SECRET=<string aleatorio distinto, mínimo 64 chars>
+```
+
+Generar en producción con:
+```bash
+node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+```
+
+**Seguridad de la HttpOnly Cookie:**
+```
+HttpOnly: true   → no accesible desde JavaScript (previene XSS)
+Secure: true     → solo HTTPS (activado en NODE_ENV=production)
+SameSite: Strict → previene CSRF
+MaxAge: 7 días
+```
+
+**Por qué no localStorage para el Access Token:**
+Guardar el access token en localStorage lo expone a cualquier XSS. Al mantenerlo solo en memoria de la aplicación, se anula ese vector de ataque. El costo es que se pierde al recargar la página, lo que se compensa con el refresh token en cookie.
+
+### 1.2 Flujo de Autenticación
+
+```
+POST /api/auth/login
+  → Valida schema Zod
+  → IniciarSesionUseCase verifica credenciales
+  → Consulta roles del usuario
+  → Emite accessToken (body) + refreshToken (HttpOnly Cookie)
+
+GET /api/auth/* (rutas protegidas)
+  → Middleware validarJWT extrae Bearer token del header
+  → Verifica firma y expiración
+  → Adjunta TokenPayload a req.usuario
+
+POST /api/auth/refresh
+  → Lee cookie refreshToken
+  → Verifica firma y expiración
+  → Re-consulta usuario y roles (por si cambiaron)
+  → Emite nuevo accessToken
+
+POST /api/auth/logout
+  → Limpia cookie refreshToken con clearCookie
+```
+
+### 1.3 Protección contra User Enumeration
+
+El endpoint de login devuelve el mismo mensaje `"Credenciales inválidas"` tanto si el email no existe como si la contraseña es incorrecta. Esto impide que un atacante deduzca si un email está registrado.
+
+### 1.4 Control Basado en Roles (RBAC)
+
+- Roles definidos en tabla `Rol` del schema Prisma.
+- El JWT contiene el array `roles` del usuario en el momento del login.
+- Los roles se refrescan automáticamente al rotar el access token.
+- **Regla:** La autorización por rol **siempre** se valida en el backend. El frontend solo usa los roles para ocultar/mostrar UI.
 
 ---
 
-## 2. Protección Contra Vulnerabilidades Comunes
+## 2. Validación y Sanitización de Datos
 
-### 2.1 Inyección SQL
-- Al utilizar **Prisma ORM** en lugar de consultas SQL crudas, el sistema está inherentemente protegido contra la gran mayoría de ataques de Inyección SQL. Prisma parametriza todas las consultas automáticamente.
-- **Regla:** Nunca utilizar `$queryRawUnsafe` con datos provenientes del usuario. Si se requiere usar raw SQL, siempre usar `$queryRaw` que soporta literales parametrizados de forma segura.
+Toda entrada al backend se trata como potencialmente maliciosa.
 
-### 2.2 Cross-Site Scripting (XSS)
-- **Frontend:** Vue.js escapa automáticamente el HTML en la interpolación de texto (`{{ }}`).
-- **Regla:** Queda estrictamente prohibido usar la directiva `v-html` con contenido generado por el usuario, como observaciones o comentarios de inspecciones. Si es absolutamente necesario, el contenido debe ser procesado por una librería de sanitización robusta como `DOMPurify` antes de renderizarse.
+### 2.1 Schemas Zod (implementado)
 
-### 2.3 Cross-Site Request Forgery (CSRF)
-- Al utilizar JWT enviado a través del header `Authorization: Bearer <token>`, el sistema es naturalmente resistente a ataques CSRF que dependen del envío automático de cookies por parte del navegador.
-- Si en el futuro se migran los tokens a cookies, se deberá implementar un token anti-CSRF (`csurf` en Express).
+Todos los endpoints validan `req.body` mediante el middleware `validarSchema` antes de llegar al controlador:
 
-### 2.4 Ataques de Fuerza Bruta (Rate Limiting)
-- Se debe implementar `express-rate-limit` en el backend para proteger endpoints sensibles, especialmente la ruta de login (`POST /api/auth/login`).
-- **Configuración recomendada:** Máximo 5 intentos fallidos por IP en una ventana de 15 minutos.
+```
+apps/backend/src/interfaces/schemas/auth.schemas.ts
+  → loginSchema
+  → crearUsuarioSchema
+  → actualizarUsuarioSchema
+```
 
----
+El middleware reemplaza `req.body` con el dato parseado por Zod, que puede incluir transformaciones (`.trim()`, `.toLowerCase()`) garantizando consistencia antes de la persistencia.
 
-## 3. Validación y Sanitización de Datos
+**Errores de validación retornan HTTP 422** con mensaje descriptivo. No se exponen los errores de tipo ni stack traces.
 
-**"Secure by Default"**: Toda entrada del usuario en el frontend se considera no confiable. Toda entrada al backend se considera maliciosa.
+### 2.2 Protección contra Inyección SQL
 
-### 3.1 Backend
-- **Esquemas de Validación:** Todos los payloads entrantes (body, params, query) deben ser validados mediante una librería como `Zod` o `Joi` en la capa de interfaces (Middlewares) antes de llegar al caso de uso.
-- **Tipado estricto:** Aprovechar TypeScript para garantizar que los tipos de datos en tiempo de ejecución coincidan con lo esperado por el dominio.
-
-### 3.2 Frontend
-- **Validación en tiempo real:** Uso de `VeeValidate` junto con `Yup` para validar los formularios antes de su envío, brindando feedback inmediato al usuario y reduciendo la carga en el servidor.
+Prisma parametriza todas las consultas automáticamente. **Regla:** nunca usar `$queryRawUnsafe` con datos del usuario.
 
 ---
 
-## 4. Gestión de Errores y Logs
+## 3. Gestión de Errores
 
-- **Sin Fugas de Información:** En entornos de producción (`NODE_ENV === 'production'`), los mensajes de error devueltos por el servidor **nunca** deben contener stack traces, rutas internas del servidor o fragmentos de consultas a la base de datos.
-- **Manejador Global:** Todos los errores del backend deben ser canalizados a través de `errorHandler.ts`, el cual se encargará de estructurar una respuesta genérica segura (ej. "Error interno del servidor") si el error no es operativo.
-- **Logs:** Los errores críticos deben registrarse internamente (usando herramientas como Winston o Pino) para auditoría y debug, sin exponerlos al cliente.
-
----
-
-## 5. Criptografía y Contraseñas
-
-- **Hashing:** Las contraseñas de los usuarios jamás deben guardarse en texto plano. Se utilizará `bcrypt` (con un factor de trabajo o salt rounds de al menos 10) o `argon2`.
-- **Regla:** Está prohibido crear mecanismos de recuperación de contraseña que envíen contraseñas temporales en texto plano por correo. El flujo correcto es generar un token temporal seguro y enviar un enlace de reseteo.
+- **`AppError`** — errores operacionales conocidos (4xx). Incluyen `statusCode` e `isOperational: true`.
+- **`errorHandler.ts`** — handler global en Express. Solo expone el `stack` en errores 5xx durante desarrollo.
+- **Regla:** ningún `catch` puede quedar silencioso. Todo error capturado debe pasarse a `next(error)` o lanzarse como `AppError`.
 
 ---
 
-## 6. Seguridad en Infraestructura y Dependencias
+## 4. Criptografía y Contraseñas
 
-### 6.1 Auditoría de Paquetes
-- Mantener actualizadas las dependencias.
-- Ejecutar periódicamente `pnpm audit` para detectar vulnerabilidades en el árbol de dependencias de terceros.
+- Contraseñas hasheadas con **bcrypt**, `SALT_ROUNDS = 12`.
+- El campo `passwordHash` nunca se retorna en las queries públicas (uso de `omit: { passwordHash: true }` en Prisma).
+- **Regla prohibida:** guardar contraseñas en texto plano o transmitirlas en logs.
 
-### 6.2 Cabeceras HTTP de Seguridad
-- Se debe implementar el middleware `helmet` en Express para configurar automáticamente cabeceras de seguridad fundamentales, como:
-  - `Strict-Transport-Security` (HSTS)
-  - `X-Content-Type-Options: nosniff`
-  - `X-Frame-Options: DENY`
+---
 
-### 6.3 CORS (Cross-Origin Resource Sharing)
-- En producción, el middleware `cors()` en Express debe estar configurado estrictamente para permitir peticiones únicamente desde el dominio oficial del frontend.
-- **Nunca** usar `*` como origen permitido en producción.
+## 5. Cabeceras HTTP
+
+- **`helmet`** configura cabeceras de seguridad (HSTS, X-Content-Type-Options, X-Frame-Options).
+- **`cors`** con `credentials: true` y lista blanca de orígenes. Nunca usar `*` en producción.
+- **`cookieParser`** habilita lectura de la cookie HttpOnly de refresh token.
+
+---
+
+## 6. Seguridad Pendiente (Backlog)
+
+| Item | Prioridad | Descripción |
+|------|-----------|-------------|
+| Rate limiting | Alta | `express-rate-limit`: 5 intentos/15 min en `/api/auth/login` |
+| Middleware de roles | Alta | Guard `requerirRol(roles[])` para endpoints admin |
+| Logs estructurados | Media | Winston/Pino para registrar eventos de seguridad |
+| Rotación de refresh token | Media | Emitir nuevo refresh token en cada `/refresh` e invalidar el anterior |
+| `GET /api/auth/me` | Baja | Endpoint para obtener perfil completo del usuario autenticado |
