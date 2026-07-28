@@ -14,8 +14,8 @@ El modelo de datos de Sinergy está diseñado bajo el patrón **Data-Driven UI**
 
 ### A. Reglas de Jerarquía Física (Estructura de Planta)
 
-1. **Ubicaciones Técnicas (`ubicaciones_tecnicas`):** Nodos geográficos o lógicos. Ej: `1000-DES-MT01`.
-2. **Plantas (`plantas`):** 3 plantas de Tubrica. La FK `ubicacion_tecnica_id` es **nullable** por requerimiento explícito del negocio.
+1. **Plantas (`plantas`):** 3 plantas de Tubrica.
+2. **Ubicaciones Técnicas (`ubicaciones_tecnicas`):** Nodos geográficos o lógicos pertenecientes a una Planta (`planta_id`). La FK `planta_id` es **nullable** por requerimiento de flexibilidad operativa.
 3. **Líneas de Producción (`lineas`):** 6–17 líneas por planta. Clave compuesta única: `(codigo, planta_id)`.
 4. **Equipos (`equipos`):** Activos físicos con tipos controlados por ENUM: `MAQUINARIA`, `MONTACARGAS`, `COMPRESOR`, `GENERADOR`, `CHILLER`. `linea_id` es nullable para equipos móviles (montacargas).
 5. **Detalles de Montacargas (`montacargas_detalles`):** Extensión 1:1 de `equipos`. Almacena Denominación, Tipo, Marca, Modelo, Identificación Abreviada (`M09`), Ubicación Técnica y Denominación 2.
@@ -60,7 +60,7 @@ erDiagram
     usuarios ||--o{ inspecciones : "aprueba (NULLABLE)"
     usuarios ||--o{ auditoria_logs : "genera"
 
-    ubicaciones_tecnicas o|--o{ plantas : "agrupa (opcional)"
+    plantas ||--o{ ubicaciones_tecnicas : "posee"
     plantas ||--o{ lineas : "contiene"
     lineas ||--o{ equipos : "alberga"
 
@@ -104,6 +104,7 @@ erDiagram
 | `codigo` | `VARCHAR(50)` | `NOT NULL, UNIQUE` | Ej: `1000-DES-MT01` |
 | `nombre` | `VARCHAR(255)` | `NOT NULL` | Nombre descriptivo |
 | `descripcion` | `TEXT` | `NULL` | Descripción larga |
+| `planta_id` | `INTEGER` | `NULL, FK → plantas(id) SET NULL` | Nullable por flexibilidad del negocio |
 | `creado_en` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | — |
 | `actualizado_en` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | Actualizado por trigger |
 
@@ -115,7 +116,6 @@ erDiagram
 | `id` | `SERIAL` | `PK` | — |
 | `codigo` | `VARCHAR(50)` | `NOT NULL, UNIQUE` | Ej: `1000` |
 | `nombre` | `VARCHAR(255)` | `NOT NULL, UNIQUE` | Nombre único de la planta |
-| `ubicacion_tecnica_id` | `INTEGER` | `NULL, FK → ubicaciones_tecnicas(id) SET NULL` | Nullable por diseño de negocio |
 | `activa` | `BOOLEAN` | `NOT NULL, DEFAULT TRUE` | — |
 | `creado_en` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | — |
 | `actualizado_en` | `TIMESTAMPTZ` | `NOT NULL, DEFAULT NOW()` | Actualizado por trigger |
@@ -288,7 +288,7 @@ erDiagram
 
 | Nombre del Índice | Tabla | Columna(s) | Justificación |
 |---|---|---|---|
-| `idx_plantas_ubicacion_tecnica` | `plantas` | `ubicacion_tecnica_id` | Jerarquía cascada |
+| `idx_ubicaciones_tecnicas_planta` | `ubicaciones_tecnicas` | `planta_id` | Jerarquía cascada |
 | `idx_lineas_planta` | `lineas` | `planta_id` | — |
 | `idx_equipos_linea` | `equipos` | `linea_id` | — |
 | `idx_equipos_tipo_equipo` | `equipos` | `tipo_equipo` | Filtro por tipo |
@@ -331,7 +331,7 @@ erDiagram
 
 | Regla de Negocio | Mecanismo SQL | Garantía |
 |---|---|---|
-| Planta sin Ubicación Técnica | `ubicacion_tecnica_id NULL` + `ON DELETE SET NULL` | Cumple caso borde del negocio |
+| Ubicación Técnica sin Planta | `planta_id NULL` + `ON DELETE SET NULL` | Cumple caso borde del negocio |
 | Trazabilidad inalterable de inspecciones | `ON DELETE RESTRICT` en `equipos` y `usuarios` | Un equipo/usuario con historial no puede borrarse |
 | Limpieza de borradores maestros | `ON DELETE CASCADE` en `componentes`, `variables`, `opciones_seleccion`, `montacargas_detalles` | No deja registros huérfanos |
 | Firma tripartita | `elaborado_por NOT NULL`, `revisado_por NULL`, `aprobado_por NULL` | Toda inspección registra al técnico. Firmas posteriores son opcionales. |

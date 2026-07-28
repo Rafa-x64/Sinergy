@@ -16,3 +16,13 @@ export interface RegistrarTipoEquipoDTO{
     nombre: string
     descripcion: string
 }
+
+export interface RegistrarUbicacionTecnicaDTO{
+    nombre: string
+    descripcion: string
+}
+
+export interface RegistrarUbicacionTecnicaDTO{
+    nombre: string
+    descripcion: string
+}

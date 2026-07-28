@@ -106,27 +106,26 @@ model UbicacionTecnica {
   codigo        String   @unique @db.VarChar(50)
   nombre        String   @db.VarChar(255)
   descripcion   String?  @db.Text
+  plantaId      Int?     @map("planta_id")
+  planta        Planta?  @relation(fields: [plantaId], references: [id], onDelete: SetNull)
   creadoEn      DateTime @default(now()) @map("creado_en")
   actualizadoEn DateTime @updatedAt @map("actualizado_en")
 
-  plantas Planta[]
-
+  @@index([plantaId])
   @@map("ubicaciones_tecnicas")
 }
 
 model Planta {
-  id                 Int               @id @default(autoincrement())
-  codigo             String            @unique @db.VarChar(50)
-  nombre             String            @unique @db.VarChar(255)
-  ubicacionTecnicaId Int?              @map("ubicacion_tecnica_id")
-  ubicacionTecnica   UbicacionTecnica? @relation(fields: [ubicacionTecnicaId], references: [id], onDelete: SetNull)
-  activa             Boolean           @default(true)
-  creadoEn           DateTime          @default(now()) @map("creado_en")
-  actualizadoEn      DateTime          @updatedAt @map("actualizado_en")
+  id            Int      @id @default(autoincrement())
+  codigo        String   @unique @db.VarChar(50)
+  nombre        String   @unique @db.VarChar(255)
+  activa        Boolean  @default(true)
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
 
-  lineas Linea[]
+  lineas              Linea[]
+  ubicacionesTecnicas UbicacionTecnica[]
 
-  @@index([ubicacionTecnicaId])
   @@map("plantas")
 }
 

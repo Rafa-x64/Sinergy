@@ -176,7 +176,7 @@ El árbol completo de la planta **nunca se carga** en la hidratación inicial. L
 
 ### `PlantAdminView.vue` (Vista — CRUD Administrativo)
 - Vista exclusiva del Supervisor.
-- Permite gestionar la jerarquía completa (Ubicaciones → Plantas → Líneas → Equipos → Componentes → Variables).
+- Permite gestionar la jerarquía completa (Plantas → Ubicaciones Técnicas / Líneas → Equipos → Componentes → Variables).
 - Los cambios aquí se reflejan inmediatamente en los formularios de inspección.
 
 ---
