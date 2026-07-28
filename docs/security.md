@@ -84,20 +84,17 @@ El endpoint de login devuelve el mismo mensaje `"Credenciales inválidas"` tanto
 
 Toda entrada al backend se trata como potencialmente maliciosa.
 
-### 2.1 Schemas Zod (implementado)
+### 2.1 Validaciones Limpias y Nativas (sin librerías externas)
 
-Todos los endpoints validan `req.body` mediante el middleware `validarSchema` antes de llegar al controlador:
+Las peticiones entrantes se validan directamente en la capa de controladores usando validaciones nativas de JavaScript/TypeScript:
 
-```
-apps/backend/src/interfaces/schemas/auth.schemas.ts
-  → loginSchema
-  → crearUsuarioSchema
-  → actualizarUsuarioSchema
-```
+- Comprobaciones explícitas de tipos (`typeof field === 'string'`)
+- Verificación de campos requeridos y strings vacíos (`.trim()`)
+- Normalización automática de correos (`.trim().toLowerCase()`)
+- Validación de formato de correo electrónico vía expresión regular
+- Validación de longitud mínima de contraseñas (mínimo 6 caracteres)
 
-El middleware reemplaza `req.body` con el dato parseado por Zod, que puede incluir transformaciones (`.trim()`, `.toLowerCase()`) garantizando consistencia antes de la persistencia.
-
-**Errores de validación retornan HTTP 422** con mensaje descriptivo. No se exponen los errores de tipo ni stack traces.
+**Errores de validación retornan HTTP 400 Bad Request** con mensajes directos y amigables. No se exponen errores internos ni stack traces.
 
 ### 2.2 Protección contra Inyección SQL
 
