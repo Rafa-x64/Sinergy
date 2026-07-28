@@ -7,7 +7,8 @@ import prisma from './prisma'
 import { errorHandler } from './middlewares/errorHandler'
 import { notFoundHandler } from './middlewares/notFoundHandler'
 import authRoutes from '../modules/auth/auth.routes'
-import rolesRouter from '../modules/roles/roles.routes'
+import rolesRoutes from '../modules/roles/roles.routes'
+import equipoRoutes from '../modules/equipo/equipo.routes'
 
 const app = express()
 
@@ -21,11 +22,16 @@ app.use(
 
       // En desarrollo, permitir cualquier origen proveniente de localhost o 127.0.0.1 en cualquier puerto (ej. Live Server :5500, Vite :5173)
       if (process.env.NODE_ENV !== 'production') {
-        const esLocal = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
+        const esLocal = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(
+          origin
+        )
         if (esLocal) return callback(null, true)
       }
 
-      const origenesPermitidos = ['http://localhost:3000', 'http://localhost:5173']
+      const origenesPermitidos = [
+        'http://localhost:3000',
+        'http://localhost:5173',
+      ]
       if (origenesPermitidos.includes(origin)) {
         return callback(null, true)
       }
@@ -51,7 +57,11 @@ app.get('/', (_req, res) => {
 app.get('/api/health', async (_req, res, next) => {
   try {
     await prisma.$queryRaw`SELECT 1`
-    res.json({ status: 'ok', message: 'Sinergy Backend running', db: 'connected' })
+    res.json({
+      status: 'ok',
+      message: 'Sinergy Backend running',
+      db: 'connected',
+    })
   } catch (error) {
     next(error)
   }
@@ -60,7 +70,8 @@ app.get('/api/health', async (_req, res, next) => {
 // ─── Módulos de funcionalidades ───────────────────────────────────────────────
 app.use('/api/auth', authRoutes)
 app.use('/api/usuarios', authRoutes) // Alias de compatibilidad
-app.use('/api/roles/', rolesRouter)
+app.use('/api/roles/', rolesRoutes)
+app.use('/api/equipo/', equipoRoutes)
 // app.use('/api/equipment',   equipmentRoutes)
 // app.use('/api/maintenance', maintenanceRoutes)
 
