@@ -34,21 +34,21 @@ CREATE TABLE ubicaciones_tecnicas (
     codigo         VARCHAR(50)  NOT NULL UNIQUE,
     nombre         VARCHAR(255) NOT NULL,
     descripcion    TEXT,
+    planta_id      INTEGER,
     creado_en      TIMESTAMP    NOT NULL DEFAULT NOW(),
-    actualizado_en TIMESTAMP    NOT NULL DEFAULT NOW()
+    actualizado_en TIMESTAMP    NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT fk_ubicaciones_tecnicas_planta FOREIGN KEY (planta_id)
+        REFERENCES plantas(id) ON DELETE SET NULL
 );
 
 CREATE TABLE plantas (
     id                   SERIAL       PRIMARY KEY,
     codigo               VARCHAR(50)  NOT NULL UNIQUE,
     nombre               VARCHAR(255) NOT NULL UNIQUE,
-    ubicacion_tecnica_id INTEGER,
     activa               BOOLEAN      NOT NULL DEFAULT TRUE,
     creado_en            TIMESTAMP    NOT NULL DEFAULT NOW(),
-    actualizado_en       TIMESTAMP    NOT NULL DEFAULT NOW(),
-
-    CONSTRAINT fk_plantas_ubicacion FOREIGN KEY (ubicacion_tecnica_id)
-        REFERENCES ubicaciones_tecnicas(id) ON DELETE SET NULL
+    actualizado_en       TIMESTAMP    NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE lineas (
@@ -226,7 +226,7 @@ CREATE TABLE auditoria_logs (
 -- ÍNDICES (compatibles con DrawDB)
 -- =============================================================================
 
-CREATE INDEX idx_plantas_ubicacion_tecnica     ON plantas(ubicacion_tecnica_id);
+CREATE INDEX idx_ubicaciones_tecnicas_planta ON ubicaciones_tecnicas(planta_id);
 CREATE INDEX idx_lineas_planta                 ON lineas(planta_id);
 CREATE INDEX idx_equipos_linea                 ON equipos(linea_id);
 CREATE INDEX idx_equipos_tipo_equipo           ON equipos(tipo_equipo);

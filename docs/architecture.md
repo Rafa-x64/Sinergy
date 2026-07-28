@@ -444,12 +444,12 @@ Esta sección documenta la arquitectura específica de este módulo dentro del s
 ### Jerarquía de Datos (Relaciones 1:N)
 
 ```
-ubicaciones_tecnicas (nullable)
-    └── plantas
-            └── lineas (6-17 por planta)
-                    └── equipos
-                            └── componentes
-                                    └── variables  ← tipo_evaluacion define el control de UI
+plantas
+    ├── ubicaciones_tecnicas (nullable planta_id)
+    └── lineas (6-17 por planta)
+            └── equipos
+                    └── componentes
+                            └── variables  ← tipo_evaluacion define el control de UI
 ```
 
 ### Esquema de Base de Datos
@@ -467,13 +467,17 @@ CREATE TYPE estado_operativo_enum  AS ENUM ('OPERATIVO', 'INOPERATIVO', 'EN_MANT
 CREATE TYPE origen_datos_enum      AS ENUM ('ONLINE', 'OFFLINE_SYNC');
 
 -- TABLAS MAESTRAS (SERIAL: bajo volumen, crecimiento controlado)
-CREATE TABLE ubicaciones_tecnicas (id SERIAL PRIMARY KEY, codigo VARCHAR(50) UNIQUE NOT NULL, nombre VARCHAR(255) NOT NULL);
-
 CREATE TABLE plantas (
     id SERIAL PRIMARY KEY,
     codigo VARCHAR(50) UNIQUE NOT NULL,
-    nombre VARCHAR(255) UNIQUE NOT NULL,
-    ubicacion_tecnica_id INTEGER NULL REFERENCES ubicaciones_tecnicas(id) ON DELETE SET NULL  -- Nullable por diseño de negocio
+    nombre VARCHAR(255) UNIQUE NOT NULL
+);
+
+CREATE TABLE ubicaciones_tecnicas (
+    id SERIAL PRIMARY KEY,
+    codigo VARCHAR(50) UNIQUE NOT NULL,
+    nombre VARCHAR(255) NOT NULL,
+    planta_id INTEGER NULL REFERENCES plantas(id) ON DELETE SET NULL -- Nullable por diseño de negocio
 );
 
 CREATE TABLE lineas  (id SERIAL PRIMARY KEY, codigo VARCHAR(50) NOT NULL, nombre VARCHAR(255) NOT NULL, planta_id INTEGER NOT NULL REFERENCES plantas(id) ON DELETE RESTRICT, UNIQUE (codigo, planta_id));

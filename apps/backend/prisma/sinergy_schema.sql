@@ -39,10 +39,14 @@ CREATE TABLE IF NOT EXISTS "ubicaciones_tecnicas" (
 	"codigo" VARCHAR(50) NOT NULL UNIQUE,
 	"nombre" VARCHAR(255) NOT NULL,
 	"descripcion" TEXT,
+	"planta_id" INTEGER,
 	"creado_en" TIMESTAMP NOT NULL DEFAULT NOW(),
 	"actualizado_en" TIMESTAMP NOT NULL DEFAULT NOW(),
 	PRIMARY KEY("id")
 );
+
+CREATE INDEX "idx_ubicaciones_tecnicas_planta"
+ON "ubicaciones_tecnicas" ("planta_id");
 
 
 
@@ -51,16 +55,11 @@ CREATE TABLE IF NOT EXISTS "plantas" (
 	"id" SERIAL,
 	"codigo" VARCHAR(50) NOT NULL UNIQUE,
 	"nombre" VARCHAR(255) NOT NULL UNIQUE,
-	"ubicacion_tecnica_id" INTEGER,
 	"activa" BOOLEAN NOT NULL DEFAULT true,
 	"creado_en" TIMESTAMP NOT NULL DEFAULT NOW(),
 	"actualizado_en" TIMESTAMP NOT NULL DEFAULT NOW(),
 	PRIMARY KEY("id")
 );
-
-
-CREATE INDEX "idx_plantas_ubicacion_tecnica"
-ON "plantas" ("ubicacion_tecnica_id");
 
 CREATE TABLE IF NOT EXISTS "lineas" (
 	"id" SERIAL,
@@ -268,8 +267,8 @@ CREATE INDEX "idx_auditoria_logs_tabla_registro"
 ON "auditoria_logs" ("tabla_afectada", "registro_id");
 CREATE INDEX "idx_auditoria_logs_creado_en"
 ON "auditoria_logs" ("creado_en");
-ALTER TABLE "plantas"
-ADD FOREIGN KEY("ubicacion_tecnica_id") REFERENCES "ubicaciones_tecnicas"("id")
+ALTER TABLE "ubicaciones_tecnicas"
+ADD FOREIGN KEY("planta_id") REFERENCES "plantas"("id")
 ON UPDATE NO ACTION ON DELETE SET NULL;
 ALTER TABLE "lineas"
 ADD FOREIGN KEY("planta_id") REFERENCES "plantas"("id")
