@@ -3,17 +3,10 @@ import { useAuthStore } from '../modules/auth/auth.store'
 
 const routes: RouteRecordRaw[] = [
   {
-    path: '/login',
-    name: 'login',
-    component: () => import('../modules/auth/views/HomeView.vue'),
-    meta: { requiresAuth: false },
-  },
-  {
     path: '/',
-    name: 'dashboard',
-    // TODO: reemplazar con el componente de dashboard cuando exista
-    component: () => import('../modules/auth/views/HomeView.vue'),
-    meta: { requiresAuth: true },
+    name: 'login',
+    component: () => import('../modules/auth/views/LoginView.vue'),
+    meta: { requiresAuth: false },
   },
 ]
 

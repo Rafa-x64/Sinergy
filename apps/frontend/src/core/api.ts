@@ -1,5 +1,5 @@
 import axios from 'axios'
-
+import { useAuthStore } from '@/modules/auth/auth.store';
 /**
  * Instancia de axios configurada para toda la aplicación.
  *
@@ -23,7 +23,6 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     // Importación lazy para evitar inicialización circular con Pinia
-    const { useAuthStore } = require('../modules/auth/auth.store')
     const authStore = useAuthStore()
 
     if (authStore.accessToken) {
