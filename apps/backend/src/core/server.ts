@@ -7,6 +7,7 @@ import prisma from './prisma'
 import { errorHandler } from './middlewares/errorHandler'
 import { notFoundHandler } from './middlewares/notFoundHandler'
 import authRoutes from '../modules/auth/auth.routes'
+import rolesRouter from '../modules/roles/roles.routes'
 
 const app = express()
 
@@ -59,6 +60,7 @@ app.get('/api/health', async (_req, res, next) => {
 // ─── Módulos de funcionalidades ───────────────────────────────────────────────
 app.use('/api/auth', authRoutes)
 app.use('/api/usuarios', authRoutes) // Alias de compatibilidad
+app.use('/api/roles/', rolesRouter)
 // app.use('/api/equipment',   equipmentRoutes)
 // app.use('/api/maintenance', maintenanceRoutes)
 

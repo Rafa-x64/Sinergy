@@ -4,17 +4,6 @@ import { verificarRefreshToken } from '../../infrastructure/security/jwt'
 import { generarAccessToken } from '../../infrastructure/security/jwt'
 import { AppError } from '../errors/AppError'
 
-/**
- * Controlador para el endpoint `POST /api/auth/refresh`.
- *
- * Lee el refreshToken de la HttpOnly Cookie, lo verifica, consulta
- * el usuario actual para obtener sus roles actualizados y emite
- * un nuevo accessToken.
- *
- * Por qué se implementa como middleware/controlador separado:
- * Este flujo tiene su propia lógica de negocio (verificar cookie, re-emitir token)
- * y no pertenece ni al controlador de auth general ni al use case de login.
- */
 export async function manejarRefreshToken(
   req: Request,
   res: Response,

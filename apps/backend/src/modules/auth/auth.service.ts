@@ -11,10 +11,8 @@ export interface AuthTokens {
   refreshToken: string
 }
 
-/**
- * AuthService: Lógica de negocio y persistencia para el módulo de Autenticación y Usuarios.
- */
 export class AuthService {
+
   async iniciarSesion(credentials: LoginDTO): Promise<AuthTokens> {
     const usuario = await prisma.usuario.findUnique({
       where: { email: credentials.email },
@@ -57,6 +55,11 @@ export class AuthService {
     return prisma.usuario.findMany({
       orderBy: { nombre: 'asc' },
       omit: { passwordHash: true },
+      include: {
+        rolesUsuario: {
+          include: { rol: true },
+        },
+      },
     })
   }
 
@@ -65,6 +68,11 @@ export class AuthService {
       where: { activo: true },
       orderBy: { nombre: 'asc' },
       omit: { passwordHash: true },
+      include: {
+        rolesUsuario: {
+          include: { rol: true },
+        },
+      },
     })
   }
 
@@ -79,6 +87,25 @@ export class AuthService {
     const ahora = new Date()
     const passwordHash = await encriptar(datos.password)
 
+    let rolIds: number[] = []
+    if (Array.isArray(datos.rolIds)) {
+      rolIds = datos.rolIds
+    } else if (typeof datos.rolId === 'number') {
+      rolIds = [datos.rolId]
+    }
+
+    if (rolIds.length > 0) {
+      const rolesExistentes = await prisma.rol.findMany({
+        where: { id: { in: rolIds } },
+        select: { id: true },
+      })
+      if (rolesExistentes.length !== rolIds.length) {
+        const encontrados = rolesExistentes.map((r) => r.id)
+        const faltantes = rolIds.filter((id) => !encontrados.includes(id))
+        throw new AppError(`Los siguientes IDs de rol no existen: ${faltantes.join(', ')}`, 400)
+      }
+    }
+
     return prisma.usuario.create({
       data: {
         nombre: datos.nombre,
@@ -89,8 +116,18 @@ export class AuthService {
         ultimoAcceso: ahora,
         creadoEn: ahora,
         actualizadoEn: ahora,
+        ...(rolIds.length > 0 && {
+          rolesUsuario: {
+            create: rolIds.map((rolId) => ({ rolId })),
+          },
+        }),
       },
       omit: { passwordHash: true },
+      include: {
+        rolesUsuario: {
+          include: { rol: true },
+        },
+      },
     })
   }
 
@@ -112,6 +149,102 @@ export class AuthService {
         actualizadoEn: new Date(),
       },
       omit: { passwordHash: true },
+    })
+  }
+
+  /**
+   * Reemplaza todos los roles de un usuario con los IDs enviados.
+   * Usa una transacción: primero borra todos los UsuarioRol existentes, luego crea los nuevos.
+   * Retorna el usuario con sus nuevos roles poblados.
+   */
+  async actualizarRoles(usuarioId: number, rolIds: number[]) {
+    // Verificar que todos los rolIds existen antes de la transacción
+    const rolesExistentes = await prisma.rol.findMany({
+      where: { id: { in: rolIds } },
+      select: { id: true },
+    })
+
+    if (rolesExistentes.length !== rolIds.length) {
+      const encontrados = rolesExistentes.map((r) => r.id)
+      const faltantes = rolIds.filter((id) => !encontrados.includes(id))
+      throw new AppError(`Los siguientes IDs de rol no existen: ${faltantes.join(', ')}`, 400)
+    }
+
+    await prisma.$transaction([
+      prisma.usuarioRol.deleteMany({ where: { usuarioId } }),
+      ...(rolIds.length > 0
+        ? [
+            prisma.usuarioRol.createMany({
+              data: rolIds.map((rolId) => ({ usuarioId, rolId })),
+            }),
+          ]
+        : []),
+    ])
+
+    // Retornar el usuario con sus roles actualizados
+    return prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      omit: { passwordHash: true },
+      include: {
+        rolesUsuario: {
+          include: { rol: true },
+        },
+      },
+    })
+  }
+
+  /**
+   * Agrega un único rol a un usuario.
+   * Es idempotente: si el rol ya estaba asignado no lanza error.
+   */
+  async agregarRol(usuarioId: number, rolId: number) {
+    const rolExiste = await prisma.rol.findUnique({ where: { id: rolId }, select: { id: true } })
+    if (!rolExiste) {
+      throw new AppError(`El rol con ID ${rolId} no existe`, 400)
+    }
+
+    // upsert ignora el conflicto de unique si ya existe la asignación
+    await prisma.usuarioRol.upsert({
+      where: { uq_usuario_rol: { rolId, usuarioId } },
+      create: { rolId, usuarioId },
+      update: {},
+    })
+
+    return prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      omit: { passwordHash: true },
+      include: { rolesUsuario: { include: { rol: true } } },
+    })
+  }
+
+  /**
+   * Quita un único rol de un usuario.
+   * Lanza AppError(404) si la asignación no existía.
+   */
+  async quitarRol(usuarioId: number, rolId: number) {
+    const asignacion = await prisma.usuarioRol.findUnique({
+      where: { uq_usuario_rol: { rolId, usuarioId } },
+    })
+
+    if (!asignacion) {
+      throw new AppError(`El usuario ${usuarioId} no tiene asignado el rol ${rolId}`, 404)
+    }
+
+    await prisma.usuarioRol.delete({
+      where: { uq_usuario_rol: { rolId, usuarioId } },
+    })
+
+    return prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      omit: { passwordHash: true },
+      include: { rolesUsuario: { include: { rol: true } } },
+    })
+  }
+
+  /** Lista todos los roles disponibles en el sistema. */
+  async obtenerRoles() {
+    return prisma.rol.findMany({
+      orderBy: { nombre: 'asc' },
     })
   }
 
