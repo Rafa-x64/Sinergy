@@ -82,7 +82,7 @@ model Rol {
 
   rolesUsuario UsuarioRol[]
 
-  @@map("roles")
+  @@map("rol")
 }
 
 model UsuarioRol {
