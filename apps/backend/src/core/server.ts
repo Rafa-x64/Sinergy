@@ -73,7 +73,7 @@ app.use('/api/auth', authRoutes)
 app.use('/api/usuarios', authRoutes) // Alias de compatibilidad
 app.use('/api/roles/', rolesRoutes)
 app.use('/api/equipo/', equipoRoutes)
-app.use('/api/plantas')
+app.use('/api/plantas', plantaRoutes)
 // app.use('/api/equipment',   equipmentRoutes)
 // app.use('/api/maintenance', maintenanceRoutes)
 

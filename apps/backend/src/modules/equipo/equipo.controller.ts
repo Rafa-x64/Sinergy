@@ -126,7 +126,7 @@ export const equipoController = {
         }
         if (error.code === 'P2002') {
           return res.status(409).json({
-            status: 'ok',
+            status: 'error',
             message: 'Ya existe un tipo de equipo con ese nombre',
           })
         }
