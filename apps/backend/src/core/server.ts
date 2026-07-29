@@ -9,6 +9,7 @@ import { notFoundHandler } from './middlewares/notFoundHandler'
 import authRoutes from '../modules/auth/auth.routes'
 import rolesRoutes from '../modules/roles/roles.routes'
 import equipoRoutes from '../modules/equipo/equipo.routes'
+import plantaRoutes from '../modules/plantas/planta.routes'
 
 const app = express()
 
@@ -72,6 +73,7 @@ app.use('/api/auth', authRoutes)
 app.use('/api/usuarios', authRoutes) // Alias de compatibilidad
 app.use('/api/roles/', rolesRoutes)
 app.use('/api/equipo/', equipoRoutes)
+app.use('/api/plantas')
 // app.use('/api/equipment',   equipmentRoutes)
 // app.use('/api/maintenance', maintenanceRoutes)
 

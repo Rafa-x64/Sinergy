@@ -13,7 +13,7 @@ router.post(['/refresh', '/refresh/'], manejarRefreshToken)
 // ─── Rutas protegidas: usuarios ───────────────────────────────────────────────
 router.get(['/', ''],                  validarJWT, authController.listarTodos)
 router.get(['/listar', '/listar/'],   validarJWT, authController.listar)
-router.post(['/crear', '/crear/'],    validarJWT, authController.registrar)
+router.post(['/crear', '/crear/'],    authController.registrar)
 router.patch(['/editar/:id', '/editar/:id/'],     validarJWT, authController.actualizar)
 router.delete(['/eliminar/:id', '/eliminar/:id/'], validarJWT, authController.deshabilitar)
 

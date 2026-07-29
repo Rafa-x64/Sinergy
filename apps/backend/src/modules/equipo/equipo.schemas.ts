@@ -1,3 +1,4 @@
+//equipos
 export interface RegistrarEquipoDTO{
     codigo: string
     nombre: string
@@ -11,18 +12,17 @@ export interface RegistrarEquipoDTO{
     lineaId: number
     tipoEquipoId: number
 }
-
-export interface RegistrarTipoEquipoDTO{
+//params
+export interface Params{
+    id: string
+}
+//tipos
+export interface RegistrarTipoDTO{
     nombre: string
-    descripcion: string
+    descripcion?: string
 }
 
-export interface RegistrarUbicacionTecnicaDTO{
-    nombre: string
-    descripcion: string
-}
-
-export interface RegistrarUbicacionTecnicaDTO{
-    nombre: string
-    descripcion: string
+export interface EditarTipoDTO{
+    nombre?: string,
+    descripcion?: string
 }

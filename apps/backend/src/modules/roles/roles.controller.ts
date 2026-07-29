@@ -1,15 +1,10 @@
 import { Request, Response, NextFunction } from 'express'
 import { Prisma } from '@prisma/client'
 import { rolService } from './roles.service'
+import { parsearId } from '../../core/utils/parsearId'
+import { capitalizar } from '../../core/utils/capitalizar'
+import { capitalizarPalabras } from '../../core/utils/capitalizarPalabras'
 
-function capitalizar(texto: string): string {
-  return texto.charAt(0).toUpperCase() + texto.slice(1).toLowerCase()
-}
-
-function parsearId(raw: string): number | null {
-  const id = parseInt(raw, 10)
-  return Number.isNaN(id) ? null : id
-}
 
 export const rolController = {
 
@@ -48,8 +43,8 @@ export const rolController = {
       }
 
       const rol = await rolService.crear({
-        nombre: capitalizar(nombre.trim()),
-        descripcion: descripcion?.trim() || undefined,
+        nombre: capitalizarPalabras(nombre.trim()),
+        descripcion: capitalizar(descripcion?.trim()) || undefined,
       })
 
       return res.status(201).json({
@@ -102,7 +97,7 @@ export const rolController = {
             error: { message: 'El nombre del rol no puede superar 50 caracteres' },
           })
         }
-        datosActualizados.nombre = capitalizar(nombre.trim())
+        datosActualizados.nombre = capitalizarPalabras(nombre.trim())
       }
 
       if (descripcion !== undefined) {
@@ -112,7 +107,7 @@ export const rolController = {
             error: { message: 'La descripción debe ser texto' },
           })
         }
-        datosActualizados.descripcion = descripcion.trim() || undefined
+        datosActualizados.descripcion = capitalizar(descripcion.trim()) || undefined
       }
 
       const rolActualizado = await rolService.actualizar(id, datosActualizados)

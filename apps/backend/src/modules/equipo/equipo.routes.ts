@@ -4,7 +4,13 @@ import { validarJWT } from '../../core/middlewares/autenticar'
 
 const router = Router()
 
-router.get('/', equipoController.listar)
-router.get('/crear', equipoController.registrar)
+//equipos
+router.get('/', validarJWT, equipoController.listarEquipos)
+router.post(['/crear', '/crear/'], validarJWT, equipoController.registrarEquipo)
+//tipos
+router.post(['/tipo/crear', '/tipo/crear/'], validarJWT, equipoController.registrarTipo)
+router.get(['/tipo/listar','/tipo/listar/'], validarJWT, equipoController.listarTipos)
+router.patch('/tipo/editar/:id', validarJWT, equipoController.editarTipo)
+router.delete('/tipo/eliminar/:id', validarJWT, equipoController.eliminarTipo )
 
 export default router
