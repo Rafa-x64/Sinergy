@@ -11,6 +11,7 @@ import rolesRoutes from '../modules/roles/roles.routes'
 import equipoRoutes from '../modules/equipo/equipo.routes'
 import plantaRoutes from '../modules/plantas/planta.routes'
 import ubicacionRoutes from '../modules/ubicaciones/ubicacion.routes'
+import lineaRoutes from '../modules/lineas/linea.routes'
 
 const app = express()
 
@@ -74,6 +75,7 @@ app.use('/api/roles', rolesRoutes)
 app.use('/api/equipo', equipoRoutes)
 app.use('/api/plantas', plantaRoutes)
 app.use('/api/ubicaciones', ubicacionRoutes)
+app.use('/api/lineas', lineaRoutes)
 
 // ─── Handlers globales (deben ir al final) ────────────────────────────────────
 app.use(notFoundHandler)

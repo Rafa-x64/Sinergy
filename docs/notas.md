@@ -23,19 +23,25 @@ Aquí se registran las anotaciones, palabras clave y requerimientos solicitados 
 
 ##  Recordatorios
 
-- [ ] **Repositorio:** Crear repositorio privado de GitHub para Sinergy.
-- [ ] **Levantamiento de Información:** Realizar levantamiento el 17-07-2026 con *Elizabeth Ramirez* y *Ali Ramos*.
-- [ ] **Mantenimiento:**
-  - Obtener información acerca del proceso de mantenimiento en las 3 plantas.
-  - Hablar con Elizabeth acerca de los procesos.
-  - Hablar con los técnicos de Ali para identificar las carencias del sistema.
-- [ ] **Accesos:** Solicitar acceso a los sistemas **Power App** y **Power BI**.
-- [ ] **Documentación pendiente:** Continuar con:
-  - `visionAlcance.md`: Resumen ejecutivo (problema, público, objetivos y alcance).
-  - `requerimientos.md`: Qué debe hacer la app y cómo comportarse.
-  - `casos_de_uso.md`: Interacciones entre actor y sistema.
-  - `acta_de_reuniones.md`: Registro de reuniones.
-  - `PRD.md` (Product Requirements Document): Mapa definitivo del producto.
+- [ ] **Modificar shchema de prisma:** Modificar las relaciones de la base de datos.
+
+  - Modificar la relacion de linea.plantaIs (deberia estar relacionada con una ubicacion tecnica)
+
+  - Agregar campo activo (boolean) a la ubicacion tecnica para evitar hacer una eliminacion fisica
+
+  > Una planta tiene varias ubicaciones tecnicas las ubicaciones tecnicas tienen varias lineas. pero una linea no puede pertenecer a mas de una ubicacion tecnicay una ubicacion tecnica no debe estar relacionada a mas de una planta a la vez
+
+- [ ] **Modificar Services y Controllers**
+
+  - Modificar los cruds de ``controller`` y ``service`` para que una vez agregado el campo ``activo`` laboren en funcion de este nuevo campo y hacer que la funcion **eliminar** en vez de hacer ``delete`` haga ``update`` (eliminacion logica)
+
+  - Editar los cruds del ``controller`` y ``service`` de ``linea`` una vez modificada la bd para que laboren en funcion de una ``ubicacion tecnica``
+
+- [ ] **Testear los endpoints para validar que todo funcione**: Realizar solicitudes crud a los endpoints
+
+- [ ] **Actualizar la BD**
+  - `pnpm prisma migrate dev`
+  - `pnpm prisma generate`
 
 ---
 
