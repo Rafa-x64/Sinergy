@@ -10,6 +10,7 @@ import authRoutes from '../modules/auth/auth.routes'
 import rolesRoutes from '../modules/roles/roles.routes'
 import equipoRoutes from '../modules/equipo/equipo.routes'
 import plantaRoutes from '../modules/plantas/planta.routes'
+import ubicacionRoutes from '../modules/ubicaciones/ubicacion.routes'
 
 const app = express()
 
@@ -18,10 +19,8 @@ app.use(helmet())
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Permitir herramientas como Postman, Thunder Client, cURL o Live Server (sin origin)
       if (!origin) return callback(null, true)
 
-      // En desarrollo, permitir cualquier origen proveniente de localhost o 127.0.0.1 en cualquier puerto (ej. Live Server :5500, Vite :5173)
       if (process.env.NODE_ENV !== 'production') {
         const esLocal = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(
           origin
@@ -71,11 +70,10 @@ app.get('/api/health', async (_req, res, next) => {
 // ─── Módulos de funcionalidades ───────────────────────────────────────────────
 app.use('/api/auth', authRoutes)
 app.use('/api/usuarios', authRoutes) // Alias de compatibilidad
-app.use('/api/roles/', rolesRoutes)
-app.use('/api/equipo/', equipoRoutes)
+app.use('/api/roles', rolesRoutes)
+app.use('/api/equipo', equipoRoutes)
 app.use('/api/plantas', plantaRoutes)
-// app.use('/api/equipment',   equipmentRoutes)
-// app.use('/api/maintenance', maintenanceRoutes)
+app.use('/api/ubicaciones', ubicacionRoutes)
 
 // ─── Handlers globales (deben ir al final) ────────────────────────────────────
 app.use(notFoundHandler)

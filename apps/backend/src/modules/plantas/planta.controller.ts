@@ -7,15 +7,11 @@ import { capitalizarPalabras } from '../../core/utils/capitalizarPalabras'
 import { capitalizar } from '../../core/utils/capitalizar'
 import { parsearId } from '../../core/utils/parsearId'
 import { FORMATO_CODIGO_PLANTA } from '../../core/utils/constantes'
+import { validarCodigo } from '../../core/utils/validarCodigo'
 
 //variables y constantes
 //imports
-function validarCodigo(texto: string, regex: RegExp): boolean {
-    if (!texto || typeof texto !== 'string') {
-        return false
-    }
-    return regex.test(texto.trim())
-}
+
 
 export const plantaController = {
     //ver plantas
@@ -38,7 +34,7 @@ export const plantaController = {
       if (!validarCodigo(codigo, FORMATO_CODIGO_PLANTA)) {
         return res.status(400).json({
           status: 'error',
-          message: 'El código de la planta es inválido o no cumple con el formato requerido (solo letras, números y guiones)'
+          message: 'El código de la planta es inválido o no cumple con el formato requerido (solo letras, números y guiones). Ej: "1000-XXX"'
         })
       }
       if (!codigo || typeof codigo !== 'string' || !codigo.trim()) {

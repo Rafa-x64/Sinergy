@@ -82,7 +82,7 @@ model Rol {
 
   rolesUsuario UsuarioRol[]
 
-  @@map("rol")
+  @@map("roles")
 }
 
 model UsuarioRol {
@@ -104,10 +104,10 @@ model UsuarioRol {
 model UbicacionTecnica {
   id            Int      @id @default(autoincrement())
   codigo        String   @unique @db.VarChar(50)
-  nombre        String   @db.VarChar(255)
+  nombre        String   @unique @db.VarChar(255)
   descripcion   String?  @db.Text
-  plantaId      Int?     @map("planta_id")
-  planta        Planta?  @relation(fields: [plantaId], references: [id], onDelete: SetNull)
+  plantaId      Int      @map("planta_id")
+  planta        Planta   @relation(fields: [plantaId], references: [id], onDelete: Restrict)
   creadoEn      DateTime @default(now()) @map("creado_en")
   actualizadoEn DateTime @updatedAt @map("actualizado_en")
 
