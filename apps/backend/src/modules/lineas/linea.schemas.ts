@@ -1,13 +1,13 @@
 export interface RegistrarLineaDTO {
   codigo: string;
   nombre: string;
-  plantaId: number;
+  ubicacionTecnicaId: number;
 }
 
 export interface EditarLineaDTO {
   codigo?: string;
   nombre?: string;
-  plantaId?: number;
+  ubicacionTecnicaId?: number;
   activa?: boolean;
 }
 
@@ -16,6 +16,6 @@ export interface ParamsLinea {
 }
 
 export interface QueryLinea {
-  plantaId?: string;
+  ubicacionTecnicaId?: string;
   activa?: string;
 }

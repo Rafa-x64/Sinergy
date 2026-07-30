@@ -101,6 +101,19 @@ model UsuarioRol {
 // CAPA 2: INFRAESTRUCTURA Y MAESTROS DE PLANTA (DATA-DRIVEN UI)
 // -----------------------------------------------------------------------------
 
+model Planta {
+  id                  Int                @id @default(autoincrement())
+  codigo              String             @unique @db.VarChar(50)
+  nombre              String             @unique @db.VarChar(255)
+  activa              Boolean            @default(true)
+  creadoEn            DateTime           @default(now()) @map("creado_en")
+  actualizadoEn       DateTime           @updatedAt @map("actualizado_en")
+
+  ubicacionesTecnicas UbicacionTecnica[]
+
+  @@map("plantas")
+}
+
 model UbicacionTecnica {
   id            Int      @id @default(autoincrement())
   codigo        String   @unique @db.VarChar(50)
@@ -108,41 +121,30 @@ model UbicacionTecnica {
   descripcion   String?  @db.Text
   plantaId      Int      @map("planta_id")
   planta        Planta   @relation(fields: [plantaId], references: [id], onDelete: Restrict)
+  activa        Boolean  @default(true)
   creadoEn      DateTime @default(now()) @map("creado_en")
   actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  lineas        Linea[]
 
   @@index([plantaId])
   @@map("ubicaciones_tecnicas")
 }
 
-model Planta {
-  id            Int      @id @default(autoincrement())
-  codigo        String   @unique @db.VarChar(50)
-  nombre        String   @unique @db.VarChar(255)
-  activa        Boolean  @default(true)
-  creadoEn      DateTime @default(now()) @map("creado_en")
-  actualizadoEn DateTime @updatedAt @map("actualizado_en")
-
-  lineas              Linea[]
-  ubicacionesTecnicas UbicacionTecnica[]
-
-  @@map("plantas")
-}
-
 model Linea {
-  id            Int      @id @default(autoincrement())
-  codigo        String   @db.VarChar(50)
-  nombre        String   @db.VarChar(255)
-  plantaId      Int      @map("planta_id")
-  planta        Planta   @relation(fields: [plantaId], references: [id], onDelete: Restrict)
-  activa        Boolean  @default(true)
-  creadoEn      DateTime @default(now()) @map("creado_en")
-  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+  id                 Int              @id @default(autoincrement())
+  codigo             String           @db.VarChar(50)
+  nombre             String           @db.VarChar(255)
+  ubicacionTecnicaId Int              @map("ubicacion_tecnica_id")
+  ubicacionTecnica   UbicacionTecnica @relation(fields: [ubicacionTecnicaId], references: [id], onDelete: Restrict)
+  activa             Boolean          @default(true)
+  creadoEn           DateTime         @default(now()) @map("creado_en")
+  actualizadoEn      DateTime         @updatedAt @map("actualizado_en")
 
-  equipos Equipo[]
+  equipos            Equipo[]
 
-  @@unique([codigo, plantaId], name: "uq_linea_planta")
-  @@index([plantaId])
+  @@unique([codigo, ubicacionTecnicaId], name: "uq_linea_ubicacion")
+  @@index([ubicacionTecnicaId])
   @@map("lineas")
 }
 

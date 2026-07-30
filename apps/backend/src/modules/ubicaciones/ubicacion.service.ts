@@ -67,7 +67,10 @@ async crearUbicacion(datos: RegistrarUbicacionDTO) {
   }
 
   async eliminarUbicacion(id: number) {
-    return prisma.ubicacionTecnica.delete({
+    return prisma.ubicacionTecnica.update({
+      data: {
+        activa: false
+      },
       where: { id }
     })
   }
