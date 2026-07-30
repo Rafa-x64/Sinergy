@@ -6,22 +6,342 @@ import { parsearId } from '../../core/utils/parsearId'
 import { capitalizar } from '../../core/utils/capitalizar'
 import { EditarTipoDTO } from './equipo.schemas'
 import { capitalizarPalabras } from '../../core/utils/capitalizarPalabras'
-import { Prisma } from '@prisma/client'
+import { Prisma, EstadoOperativo} from '@prisma/client'
+import { RegistrarEquipoDTO, EditarEquipoDTO, FiltrosObtenerEquipos, QueryEquipo } from './equipo.schemas'
 
 /*-------------------------------------------EQUIPOS--------------------------------------------- */
 export const equipoController = {
-  async listarEquipos(req: Request, res: Response<ResponseDTO>, next: NextFunction) {
-    const equipos = await equipoService.obtenerEquipos()
-    if (!equipos) {
-      return res.status(400).json({ status: 'error', message: 'error al listar los equipos' })
-    }
-    if(equipos.length === 0){
-      return res.status(404).json({ status: 'error', message: 'no hay equipos' })
-    }
-    return res.status(200).json({ status: 'ok', message: 'lista de equipos', data: equipos})
-  },
-  async registrarEquipo(req: Request, res: Response<ResponseDTO>, next: NextFunction){
+  // Registrar Equipo
+  async registrarEquipo(
+    req: Request<unknown, ResponseDTO, RegistrarEquipoDTO>,
+    res: Response<ResponseDTO>,
+    next: NextFunction
+  ) {
+    try {
+      const { codigo, nombre, tipoEquipoId, lineaId, serial, marca, modelo, estadoOperativo, observacion } = req.body
 
+      if (!codigo || typeof codigo !== 'string' || !codigo.trim()) {
+        return res.status(400).json({ status: 'error', message: 'El código del equipo es requerido' })
+      }
+
+      const codigoNormalizado = codigo.trim().toUpperCase()
+      if (codigoNormalizado.length > 100) {
+        return res.status(400).json({ status: 'error', message: 'El código no puede superar los 100 caracteres' })
+      }
+
+      if (!nombre || typeof nombre !== 'string' || !nombre.trim()) {
+        return res.status(400).json({ status: 'error', message: 'El nombre es requerido' })
+      }
+      if (nombre.trim().length > 255) {
+        return res.status(400).json({ status: 'error', message: 'El nombre no puede superar los 255 caracteres' })
+      }
+
+      if (typeof tipoEquipoId !== 'number') {
+        return res.status(400).json({ status: 'error', message: 'El ID del tipo de equipo es requerido y debe ser un número' })
+      }
+      const existeTipo = await equipoService.existeTipoEquipo(tipoEquipoId)
+      if (!existeTipo) {
+        return res.status(404).json({ status: 'error', message: `El tipo de equipo con ID ${tipoEquipoId} no existe` })
+      }
+
+      if (lineaId !== undefined && lineaId !== null) {
+        if (typeof lineaId !== 'number') {
+          return res.status(400).json({ status: 'error', message: 'El ID de la línea debe ser un número' })
+        }
+        const existeLin = await equipoService.existeLinea(lineaId)
+        if (!existeLin) {
+          return res.status(404).json({ status: 'error', message: `La línea con ID ${lineaId} no existe` })
+        }
+      }
+
+      if (estadoOperativo !== undefined) {
+        const valoresValidosEnum = Object.values(EstadoOperativo)
+
+        if (!valoresValidosEnum.includes(estadoOperativo)) {
+          return res.status(400).json({
+            status: 'error',
+            message: `El estadoOperativo es inválido. Valores permitidos: ${valoresValidosEnum.join(', ')}`
+          })
+        }
+      }
+
+      const nuevoEquipo: RegistrarEquipoDTO = {
+        codigo: codigoNormalizado,
+        nombre: capitalizarPalabras(nombre.trim()),
+        tipoEquipoId,
+        lineaId: lineaId ?? null,
+        serial: serial ? serial.trim() : null,
+        marca: marca ? marca.trim() : null,
+        modelo: modelo ? modelo.trim() : null,
+        estadoOperativo: estadoOperativo ?? EstadoOperativo.OPERATIVO,
+        observacion: observacion ? observacion.trim() : null
+      }
+
+      const equipoRegistrado = await equipoService.crearEquipo(nuevoEquipo)
+
+      return res.status(201).json({
+        status: 'ok',
+        message: 'Equipo registrado correctamente',
+        data: equipoRegistrado
+      })
+
+    } catch (error: unknown) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        return res.status(409).json({
+          status: 'error',
+          message: 'Ya existe un equipo registrado con ese código'
+        })
+      }
+      next(error)
+    }
+  },
+  // Actualizar Equipo
+  async actualizarEquipo(
+    req: Request<any, ResponseDTO, EditarEquipoDTO>,
+    res: Response<ResponseDTO>,
+    next: NextFunction
+  ) {
+    try {
+      const id = parsearId(req.params.id)
+
+      if (id === null) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'El ID del equipo debe ser un número válido'
+        })
+      }
+
+      if (Object.keys(req.body).length === 0) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Debe proporcionar al menos un campo para actualizar'
+        })
+      }
+
+      const {
+        codigo,
+        nombre,
+        serial,
+        marca,
+        modelo,
+        estadoOperativo,
+        observacion,
+        lineaId,
+        tipoEquipoId
+      } = req.body
+
+      const datosActualizados: EditarEquipoDTO = {}
+
+      if (codigo !== undefined) {
+        const codigoNormalizado = codigo.trim().toUpperCase()
+        if (!codigoNormalizado) {
+          return res.status(400).json({ status: 'error', message: 'El código no puede estar vacío' })
+        }
+        if (codigoNormalizado.length > 100) {
+          return res.status(400).json({ status: 'error', message: 'El código no puede superar los 100 caracteres' })
+        }
+        datosActualizados.codigo = codigoNormalizado
+      }
+
+      if (nombre !== undefined) {
+        if (typeof nombre !== 'string' || !nombre.trim()) {
+          return res.status(400).json({ status: 'error', message: 'El nombre es inválido' })
+        }
+        if (nombre.trim().length > 255) {
+          return res.status(400).json({ status: 'error', message: 'El nombre no puede superar los 255 caracteres' })
+        }
+        datosActualizados.nombre = nombre.trim()
+      }
+
+      if (serial !== undefined) {
+        if (serial !== null && (typeof serial !== 'string' || serial.trim().length > 100)) {
+          return res.status(400).json({ status: 'error', message: 'El serial debe ser texto y no superar 100 caracteres' })
+        }
+        datosActualizados.serial = serial ? serial.trim() : null
+      }
+
+      if (marca !== undefined) {
+        if (marca !== null && (typeof marca !== 'string' || marca.trim().length > 100)) {
+          return res.status(400).json({ status: 'error', message: 'La marca debe ser texto y no superar 100 caracteres' })
+        }
+        datosActualizados.marca = marca ? marca.trim() : null
+      }
+
+      if (modelo !== undefined) {
+        if (modelo !== null && (typeof modelo !== 'string' || modelo.trim().length > 100)) {
+          return res.status(400).json({ status: 'error', message: 'El modelo debe ser texto y no superar 100 caracteres' })
+        }
+        datosActualizados.modelo = modelo ? modelo.trim() : null
+      }
+
+      if (estadoOperativo !== undefined) {
+        const valoresValidosEnum = Object.values(EstadoOperativo)
+        if (!valoresValidosEnum.includes(estadoOperativo)) {
+          return res.status(400).json({
+            status: 'error',
+            message: `El estadoOperativo es inválido. Valores permitidos: ${valoresValidosEnum.join(', ')}`
+          })
+        }
+        datosActualizados.estadoOperativo = estadoOperativo
+      }
+
+      if (observacion !== undefined) {
+        datosActualizados.observacion = observacion ? observacion.trim() : null
+      }
+
+      if (lineaId !== undefined) {
+        if (lineaId !== null) {
+          if (typeof lineaId !== 'number') {
+            return res.status(400).json({ status: 'error', message: 'El ID de la línea debe ser un número o null' })
+          }
+          const existeLinea = await equipoService.existeLinea(lineaId)
+          if (!existeLinea) {
+            return res.status(404).json({ status: 'error', message: `La línea con ID ${lineaId} no existe` })
+          }
+        }
+        datosActualizados.lineaId = lineaId
+      }
+
+      if (tipoEquipoId !== undefined) {
+        if (typeof tipoEquipoId !== 'number') {
+          return res.status(400).json({ status: 'error', message: 'El ID del tipo de equipo debe ser un número' })
+        }
+        const existeTipo = await equipoService.existeTipoEquipo(tipoEquipoId)
+        if (!existeTipo) {
+          return res.status(404).json({ status: 'error', message: `El tipo de equipo con ID ${tipoEquipoId} no existe` })
+        }
+        datosActualizados.tipoEquipoId = tipoEquipoId
+      }
+
+      const equipoActualizado = await equipoService.editarEquipo(id, datosActualizados)
+
+      return res.status(200).json({
+        status: 'ok',
+        message: 'Equipo actualizado correctamente',
+        data: equipoActualizado
+      })
+
+    } catch (error: unknown) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2025') {
+          return res.status(404).json({
+            status: 'error',
+            message: `El equipo con ID ${req.params.id} no existe`
+          })
+        }
+        if (error.code === 'P2002') {
+          return res.status(409).json({
+            status: 'error',
+            message: 'Ya existe otro equipo registrado con ese código'
+          })
+        }
+      }
+      next(error)
+    }
+  },
+  // Listar Equipos
+  async listarEquipos(
+    req: Request<unknown, ResponseDTO, unknown, QueryEquipo>,
+    res: Response<ResponseDTO>,
+    next: NextFunction
+  ) {
+    try {
+      const { lineaId, tipoEquipoId, estadoOperativo, busqueda } = req.query
+
+      let idLineaFiltro: number | undefined = undefined
+      let idTipoEquipoFiltro: number | undefined = undefined
+
+      if (lineaId !== undefined) {
+        const idParseado = parsearId(lineaId)
+        if (idParseado === null) {
+          return res.status(400).json({ status: 'error', message: 'El parámetro lineaId debe ser un número válido' })
+        }
+        idLineaFiltro = idParseado
+      }
+
+      if (tipoEquipoId !== undefined) {
+        const idParseado = parsearId(tipoEquipoId)
+        if (idParseado === null) {
+          return res.status(400).json({ status: 'error', message: 'El parámetro tipoEquipoId debe ser un número válido' })
+        }
+        idTipoEquipoFiltro = idParseado
+      }
+
+      if (estadoOperativo !== undefined && !(estadoOperativo in EstadoOperativo)) {
+        return res.status(400).json({
+          status: 'error',
+          message: `El estado operativo debe ser un valor válido: ${Object.keys(EstadoOperativo).join(', ')}`
+        })
+      }
+
+      const filtros = {
+        lineaId: idLineaFiltro,
+        tipoEquipoId: idTipoEquipoFiltro,
+        estadoOperativo: estadoOperativo as EstadoOperativo | undefined,
+        busqueda: busqueda ? busqueda.trim() : undefined
+      }
+
+      const equipos = await equipoService.obtenerEquipos(filtros)
+
+      if (equipos.length === 0) {
+        return res.status(404).json({
+          status: 'error',
+          message: 'No se encontraron equipos que coincidan con los criterios de búsqueda'
+        })
+      }
+
+      return res.status(200).json({
+        status: 'ok',
+        message: 'Lista de equipos obtenida correctamente',
+        data: equipos
+      })
+
+    } catch (error: unknown) {
+      next(error)
+    }
+  },
+
+  // Eliminar Equipo
+  async eliminarEquipo(
+    req: Request,
+    res: Response<ResponseDTO>,
+    next: NextFunction
+  ) {
+    try {
+      const id = parsearId(req.params.id)
+
+      if (id === null) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'El ID del equipo debe ser un número válido'
+        })
+      }
+
+      const equipoEliminado = await equipoService.eliminarEquipo(id)
+
+      return res.status(200).json({
+        status: 'ok',
+        message: 'Equipo eliminado correctamente',
+        data: equipoEliminado
+      })
+
+    } catch (error: unknown) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2025') {
+          return res.status(404).json({
+            status: 'error',
+            message: `El equipo con ID ${req.params.id} no existe`
+          })
+        }
+        if (error.code === 'P2003') {
+          return res.status(409).json({
+            status: 'error',
+            message: 'No se puede eliminar el equipo porque tiene registros asociados (componentes e inspecciones)'
+          })
+        }
+      }
+      next(error)
+    }
   },
   /*---------------------------------------------TIPOS_EQUIPOS-----------------------------------*/
   //registrar

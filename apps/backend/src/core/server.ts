@@ -72,7 +72,7 @@ app.get('/api/health', async (_req, res, next) => {
 app.use('/api/auth', authRoutes)
 app.use('/api/usuarios', authRoutes) // Alias de compatibilidad
 app.use('/api/roles', rolesRoutes)
-app.use('/api/equipo', equipoRoutes)
+app.use('/api/equipos', equipoRoutes)
 app.use('/api/plantas', plantaRoutes)
 app.use('/api/ubicaciones', ubicacionRoutes)
 app.use('/api/lineas', lineaRoutes)
