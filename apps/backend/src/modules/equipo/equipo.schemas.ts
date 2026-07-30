@@ -1,18 +1,43 @@
+import { EstadoOperativo } from '@prisma/client'
 //equipos
-export interface RegistrarEquipoDTO{
-    codigo: string
-    nombre: string
-    serial: string
-    marca: string
-    modelo: string
-    estadoOperativo: 'OPERATIVO' | 'INOPERATIVO'
-    observacion: string
-    creadoEn: Date
-    actualizadoEn: Date
-    lineaId: number
-    tipoEquipoId: number
+export interface RegistrarEquipoDTO {
+  codigo: string
+  nombre: string
+  tipoEquipoId: number
+  lineaId?: number | null
+  serial?: string | null
+  marca?: string | null
+  modelo?: string | null
+  estadoOperativo?: EstadoOperativo
+  observacion?: string | null
 }
-//params
+
+export interface EditarEquipoDTO {
+  codigo?: string
+  nombre?: string
+  tipoEquipoId?: number
+  lineaId?: number | null
+  serial?: string | null
+  marca?: string | null
+  modelo?: string | null
+  estadoOperativo?: EstadoOperativo
+  observacion?: string | null
+}
+
+export interface QueryEquipo {
+  lineaId?: string
+  tipoEquipoId?: string
+  estadoOperativo?: EstadoOperativo
+  busqueda?: string
+}
+
+export interface FiltrosObtenerEquipos {
+  lineaId?: number
+  tipoEquipoId?: number
+  estadoOperativo?: EstadoOperativo
+  busqueda?: string
+}
+
 export interface Params{
     id: string
 }
