@@ -23,7 +23,7 @@ export const ubicacionController = {
       if (!validarCodigo(codigoNormalizado, REGEX_CODIGO_UBICACION)) {
         return res.status(400).json({
           status: 'error',
-          message: 'El código debe tener el formato estricto (ej: 1000-EXT-SAUE-CP01)'
+          message: 'El código debe tener la estructura [PLANTA]-[UBICACION] (ej: 1000-EXT-SAUE)'
         })
       }
 
@@ -102,7 +102,7 @@ export const ubicacionController = {
         if (!validarCodigo(codigoNormalizado, REGEX_CODIGO_UBICACION)) {
           return res.status(400).json({
             status: 'error',
-            message: 'El código debe tener el formato estricto (ej: 1000-EXT-SAUE-CP01)'
+            message: 'El código debe tener la estructura [PLANTA]-[UBICACION] (ej: 1000-EXT-SAUE)'
           })
         }
         datosActualizados.codigo = codigoNormalizado
