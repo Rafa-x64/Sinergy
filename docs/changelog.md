@@ -17,6 +17,9 @@ El formato sigue el estándar [Keep a Changelog](https://keepachangelog.com/es/1
 ## [Unreleased]
 
 ### Added
+- **Integración de Vuetify 3 y Material Design Icons (`@mdi/font`)**: Configuración e integración del plugin `vuetify` en `apps/frontend/src/plugins/vuetify.ts` y registro global en `main.ts`, habilitando componentes UI avanzados y librería de íconos MDI.
+- **Tutorial Completo de Vuetify 3 (`docs/extensions/extensions.md`)**: Guía detallada paso a paso para la instalación, registro, tematización y uso de componentes Vuetify con `<script setup lang="ts">` en Vue 3.
+- **Contratos de API Backend Estandarizados (`docs/api/contratos.md`)**: Documentación integral de los endpoints HTTP, parámetros DTO, códigos de error y respuestas bajo el formato `ResponseDTO` para los módulos de Plantas, Ubicaciones Técnicas, Líneas Operativas, Equipos y Componentes.
 - **Autenticación Segura mediante Doble Token JWT (Access Token + Refresh Cookie)**: Implementación de Access Token de vida corta (15 min) retornado en JSON y Refresh Token de vida larga (7 días) cifrado en HttpOnly Cookie con `SameSite: strict`. (`apps/backend/src/infrastructure/security/jwt.ts`, `apps/backend/src/core/middlewares/autenticar.ts`, `apps/backend/src/core/middlewares/refreshToken.ts`)
 - **Validación de Payloads con Zod**: Middleware factory `validarSchema` que ejecuta validación estricta de esquemas Zod en tiempo de ejecución (`loginSchema`, `crearUsuarioSchema`, `actualizarUsuarioSchema`). (`apps/backend/src/core/middlewares/validarSchema.ts`, `apps/backend/src/modules/auth/auth.schemas.ts`)
 - **Contratos de API Actualizados (`docs/api/contratos.md`)**: Documentación detallada de contratos HTTP, headers, cookies, esquemas Zod y códigos de respuesta para todos los endpoints de autenticación y gestión de usuarios.
