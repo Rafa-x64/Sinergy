@@ -387,7 +387,7 @@ export const errorHandler = (err: Error, req: Request, res: Response, next: Next
 
 # Parte B — Frontend (Vue 3 SPA)
 
-El frontend es una SPA construida con Vue 3, TypeScript, Bootstrap 5 y Pinia. Sigue la **Composition API** con `<script setup>` en todos los componentes. La lógica reutilizable va en composables, el estado compartido en stores de Pinia, y los estilos en las clases utilitarias de Bootstrap.
+El frontend es una SPA construida con Vue 3, TypeScript, Bootstrap 5, Vuetify 3 (con Material Design Icons `@mdi/font`) y Pinia. Sigue la **Composition API** con `<script setup>` en todos los componentes. La lógica reutilizable va en composables, el estado compartido en stores de Pinia, y los estilos en clases utilitarias de Bootstrap y componentes de Vuetify. Para una referencia detallada sobre la configuración y uso de Vuetify 3, consulta [extensions.md](file:///c:/xampp/htdocs/Sinergy/docs/extensions/extensions.md#21-vuetify-3--mdifont).
 
 ---
 

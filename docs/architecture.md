@@ -67,6 +67,8 @@ Sinergy es un sistema de gestión de mantenimiento industrial estructurado como 
 | SheetJS (xlsx)      | 0.18.5         | Exportación a Excel                |
 | jsPDF + html2canvas | 2.5.1 / 1.4.1  | Exportación a PDF                  |
 | FontAwesome         | 6.5.1          | Iconografía SVG                    |
+| Vuetify 3           | 3.13.0         | Componentes UI y Material Design   |
+| @mdi/font           | 7.4.47         | Iconografía Material Design        |
 
 ### Backend
 

@@ -147,6 +147,9 @@ importers:
       vue3-apexcharts:
         specifier: ^1.11.1
         version: 1.11.1(apexcharts@3.49.1)(vue@3.5.13(typescript@5.4.5))
+      vuetify:
+        specifier: ^3.13.0
+        version: 3.13.0(typescript@5.4.5)(vue@3.5.13(typescript@5.4.5))
       xlsx:
         specifier: 0.18.5
         version: 0.18.5
@@ -154,6 +157,9 @@ importers:
         specifier: 1.4.0
         version: 1.4.0
     devDependencies:
+      '@mdi/font':
+        specifier: ^7.4.47
+        version: 7.4.47
       '@types/bootstrap':
         specifier: 5.2.10
         version: 5.2.10
@@ -405,6 +411,9 @@ packages:
 
   '@kurkle/color@0.3.4':
     resolution: {integrity: sha512-M5UknZPHRu3DEDWoipU6sE8PdkZ6Z/S+v4dD+Ke8IaNlpdSQah50lz1KtcFBa2vsdOnwbbnxJwVM4wty6udA5w==}
+
+  '@mdi/font@7.4.47':
+    resolution: {integrity: sha512-43MtGpd585SNzHZPcYowu/84Vz2a2g31TvPMTm9uTiCSWzaheQySUcSyUH/46fPnuPQWof2yd0pGBtzee/IQWw==}
 
   '@popperjs/core@2.11.8':
     resolution: {integrity: sha512-P1st0aksCrn9sGZhp8GMYwBnQsbvAWsZAX44oXNNvLHGqAOcoVxmjZiohstwQ7SqKnbR47akdNi+uleWD8+g6A==}
@@ -2223,6 +2232,21 @@ packages:
       typescript:
         optional: true
 
+  vuetify@3.13.0:
+    resolution: {integrity: sha512-ODQZHKni5d9o2XVBVfnmlRwssdIko1WCM8DlPvpo4maeoPrNgjoIa38VvhLWYH/FeKgif4w0LlUTdW5Rkg7R5Q==}
+    peerDependencies:
+      typescript: '>=4.7'
+      vite-plugin-vuetify: '>=2.1.0'
+      vue: ^3.5.0
+      webpack-plugin-vuetify: '>=3.1.0'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+      vite-plugin-vuetify:
+        optional: true
+      webpack-plugin-vuetify:
+        optional: true
+
   which@2.0.2:
     resolution: {integrity: sha512-BLI3Tl1TW3Pvl70l3yq3Y64i+awpwXqsGBYWkkqMtnbXgrMD+yj7rhW0kuEDxzJaYXGjEW5ogapKNMEKNMjibA==}
     engines: {node: '>= 8'}
@@ -2427,6 +2451,8 @@ snapshots:
       '@jridgewell/sourcemap-codec': 1.5.5
 
   '@kurkle/color@0.3.4': {}
+
+  '@mdi/font@7.4.47': {}
 
   '@popperjs/core@2.11.8': {}
 
@@ -4245,6 +4271,12 @@ snapshots:
       '@vue/runtime-dom': 3.5.40
       '@vue/server-renderer': 3.5.40
       '@vue/shared': 3.5.40
+    optionalDependencies:
+      typescript: 5.4.5
+
+  vuetify@3.13.0(typescript@5.4.5)(vue@3.5.13(typescript@5.4.5)):
+    dependencies:
+      vue: 3.5.13(typescript@5.4.5)
     optionalDependencies:
       typescript: 5.4.5
 
