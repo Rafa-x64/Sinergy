@@ -12,6 +12,7 @@ import equipoRoutes from '../modules/equipo/equipo.routes'
 import plantaRoutes from '../modules/plantas/planta.routes'
 import ubicacionRoutes from '../modules/ubicaciones/ubicacion.routes'
 import lineaRoutes from '../modules/lineas/linea.routes'
+import componenteRoutes from '../modules/componentes/componente.routes'
 
 const app = express()
 
@@ -76,6 +77,7 @@ app.use('/api/equipos', equipoRoutes)
 app.use('/api/plantas', plantaRoutes)
 app.use('/api/ubicaciones', ubicacionRoutes)
 app.use('/api/lineas', lineaRoutes)
+app.use('/api/componentes', componenteRoutes)
 
 // ─── Handlers globales (deben ir al final) ────────────────────────────────────
 app.use(notFoundHandler)
