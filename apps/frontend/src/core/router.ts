@@ -6,8 +6,14 @@ const routes: RouteRecordRaw[] = [
     path: '/',
     name: 'login',
     component: () => import('../modules/auth/views/LoginView.vue'),
-    meta: { requiresAuth: false },
+    meta: { requiresAuth: false, hideLayout: true },
   },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'not-found',
+    component: () => import('@/views/NotFoundView.vue'),
+    meta: { requiresAuth: false, hideLayout: true }
+  }
 ]
 
 const router = createRouter({
