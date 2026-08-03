@@ -71,7 +71,7 @@ app.get('/api/health', async (_req, res, next) => {
 
 // ─── Módulos de funcionalidades ───────────────────────────────────────────────
 app.use('/api/auth', authRoutes)
-app.use('/api/usuarios', authRoutes) // Alias de compatibilidad
+app.use('/api/usuarios', authRoutes)
 app.use('/api/roles', rolesRoutes)
 app.use('/api/equipos', equipoRoutes)
 app.use('/api/plantas', plantaRoutes)
