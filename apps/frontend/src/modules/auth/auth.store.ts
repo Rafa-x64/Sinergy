@@ -51,13 +51,9 @@ export const useAuthStore = defineStore('auth', () => {
       await cargarPerfil()
 
       router.push({ name: 'dashboard' })
-    } catch (err: unknown) {
-      if (
-        err instanceof Error &&
-        'response' in (err as Record<string, unknown>)
-      ) {
-        const axiosError = err as { response: { data: ApiResponse } }
-        error.value = axiosError.response.data.error?.message ?? 'Error al iniciar sesión'
+    } catch (err: any) {
+      if (err?.response?.data?.error?.message) {
+        error.value = err.response.data.error.message
       } else {
         error.value = 'Error de conexión con el servidor'
       }

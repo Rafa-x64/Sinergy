@@ -12,7 +12,7 @@ import { useAuthStore } from '@/modules/auth/auth.store';
  * circular (Pinia no existe en el momento en que este módulo se carga).
  */
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:3001/api',
+  baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api',
   withCredentials: true, // Necesario para enviar/recibir la HttpOnly Cookie de refresh token
   headers: {
     'Content-Type': 'application/json',

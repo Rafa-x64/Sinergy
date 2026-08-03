@@ -25,6 +25,7 @@
     "noFallthroughCasesInSwitch": true,
     /* Ruta del Alias */
     "baseUrl": ".",
+    "rootDir": "../..",
     "paths": {
       "@/*": [
         "./src/*"
@@ -35,6 +36,7 @@
     "src/**/*.ts",
     "src/**/*.tsx",
     "src/**/*.vue",
-    "src/env.d.ts"
+    "src/env.d.ts",
+    "../shared/**/*.ts"
   ]
 }

@@ -18,6 +18,9 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faUser, faCog, faHome, faChartBar } from '@fortawesome/free-solid-svg-icons'
 library.add(faUser, faCog, faHome, faChartBar)
 
+// Vuetify 3
+import vuetify from './plugins/vuetify'
+
 // Crear app
 const app = createApp(App)
 const pinia = createPinia()
@@ -25,6 +28,7 @@ const pinia = createPinia()
 // Plugins
 app.use(pinia)
 app.use(router)
+app.use(vuetify)
 app.use(createBootstrap())
 app.use(VueApexCharts)
 app.use(Toast, {
