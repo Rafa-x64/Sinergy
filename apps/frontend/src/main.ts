@@ -17,6 +17,7 @@ import { library } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faUser, faCog, faHome, faChartBar } from '@fortawesome/free-solid-svg-icons'
 library.add(faUser, faCog, faHome, faChartBar)
+import '@mdi/font/css/materialdesignicons.css'
 
 // Vuetify 3
 import vuetify from './plugins/vuetify'

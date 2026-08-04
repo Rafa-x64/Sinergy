@@ -9,6 +9,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: false, hideLayout: true },
   },
   {
+    path: '/dashboard',
+    name: 'dashboard',
+    component: () => import('../modules/dashboard/views/DashboardView.vue'),
+    meta: { requiresAuth: true, hideLayout: false },
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('@/views/NotFoundView.vue'),

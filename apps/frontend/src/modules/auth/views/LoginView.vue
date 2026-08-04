@@ -1,82 +1,33 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { reactive, ref } from 'vue'
+import { useAuthStore, type LoginDTO } from '../auth.store'
+import { useRouter } from 'vue-router'
 
-interface InicioSesionDTO {
-  email: string
-  password: string
-}
+const router = useRouter()
+const authStore = useAuthStore()
 
-interface RespuestaExito {
-  success: true
-  message: string
-  data: {
-    accessToken: string
-  }
-}
-
-interface RespuestaError {
-  success: false
-  error: {
-    message: string
-  }
-}
-
-type RespuestaLogin = RespuestaExito | RespuestaError
-
-const datosFormulario = reactive<InicioSesionDTO>({
+const formulario = reactive<LoginDTO>({
   email: '',
   password: ''
 })
 
-const cargando = ref(false)
+const cargando = ref<boolean>(false)
 const mensajeServidor = ref<string | null>(null)
 
-const API_URL = 'http://localhost:3000/api'
+const manejarSubmit = async (): Promise<void> => {
+  cargando.value = true
+  mensajeServidor.value = null
 
-async function iniciarSesion(): Promise<void> {
   try {
-    console.log(`Iniciando petición POST a ${API_URL}/auth/login`)
+    const resultado = await authStore.login(formulario)
 
-    const response = await fetch(`${API_URL}/auth/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      credentials: 'include',
-      body: JSON.stringify(datosFormulario)
-    })
-
-    const respuesta = (await response.json()) as RespuestaLogin
-
-    console.log('Estado HTTP:', response.status)
-
-    if (respuesta.success) {
-      console.log('Mensaje del servidor:', respuesta.message)
-      console.log('Access Token recibido:', respuesta.data.accessToken)
-
-      mensajeServidor.value = respuesta.message
-      // Aquí puedes guardar el accessToken en memoria o redireccionar
+    if (resultado.success && authStore.estaAutenticado) {
+      await router.push({ name: 'dashboard' })
     } else {
-      // TypeScript infiere que 'respuesta' es RespuestaError
-      console.log('Error del servidor:', respuesta.error.message)
-      mensajeServidor.value = respuesta.error.message
+      mensajeServidor.value = resultado.message ?? 'Credenciales inválidas'
     }
-
   } catch (error: unknown) {
-    if (error instanceof Error) {
-      console.log('Error de red o servidor no disponible:', error.message)
-      mensajeServidor.value = 'No se pudo conectar con el servidor'
-    } else {
-      console.log('Error desconocido:', error)
-    }
-  }
-}
-
-const enviar = async (): Promise<void> => {
-  try {
-    cargando.value = true
-    mensajeServidor.value = null
-    await iniciarSesion()
+    mensajeServidor.value = 'Error de conexión con el servidor'
   } finally {
     cargando.value = false
   }
@@ -91,11 +42,11 @@ const enviar = async (): Promise<void> => {
         <v-col cols="12" md="6" class="pa-8 d-flex flex-column justify-center">
           <h1 class="text-h4 font-weight-bold mb-6">Bienvenido</h1>
 
-          <v-form @submit.prevent="enviar">
-            <v-text-field v-model="datosFormulario.email" label="Correo" prepend-inner-icon="mdi-email-outline"
+          <v-form @submit.prevent="manejarSubmit">
+            <v-text-field v-model="formulario.email" label="Correo" prepend-inner-icon="mdi-email-outline"
               variant="outlined" placeholder="correo@gmail.com" type="email" class="mb-2"></v-text-field>
 
-            <v-text-field v-model="datosFormulario.password" label="Contraseña" prepend-inner-icon="mdi-lock-outline"
+            <v-text-field v-model="formulario.password" label="Contraseña" prepend-inner-icon="mdi-lock-outline"
               variant="outlined" placeholder="Contraseña123" type="password" class="mb-4"></v-text-field>
 
             <v-btn type="submit" color="primary" size="large" block :loading="cargando">

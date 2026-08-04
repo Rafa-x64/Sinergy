@@ -8,7 +8,7 @@ const COOKIE_OPTIONS = {
   httpOnly: true,
   secure: IS_PRODUCTION,
   sameSite: 'strict' as const,
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días en ms
+  maxAge: 7 * 24 * 60 * 60 * 1000,
 }
 
 function esEmailValido(email: string): boolean {
@@ -17,7 +17,6 @@ function esEmailValido(email: string): boolean {
   return emailRegex.test(email.trim())
 }
 
-/** Extrae y valida un :id numérico de los params. Devuelve null si es inválido. */
 function parsearId(raw: string): number | null {
   const id = parseInt(raw, 10)
   return Number.isNaN(id) ? null : id
@@ -25,32 +24,29 @@ function parsearId(raw: string): number | null {
 
 export const authController = {
 
-  async iniciarSesion(req: Request, res: Response, next: NextFunction) {
+  async iniciarSesion(req: Request, res: Response, next: NextFunction): Promise<void> {
+    console.log('Headers recibidos:', req.headers['content-type'])
+    console.log('Body recibido (Backend):', req.body)
     try {
       const { email, password } = req.body
 
-      if (!email || typeof email !== 'string' || !email.trim()) {
-        return res.status(400).json({ success: false, error: { message: 'El correo electrónico es requerido' } })
+      if (!email || !password) {
+        res.status(400).json({
+          success: false,
+          error: { message: 'El correo y la contraseña son requeridos' }
+        })
+        return
       }
 
-      if (!password || typeof password !== 'string') {
-        return res.status(400).json({ success: false, error: { message: 'La contraseña es requerida' } })
-      }
-
-      const emailNormalizado = email.trim().toLowerCase()
-
-      if (!esEmailValido(emailNormalizado)) {
-        return res.status(400).json({ success: false, error: { message: 'El formato del correo electrónico no es válido' } })
-      }
-
-      const { accessToken, refreshToken } = await authService.iniciarSesion({ email: emailNormalizado, password })
+      const credenciales = { email: String(email).trim().toLowerCase(), password: String(password) }
+      const { accessToken, refreshToken } = await authService.iniciarSesion(credenciales)
 
       res.cookie('refreshToken', refreshToken, COOKIE_OPTIONS)
 
-      return res.status(200).json({
+      res.status(200).json({
         success: true,
         message: 'Sesión iniciada correctamente',
-        data: { accessToken },
+        data: { accessToken }
       })
     } catch (error) {
       next(error)
