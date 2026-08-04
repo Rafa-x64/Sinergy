@@ -395,72 +395,147 @@ El frontend es una SPA construida con Vue 3, TypeScript, Bootstrap 5, Vuetify 3 
 
 ```
 src/
-├── core/           ← Router (router.ts) e instancia de API/Axios (api.ts)
-├── shared/         ← Componentes reutilizables UI (BaseButton, BaseCard...) y Layouts
-└── modules/        ← Módulos aislados por negocio
-    ├── auth/       ← views/, auth.store.ts
+├── components/     ← Componentes globales de UI y Layout (Menu.vue, SinergyChip.vue)
+├── core/           ← Router (router.ts) y plugins (vuetify.ts)
+├── shared/         ← Componentes y utilidades compartidas
+└── modules/        ← Módulos aislados por negocio (Feature-Based)
+    ├── auth/       ← views/ (LoginView.vue), auth.store.ts
+    ├── dashboard/  ← views/ (DashboardView.vue), dashboard.store.ts
     ├── equipment/  ← views/, components/, equipment.store.ts
     └── maintenance/← views/, maintenance.store.ts
 ```
 
----
+### Componentes de Layout Responsivos (`App.vue`, `Menu.vue`, `SinergyChip.vue`)
 
-## B2. Crear una Vista dentro de un Módulo
-
-Las vistas viven dentro de `src/modules/<modulo>/views/`:
+El layout de la aplicación se gestiona globalmente en `App.vue` en combinación con la propiedad de ruta `meta.hideLayout`:
 
 ```vue
-<!-- apps/frontend/src/modules/equipment/views/EquipmentList.vue -->
+<!-- apps/frontend/src/App.vue -->
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import { useEquipmentStore } from '../equipment.store'
+import { RouterView, useRoute } from 'vue-router'
+import { computed } from 'vue'
+import Menu from './components/Menu.vue'
 
-const store = useEquipmentStore()
-
-onMounted(() => store.cargarEquipos())
+const route = useRoute()
+const ocultarLayout = computed(() => !!route.meta.hideLayout)
 </script>
 
 <template>
-  <div class="container py-4">
-    <h1 class="mb-4">Equipos de Maquinaria</h1>
-    <div v-if="store.cargando" class="spinner-border text-primary" />
-    <div v-else class="row g-3">
-      <div v-for="equipo in store.equipos" :key="equipo.id" class="col-md-4">
-        <div class="card p-3 shadow-sm">
-          <h5>{{ equipo.nombre }}</h5>
-          <p class="text-muted mb-0">{{ equipo.codigo }}</p>
-        </div>
-      </div>
-    </div>
-  </div>
+  <v-app>
+    <Menu :ocultarLayout="ocultarLayout" />
+    <v-main>
+      <RouterView />
+    </v-main>
+  </v-app>
+</template>
+```
+
+- `<Menu.vue>` renderiza de forma adaptativa un `<v-navigation-drawer>` permanente en escritorios (`>= 960px`) y un `<v-app-bar>` con menú desplegable en dispositivos móviles (`< 960px`) usando `useMediaQuery` de `@vueuse/core`.
+- `<SinergyChip.vue>` es el componente de marca oficial que muestra el gradiente, logo de Vuetify y tipografía adaptativa.
+
+---
+
+## B2. Crear una Vista dentro de un Módulo (Estándar Vuetify 3)
+
+Las vistas viven dentro de `src/modules/<modulo>/views/` y deben usar componentes de Vuetify 3 (`v-container`, `v-row`, `v-col`, `v-sheet`, `v-card`, `v-tabs`, `v-form`, etc.) con TypeScript explícito.
+
+Ejemplo de vista de Dashboard (`src/modules/dashboard/views/DashboardView.vue`):
+
+```vue
+<script setup lang="ts">
+import { ref } from 'vue'
+
+const tabs = [
+  { id: 1, name: 'Estadísticas', color: 'warning' },
+  { id: 2, name: 'Historial', color: 'info' },
+  { id: 3, name: 'Reportes', color: 'error' },
+  { id: 4, name: 'Equipos', color: 'success' }
+]
+
+const pestañaActiva = ref(tabs[0].id)
+</script>
+
+<template>
+  <v-container fluid class="pa-0">
+    <v-row>
+      <v-col cols="12" class="pa-5">
+        <v-sheet elevation="2" color="background">
+          <v-tabs v-model="pestañaActiva" color="primary" grow>
+            <v-tab v-for="tab in tabs" :key="tab.id" :value="tab.id" :color="tab.color">
+              {{ tab.name }}
+            </tab>
+          </v-tabs>
+          <v-tabs-window v-model="pestañaActiva" transition="fade-transition">
+            <v-tabs-window-item v-for="tab in tabs" :key="tab.id" :value="tab.id">
+              <v-sheet class="pa-5" color="surface">
+                Contenido del panel {{ tab.name }}
+              </v-sheet>
+            </v-tabs-window-item>
+          </v-tabs-window>
+        </v-sheet>
+      </v-col>
+    </v-row>
+  </v-container>
 </template>
 ```
 
 ---
 
-## B3. Registrar la Ruta en Vue Router
+## B3. Registrar la Ruta en Vue Router (`router.ts`)
 
-Registra las vistas de los módulos en `apps/frontend/src/core/router.ts`:
+Registra las rutas en `apps/frontend/src/core/router.ts` definiendo los metadatos `requiresAuth` y `hideLayout`:
 
 ```typescript
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+import { useAuthStore } from '../modules/auth/auth.store'
 
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
-    name: 'home',
-    component: () => import('../modules/auth/views/HomeView.vue')
+    name: 'login',
+    component: () => import('../modules/auth/views/LoginView.vue'),
+    meta: { requiresAuth: false, hideLayout: true }
   },
   {
-    path: '/equipment',
-    name: 'equipment-list',
-    component: () => import('../modules/equipment/views/EquipmentList.vue')
+    path: '/dashboard',
+    name: 'dashboard',
+    component: () => import('../modules/dashboard/views/DashboardView.vue'),
+    meta: { requiresAuth: true, hideLayout: false }
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'not-found',
+    component: () => import('@/views/NotFoundView.vue'),
+    meta: { requiresAuth: false, hideLayout: true }
   }
 ]
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
-  routes
+  routes,
+  scrollBehavior(_to, _from, savedPosition) {
+    return savedPosition || { top: 0 }
+  }
+})
+
+/**
+ * Navigation Guard global para gestión de sesión persistente.
+ */
+router.beforeEach(async (to) => {
+  const authStore = useAuthStore()
+  const requiereAuth = to.meta.requiresAuth === true
+
+  if (requiereAuth && !authStore.estaAutenticado) {
+    // Intenta restaurar la sesión desde la cookie HttpOnly en /auth/refresh
+    const sesionRestaurada = await authStore.refrescarToken()
+    if (!sesionRestaurada) {
+      return { name: 'login' }
+    }
+  }
+
+  if (!requiereAuth && authStore.estaAutenticado && to.name === 'login') {
+    return { name: 'dashboard' }
+  }
 })
 
 export default router
@@ -471,185 +546,239 @@ export default router
 
 ---
 
-## B4. Crear un Componente Base Reutilizable
+## B4. Crear un Store de Pinia y Autenticación (`auth.store.ts`)
 
-Los componentes base son los bloques de construcción del sistema. Estandarizan la UI.
-
-```vue
-<!-- apps/frontend/src/components/BaseCard.vue -->
-<script setup lang="ts">
-defineProps<{
-  titulo: string
-  subtitulo?: string
-  variante?: 'default' | 'success' | 'danger' | 'warning'
-}>()
-</script>
-
-<template>
-  <div class="card h-100 shadow-sm border-0">
-    <div class="card-body">
-      <h6 class="card-title fw-semibold mb-1">{{ titulo }}</h6>
-      <p v-if="subtitulo" class="card-subtitle text-muted small">{{ subtitulo }}</p>
-      <!-- Slot para contenido personalizado -->
-      <slot />
-    </div>
-  </div>
-</template>
-```
-
-```vue
-<!-- apps/frontend/src/components/BaseButton.vue -->
-<script setup lang="ts">
-withDefaults(defineProps<{
-  label: string
-  variant?: 'primary' | 'secondary' | 'danger' | 'success'
-  loading?: boolean
-  type?: 'button' | 'submit'
-}>(), {
-  variant: 'primary',
-  loading: false,
-  type: 'button'
-})
-
-defineEmits<{ click: [] }>()
-</script>
-
-<template>
-  <button
-    :type="type"
-    :class="`btn btn-${variant}`"
-    :disabled="loading"
-    @click="$emit('click')"
-  >
-    <span v-if="loading" class="spinner-border spinner-border-sm me-2" />
-    {{ label }}
-  </button>
-</template>
-```
-
-> [!IMPORTANT]
-> Prohibido crear estilos aislados por vista que rompan la coherencia. Si un estilo se repite en 2 lugares, extráelo a un componente base.
-
----
-
-## B5. Crear un Store de Pinia
-
-El store centraliza el estado que debe ser compartido entre múltiples vistas o componentes.
+El store centraliza el estado global de la sesión. Sigue la arquitectura de **Doble Token JWT**: Access Token mantenido en memoria (`accessToken`) + Refresh Token almacenado en cookie segura `HttpOnly`.
 
 ```typescript
-// apps/frontend/src/stores/authStore.ts
+// apps/frontend/src/modules/auth/auth.store.ts
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 
-interface UsuarioAutenticado {
-  id: number
-  nombre: string
+export interface LoginDTO {
   email: string
-  rol: 'TECNICO' | 'SUPERVISOR' | 'ADMIN'
+  password: string
 }
+
+export interface RespuestaApi<T = void> {
+  success: boolean
+  message?: string
+  data?: T
+  error?: { message: string }
+}
+
+const API_URL = 'http://localhost:3000/api'
 
 export const useAuthStore = defineStore('auth', () => {
-  const token = ref<string | null>(localStorage.getItem('token'))
-  const usuario = ref<UsuarioAutenticado | null>(null)
+  const accessToken = ref<string | null>(null)
 
-  const isAuthenticated = computed(() => !!token.value)
-  const esSupervisor = computed(() => usuario.value?.rol === 'SUPERVISOR')
+  const estaAutenticado = computed<boolean>(() => accessToken.value !== null)
 
-  const setToken = (nuevoToken: string) => {
-    token.value = nuevoToken
-    localStorage.setItem('token', nuevoToken)
+  async function login(credenciales: LoginDTO): Promise<RespuestaApi> {
+    const response = await fetch(`${API_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(credenciales)
+    })
+
+    const resultado: RespuestaApi<{ accessToken: string }> = await response.json()
+
+    if (resultado.success && resultado.data) {
+      accessToken.value = resultado.data.accessToken
+    }
+
+    return {
+      success: resultado.success,
+      message: resultado.message ?? resultado.error?.message ?? 'Error inesperado'
+    }
   }
 
-  const setUsuario = (datos: UsuarioAutenticado) => {
-    usuario.value = datos
-    localStorage.setItem('rol', datos.rol)
+  async function refrescarToken(): Promise<boolean> {
+    try {
+      const response = await fetch(`${API_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      })
+
+      if (!response.ok) {
+        cerrarSesion()
+        return false
+      }
+
+      const resultado: RespuestaApi<{ accessToken: string }> = await response.json()
+
+      if (resultado.success && resultado.data?.accessToken) {
+        accessToken.value = resultado.data.accessToken
+        return true
+      }
+
+      return false
+    } catch {
+      cerrarSesion()
+      return false
+    }
   }
 
-  const logout = () => {
-    token.value = null
-    usuario.value = null
-    localStorage.removeItem('token')
-    localStorage.removeItem('rol')
+  async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<Response> {
+    const headers = new Headers(options.headers)
+
+    if (accessToken.value) {
+      headers.set('Authorization', `Bearer ${accessToken.value}`)
+    }
+
+    return fetch(`${API_URL}${endpoint}`, {
+      ...options,
+      headers,
+      credentials: 'include'
+    })
   }
 
-  return { token, usuario, isAuthenticated, esSupervisor, setToken, setUsuario, logout }
+  function cerrarSesion(): void {
+    accessToken.value = null
+  }
+
+  return {
+    accessToken,
+    estaAutenticado,
+    login,
+    refrescarToken,
+    apiFetch,
+    cerrarSesion
+  }
 })
 ```
 
 ---
 
-## B6. Crear un Composable (Lógica Reutilizable)
+## B5. Consumir la API del Backend con `apiFetch`
 
-Los composables encapsulan lógica que puede ser usada en múltiples vistas. No tienen template.
+Toda interacción de red que requiera comunicarse con el backend Express debe realizarse utilizando la función `apiFetch` expuesta por `useAuthStore()`.
 
+### Firma de la función
 ```typescript
-// apps/frontend/src/composables/useTecnicos.ts
-import { ref } from 'vue'
-import http from '@/utils/http'
-import type { Tecnico } from '@/types/Tecnico' // Define tus tipos en src/types/
+apiFetch(endpoint: string, options?: RequestInit): Promise<Response>
+```
 
-export function useTecnicos() {
-  const tecnicos = ref<Tecnico[]>([])
-  const cargando = ref(false)
-  const error = ref<string | null>(null)
+### Garantías de `apiFetch`
+1. **Header Authorization Automático**: Si el usuario está autenticado (`accessToken` en memoria), agrega automáticamente el header `Authorization: Bearer <accessToken>`.
+2. **Envío de Cookies HttpOnly**: Incluye nativamente `credentials: 'include'`, asegurando el intercambio del Refresh Token en peticiones cruzadas.
+3. **Ruta Base Centralizada**: Concatena automáticamente el endpoint indicado con la constante `${API_URL}` (`http://localhost:3000/api`).
 
-  const cargarTecnicos = async (plantaId?: number) => {
-    cargando.value = true
-    error.value = null
-    try {
-      const url = plantaId ? `/tecnicos/planta/${plantaId}` : '/tecnicos'
-      const { data } = await http.get<Tecnico[]>(url)
-      tecnicos.value = data
-    } catch (e) {
-      error.value = 'No se pudieron cargar los técnicos.'
-    } finally {
-      cargando.value = false
+### Ejemplo de uso en Cierre de Sesión (`Menu.vue`)
+```typescript
+import { useAuthStore } from '../modules/auth/auth.store'
+import { useRouter } from 'vue-router'
+
+const authStore = useAuthStore()
+const router = useRouter()
+
+const cerrarSesion = async (): Promise<void> => {
+  try {
+    const respuesta = await authStore.apiFetch('/auth/logout', {
+      method: 'POST'
+    })
+
+    if (!respuesta.ok) {
+      throw new Error('Error al comunicarse con el servidor')
     }
-  }
 
-  return { tecnicos, cargando, error, cargarTecnicos }
+    authStore.cerrarSesion()
+    await router.push({ name: 'login' })
+  } catch (error) {
+    console.error('Fallo durante el cierre de sesión:', error)
+  }
 }
 ```
 
+> [!IMPORTANT]
+> **Prohibido guardar Access Tokens en `localStorage` o `sessionStorage`**. El Access Token debe residir únicamente en la memoria de Pinia por motivos de seguridad contra ataques XSS.
+
 ---
 
-## B7. Consumir la API del Backend
+## B6. Formulario de Inicio de Sesión (`LoginView.vue`)
 
-Toda comunicación HTTP pasa por la instancia centralizada de Axios. Crea el archivo si no existe:
+Ejemplo del flujo de autenticación consumiendo `useAuthStore` y campos reactivos de TypeScript:
 
-```typescript
-// apps/frontend/src/utils/http.ts
-import axios from 'axios'
+```vue
+<!-- apps/frontend/src/modules/auth/views/LoginView.vue -->
+<script setup lang="ts">
+import { reactive, ref } from 'vue'
+import { useAuthStore, type LoginDTO } from '../auth.store'
+import { useRouter } from 'vue-router'
 
-const http = axios.create({
-  baseURL: import.meta.env.VITE_API_URL, // http://localhost:3000/api
-  timeout: 10000,
-  headers: { 'Content-Type': 'application/json' }
+const router = useRouter()
+const authStore = useAuthStore()
+
+const formulario = reactive<LoginDTO>({
+  email: '',
+  password: ''
 })
 
-// Adjunta el JWT en cada petición
-http.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
-  if (token) config.headers.Authorization = `Bearer ${token}`
-  return config
-})
+const cargando = ref<boolean>(false)
+const mensajeServidor = ref<string | null>(null)
 
-// Redirige al login si el token expira
-http.interceptors.response.use(
-  (res) => res,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token')
-      window.location.href = '/login'
+const manejarSubmit = async (): Promise<void> => {
+  cargando.value = true
+  mensajeServidor.value = null
+
+  try {
+    const resultado = await authStore.login(formulario)
+
+    if (resultado.success && authStore.estaAutenticado) {
+      await router.push({ name: 'dashboard' })
+    } else {
+      mensajeServidor.value = resultado.message ?? 'Credenciales inválidas'
     }
-    return Promise.reject(error)
+  } catch {
+    mensajeServidor.value = 'Error de conexión con el servidor'
+  } finally {
+    cargando.value = false
   }
-)
+}
+</script>
 
-export default http
+<template>
+  <v-container fluid class="fill-height bg-grey-lighten-4">
+    <v-row justify="center" align="center">
+      <v-col cols="12" sm="8" md="4">
+        <v-card elevation="4" class="pa-6 rounded-lg">
+          <h1 class="text-h4 font-weight-bold mb-6 text-center">Bienvenido</h1>
+
+          <v-form @submit.prevent="manejarSubmit">
+            <v-text-field
+              v-model="formulario.email"
+              label="Correo"
+              prepend-inner-icon="mdi-email-outline"
+              variant="outlined"
+              type="email"
+              class="mb-2"
+            ></v-text-field>
+
+            <v-text-field
+              v-model="formulario.password"
+              label="Contraseña"
+              prepend-inner-icon="mdi-lock-outline"
+              variant="outlined"
+              type="password"
+              class="mb-4"
+            ></v-text-field>
+
+            <v-alert v-if="mensajeServidor" type="error" variant="tonal" class="mb-4">
+              {{ mensajeServidor }}
+            </v-alert>
+
+            <v-btn type="submit" color="primary" size="large" block :loading="cargando">
+              Iniciar Sesión
+            </v-btn>
+          </v-form>
+        </v-card>
+      </v-col>
+    </v-row>
+  </v-container>
+</template>
 ```
-
-**Nunca uses `axios` directamente en un componente o vista.** Siempre importa `http` desde `@/utils/http`.
 
 ---
 

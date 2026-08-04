@@ -17,6 +17,12 @@ El formato sigue el estándar [Keep a Changelog](https://keepachangelog.com/es/1
 ## [Unreleased]
 
 ### Added
+- **Estandarización de `apiFetch` en `auth.store.ts`**: Implementación de la función `apiFetch` para consumo centralizado de la API REST, inyectando automáticamente `Authorization: Bearer <accessToken>`, `credentials: 'include'` y prefijo `API_URL`. (`apps/frontend/src/modules/auth/auth.store.ts`)
+- **Vistas y Componentes de Interfaz (`LoginView.vue`, `DashboardView.vue`, `Menu.vue`, `SinergyChip.vue`)**: Implementación del formulario de inicio de sesión con Vuetify 3, vista inicial de Dashboard con pestañas, menú responsivo adaptativo (drawer permanente en desktop y app-bar en móvil) y componente visual `SinergyChip`. (`apps/frontend/src/modules/auth/views/LoginView.vue`, `apps/frontend/src/modules/dashboard/views/DashboardView.vue`, `apps/frontend/src/components/Menu.vue`, `apps/frontend/src/components/SinergyChip.vue`)
+- **Restauración Automática de Sesión en Navigation Guard**: Configuración de `router.beforeEach` en `src/core/router.ts` llamando a `authStore.refrescarToken()` para persistencia transparente de la sesión mediante cookies HttpOnly en recargas de página.
+
+### Changed
+- **Guía del Desarrollador y Arquitectura (`docs/guia-desarrollador.md`, `docs/architecture.md`)**: Actualización de los estándares del frontend, eliminación de dependencias de `localStorage` para tokens JWT en favor de Access Token en memoria, y formalización de `apiFetch` como función estándar de consumo de servicios.
 - **Integración de Vuetify 3 y Material Design Icons (`@mdi/font`)**: Configuración e integración del plugin `vuetify` en `apps/frontend/src/plugins/vuetify.ts` y registro global en `main.ts`, habilitando componentes UI avanzados y librería de íconos MDI.
 - **Tutorial Completo de Vuetify 3 (`docs/extensions/extensions.md`)**: Guía detallada paso a paso para la instalación, registro, tematización y uso de componentes Vuetify con `<script setup lang="ts">` en Vue 3.
 - **Contratos de API Backend Estandarizados (`docs/api/contratos.md`)**: Documentación integral de los endpoints HTTP, parámetros DTO, códigos de error y respuestas bajo el formato `ResponseDTO` para los módulos de Plantas, Ubicaciones Técnicas, Líneas Operativas, Equipos y Componentes.

@@ -280,25 +280,27 @@ src/
 
 ---
 
-## Gestión de Estado (Frontend)
+## Gestión de Estado y Comunicaciones (Frontend)
 
 ### ¿Cuándo usar cada mecanismo?
 
 | Mecanismo                            | Cuándo usarlo                                                                                      |
 | ------------------------------------ | -------------------------------------------------------------------------------------------------- |
 | `ref` / `reactive` local             | Estado que solo necesita el componente actual                                                      |
-| `composable` (ref interno)           | Estado local a una funcionalidad (ej. lista de técnicos para una vista)                            |
-| `Pinia store`                        | Estado que múltiples vistas necesitan leer o modificar (usuario autenticado, configuración global) |
-| `localStorage` vía `useLocalStorage` | Estado que debe persistir entre sesiones (token, preferencias)                                     |
+| `composable` (ref interno)           | Estado local a una funcionalidad (ej. lista de datos específica de una vista)                      |
+| `Pinia store`                        | Estado que múltiples vistas necesitan leer o modificar (autenticación, token en memoria, tema)     |
+| `apiFetch` (expuesto en `authStore`) | Peticiones HTTP autenticadas (incluye Bearer token, HttpOnly credentials y prefijo `API_URL`)      |
+| `HttpOnly Cookie`                    | Persistencia segura del Refresh Token (7 días, controlado por backend)                             |
 | `Dexie / IndexedDB`                  | Datos estructurados offline (inspecciones pendientes de sincronizar)                               |
 
 ### Stores actuales
 
-| Store               | Archivo                                    | Responsabilidad                                         |
-| ------------------- | ------------------------------------------ | ------------------------------------------------------- |
-| `auth.store`        | `modules/auth/auth.store.ts`               | Token JWT, datos del usuario, rol, login/logout         |
-| `equipment.store`   | `modules/equipment/equipment.store.ts`     | Lista de equipos, filtros activos, detalle seleccionado |
-| `maintenance.store` | `modules/maintenance/maintenance.store.ts` | Variables críticas, reportes, estado de inspección      |
+| Store               | Archivo                                    | Responsabilidad                                                                          |
+| ------------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| `auth.store`        | `modules/auth/auth.store.ts`               | Access Token en memoria, estado de sesión, `login()`, `refrescarToken()`, `apiFetch()`   |
+| `dashboard.store`   | `modules/dashboard/dashboard.store.ts`   | Estado y datos del panel principal                                                      |
+| `equipment.store`   | `modules/equipment/equipment.store.ts`     | Lista de equipos, filtros activos, detalle seleccionado                                  |
+| `maintenance.store` | `modules/maintenance/maintenance.store.ts` | Variables críticas, reportes, estado de inspección                                       |
 
 ---
 
