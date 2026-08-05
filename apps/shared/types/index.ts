@@ -5,12 +5,9 @@
 
 /** Envoltorio estándar para todas las respuestas de la API. */
 export interface ApiResponse<T = undefined> {
-  success: boolean
+  status: 'ok' | 'error'
   message?: string
   data?: T
-  error?: {
-    message: string
-  }
 }
 
 /** Envoltorio para respuestas paginadas. */

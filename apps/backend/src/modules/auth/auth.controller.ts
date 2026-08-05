@@ -25,15 +25,13 @@ function parsearId(raw: string): number | null {
 export const authController = {
 
   async iniciarSesion(req: Request, res: Response, next: NextFunction): Promise<void> {
-    console.log('Headers recibidos:', req.headers['content-type'])
-    console.log('Body recibido (Backend):', req.body)
     try {
       const { email, password } = req.body
 
       if (!email || !password) {
         res.status(400).json({
-          success: false,
-          error: { message: 'El correo y la contraseña son requeridos' }
+          status: 'error',
+          message: 'El correo y la contraseña son requeridos'
         })
         return
       }
@@ -44,7 +42,7 @@ export const authController = {
       res.cookie('refreshToken', refreshToken, COOKIE_OPTIONS)
 
       res.status(200).json({
-        success: true,
+        status: 'ok',
         message: 'Sesión iniciada correctamente',
         data: { accessToken }
       })
@@ -58,38 +56,38 @@ export const authController = {
       const { nombre, apellido, email, password, activo, rolIds, rolId } = req.body
 
       if (!nombre || typeof nombre !== 'string' || !nombre.trim()) {
-        return res.status(400).json({ success: false, error: { message: 'El nombre es requerido' } })
+        return res.status(400).json({ status: 'error', message: 'El nombre es requerido' })
       }
 
       if (!apellido || typeof apellido !== 'string' || !apellido.trim()) {
-        return res.status(400).json({ success: false, error: { message: 'El apellido es requerido' } })
+        return res.status(400).json({ status: 'error', message: 'El apellido es requerido' })
       }
 
       if (!email || typeof email !== 'string' || !email.trim()) {
-        return res.status(400).json({ success: false, error: { message: 'El correo electrónico es requerido' } })
+        return res.status(400).json({ status: 'error', message: 'El correo electrónico es requerido' })
       }
 
       const emailNormalizado = email.trim().toLowerCase()
 
       if (!esEmailValido(emailNormalizado)) {
-        return res.status(400).json({ success: false, error: { message: 'El formato del correo electrónico no es válido' } })
+        return res.status(400).json({ status: 'error', message: 'El formato del correo electrónico no es válido' })
       }
 
       if (!password || typeof password !== 'string' || password.length < 6) {
-        return res.status(400).json({ success: false, error: { message: 'La contraseña debe tener al menos 6 caracteres' } })
+        return res.status(400).json({ status: 'error', message: 'La contraseña debe tener al menos 6 caracteres' })
       }
 
       if (rolIds !== undefined && !Array.isArray(rolIds)) {
-        return res.status(400).json({ success: false, error: { message: 'El campo rolIds debe ser un arreglo de números' } })
+        return res.status(400).json({ status: 'error', message: 'El campo rolIds debe ser un arreglo de números' })
       }
 
       if (rolId !== undefined && (typeof rolId !== 'number' || !Number.isInteger(rolId) || rolId <= 0)) {
-        return res.status(400).json({ success: false, error: { message: 'El campo rolId debe ser un número entero positivo' } })
+        return res.status(400).json({ status: 'error', message: 'El campo rolId debe ser un número entero positivo' })
       }
 
       const usuarioExistente = await authService.buscarPorEmail(emailNormalizado)
       if (usuarioExistente !== null) {
-        return res.status(409).json({ success: false, error: { message: `Ya existe un usuario registrado con el correo ${emailNormalizado}` } })
+        return res.status(409).json({ status: 'error', message: `Ya existe un usuario registrado con el correo ${emailNormalizado}` })
       }
 
       const usuario = await authService.crear({
@@ -102,7 +100,7 @@ export const authController = {
         rolId,
       })
 
-      return res.status(201).json({ success: true, message: 'Usuario creado correctamente', data: usuario })
+      return res.status(201).json({ status: 'ok', message: 'Usuario creado correctamente', data: usuario })
     } catch (error) {
       next(error)
     }
@@ -112,41 +110,41 @@ export const authController = {
     try {
       const id = parsearId(req.params.id)
       if (id === null) {
-        return res.status(400).json({ success: false, error: { message: 'El ID proporcionado no es válido' } })
+        return res.status(400).json({ status: 'error', message: 'El ID proporcionado no es válido' })
       }
 
       const { nombre, apellido, email, password, activo } = req.body
 
       if (Object.keys(req.body).length === 0) {
-        return res.status(400).json({ success: false, error: { message: 'Debe proporcionar al menos un campo para actualizar' } })
+        return res.status(400).json({ status: 'error', message: 'Debe proporcionar al menos un campo para actualizar' })
       }
 
       const datosActualizados: Record<string, unknown> = {}
 
       if (nombre !== undefined) {
         if (typeof nombre !== 'string' || !nombre.trim()) {
-          return res.status(400).json({ success: false, error: { message: 'El nombre no es válido' } })
+          return res.status(400).json({ status: 'error', message: 'El nombre no es válido' })
         }
         datosActualizados.nombre = nombre.trim()
       }
 
       if (apellido !== undefined) {
         if (typeof apellido !== 'string' || !apellido.trim()) {
-          return res.status(400).json({ success: false, error: { message: 'El apellido no es válido' } })
+          return res.status(400).json({ status: 'error', message: 'El apellido no es válido' })
         }
         datosActualizados.apellido = apellido.trim()
       }
 
       if (email !== undefined) {
         if (typeof email !== 'string' || !esEmailValido(email)) {
-          return res.status(400).json({ success: false, error: { message: 'El correo electrónico no es válido' } })
+          return res.status(400).json({ status: 'error', message: 'El correo electrónico no es válido' })
         }
         datosActualizados.email = email.trim().toLowerCase()
       }
 
       if (password !== undefined) {
         if (typeof password !== 'string' || password.length < 6) {
-          return res.status(400).json({ success: false, error: { message: 'La contraseña debe tener al menos 6 caracteres' } })
+          return res.status(400).json({ status: 'error', message: 'La contraseña debe tener al menos 6 caracteres' })
         }
         datosActualizados.password = password
       }
@@ -157,101 +155,87 @@ export const authController = {
 
       const actualizado = await authService.actualizar(id, datosActualizados)
 
-      return res.status(200).json({ success: true, message: 'Usuario actualizado correctamente', data: actualizado })
+      return res.status(200).json({ status: 'ok', message: 'Usuario actualizado correctamente', data: actualizado })
     } catch (error: unknown) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-        return res.status(404).json({ success: false, error: { message: `El usuario con el ID ${req.params.id} no existe` } })
+        return res.status(404).json({ status: 'error', message: `El usuario con el ID ${req.params.id} no existe` })
       }
       next(error)
     }
   },
 
-  /**
-   * PATCH /api/auth/roles/:id
-   * Reemplaza los roles de un usuario por los rolIds enviados en el body.
-   * Enviar [] vacía todos los roles del usuario.
-   */
   async actualizarRoles(req: Request, res: Response, next: NextFunction) {
     try {
       const id = parsearId(req.params.id)
       if (id === null) {
-        return res.status(400).json({ success: false, error: { message: 'El ID de usuario proporcionado no es válido' } })
+        return res.status(400).json({ status: 'error', message: 'El ID de usuario proporcionado no es válido' })
       }
 
       const { rolIds } = req.body
 
       if (!Array.isArray(rolIds)) {
-        return res.status(400).json({ success: false, error: { message: 'El campo rolIds debe ser un arreglo de IDs numéricos' } })
+        return res.status(400).json({ status: 'error', message: 'El campo rolIds debe ser un arreglo de IDs numéricos' })
       }
 
       for (const rolId of rolIds) {
         if (typeof rolId !== 'number' || !Number.isInteger(rolId) || rolId <= 0) {
-          return res.status(400).json({ success: false, error: { message: `El ID de rol "${rolId}" no es válido. Todos deben ser números enteros positivos` } })
+          return res.status(400).json({ status: 'error', message: `El ID de rol "${rolId}" no es válido. Todos deben ser números enteros positivos` })
         }
       }
 
       const usuario = await authService.actualizarRoles(id, rolIds)
 
       if (!usuario) {
-        return res.status(404).json({ success: false, error: { message: `El usuario con ID ${id} no existe` } })
+        return res.status(404).json({ status: 'error', message: `El usuario con ID ${id} no existe` })
       }
 
-      return res.status(200).json({ success: true, message: 'Roles actualizados correctamente', data: usuario })
+      return res.status(200).json({ status: 'ok', message: 'Roles actualizados correctamente', data: usuario })
     } catch (error) {
       next(error)
     }
   },
 
-  /**
-   * POST /api/auth/roles/:id/:rolId
-   * Agrega un único rol a un usuario. Idempotente.
-   */
   async agregarRol(req: Request, res: Response, next: NextFunction) {
     try {
       const usuarioId = parsearId(req.params.id)
       const rolId = parsearId(req.params.rolId)
 
       if (usuarioId === null || rolId === null) {
-        return res.status(400).json({ success: false, error: { message: 'Los IDs de usuario y rol deben ser números enteros válidos' } })
+        return res.status(400).json({ status: 'error', message: 'Los IDs de usuario y rol deben ser números enteros válidos' })
       }
 
       const usuario = await authService.agregarRol(usuarioId, rolId)
       if (!usuario) {
-        return res.status(404).json({ success: false, error: { message: `El usuario con ID ${usuarioId} no existe` } })
+        return res.status(404).json({ status: 'error', message: `El usuario con ID ${usuarioId} no existe` })
       }
 
-      return res.status(200).json({ success: true, message: 'Rol asignado correctamente', data: usuario })
+      return res.status(200).json({ status: 'ok', message: 'Rol asignado correctamente', data: usuario })
     } catch (error) {
       next(error)
     }
   },
 
-  /**
-   * DELETE /api/auth/roles/:id/:rolId
-   * Quita un único rol de un usuario.
-   */
   async quitarRol(req: Request, res: Response, next: NextFunction) {
     try {
       const usuarioId = parsearId(req.params.id)
       const rolId = parsearId(req.params.rolId)
 
       if (usuarioId === null || rolId === null) {
-        return res.status(400).json({ success: false, error: { message: 'Los IDs de usuario y rol deben ser números enteros válidos' } })
+        return res.status(400).json({ status: 'error', message: 'Los IDs de usuario y rol deben ser números enteros válidos' })
       }
 
       const usuario = await authService.quitarRol(usuarioId, rolId)
 
-      return res.status(200).json({ success: true, message: 'Rol removido correctamente', data: usuario })
+      return res.status(200).json({ status: 'ok', message: 'Rol removido correctamente', data: usuario })
     } catch (error) {
       next(error)
     }
   },
 
-  /** GET /api/auth/roles — Lista todos los roles disponibles. */
   async listarRoles(req: Request, res: Response, next: NextFunction) {
     try {
       const roles = await authService.obtenerRoles()
-      return res.status(200).json({ success: true, data: roles })
+      return res.status(200).json({ status: 'ok', data: roles })
     } catch (error) {
       next(error)
     }
@@ -260,7 +244,7 @@ export const authController = {
   async listarTodos(req: Request, res: Response, next: NextFunction) {
     try {
       const usuarios = await authService.obtenerTodos()
-      return res.status(200).json({ success: true, data: usuarios })
+      return res.status(200).json({ status: 'ok', data: usuarios })
     } catch (error) {
       next(error)
     }
@@ -269,7 +253,7 @@ export const authController = {
   async listar(req: Request, res: Response, next: NextFunction) {
     try {
       const usuarios = await authService.obtenerHabilitados()
-      return res.status(200).json({ success: true, data: usuarios })
+      return res.status(200).json({ status: 'ok', data: usuarios })
     } catch (error) {
       next(error)
     }
@@ -279,20 +263,20 @@ export const authController = {
     try {
       const id = parsearId(req.params.id)
       if (id === null) {
-        return res.status(400).json({ success: false, error: { message: 'El ID proporcionado no es válido' } })
+        return res.status(400).json({ status: 'error', message: 'El ID proporcionado no es válido' })
       }
 
       const yaInactivo = await authService.estaInactivo(id)
       if (yaInactivo) {
-        return res.status(409).json({ success: false, error: { message: `El usuario con id ${id} ya fue deshabilitado` } })
+        return res.status(409).json({ status: 'error', message: `El usuario con id ${id} ya fue deshabilitado` })
       }
 
       const eliminado = await authService.deshabilitar(id)
       if (eliminado === null) {
-        return res.status(404).json({ success: false, error: { message: `Usuario con id ${id} no encontrado` } })
+        return res.status(404).json({ status: 'error', message: `Usuario con id ${id} no encontrado` })
       }
 
-      return res.status(200).json({ success: true, message: 'Usuario deshabilitado correctamente', data: eliminado })
+      return res.status(200).json({ status: 'ok', message: 'Usuario deshabilitado correctamente', data: eliminado })
     } catch (error) {
       next(error)
     }
@@ -301,7 +285,7 @@ export const authController = {
   async cerrarSesion(req: Request, res: Response, next: NextFunction) {
     try {
       res.clearCookie('refreshToken', { httpOnly: true, secure: IS_PRODUCTION, sameSite: 'strict' })
-      return res.status(200).json({ success: true, message: 'Sesión cerrada correctamente' })
+      return res.status(200).json({ status: 'ok', message: 'Sesión cerrada correctamente' })
     } catch (error) {
       next(error)
     }

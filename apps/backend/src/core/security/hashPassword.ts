@@ -7,4 +7,3 @@ export async function encriptar(contraseña: string): Promise<string>{
     const hash = await bcrypt.hash(contraseña, salt);
     return hash;
 }
-

@@ -7,10 +7,9 @@ export interface LoginDTO {
 }
 
 export interface RespuestaApi<T = void> {
-  success: boolean
+  status: 'ok' | 'error'
   message?: string
   data?: T
-  error?: { message: string }
 }
 
 const API_URL = 'http://localhost:3000/api'
@@ -30,13 +29,13 @@ export const useAuthStore = defineStore('auth', () => {
 
     const resultado: RespuestaApi<{ accessToken: string }> = await response.json()
 
-    if (resultado.success && resultado.data) {
+    if (resultado.status === 'ok' && resultado.data?.accessToken) {
       accessToken.value = resultado.data.accessToken
     }
 
     return {
-      success: resultado.success,
-      message: resultado.message ?? resultado.error?.message ?? 'Error inesperado'
+      status: resultado.status,
+      message: resultado.message ?? 'Error inesperado'
     }
   }
 
@@ -55,13 +54,13 @@ export const useAuthStore = defineStore('auth', () => {
 
       const resultado: RespuestaApi<{ accessToken: string }> = await response.json()
 
-      if (resultado.success && resultado.data?.accessToken) {
+      if (resultado.status === 'ok' && resultado.data?.accessToken) {
         accessToken.value = resultado.data.accessToken
         return true
       }
 
       return false
-    } catch (error: unknown) {
+    } catch {
       cerrarSesion()
       return false
     }

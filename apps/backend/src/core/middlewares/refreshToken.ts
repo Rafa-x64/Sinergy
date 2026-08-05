@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express'
 import prisma from '../prisma'
-import { verificarRefreshToken } from '../../infrastructure/security/jwt'
-import { generarAccessToken } from '../../infrastructure/security/jwt'
+import { verificarRefreshToken, generarAccessToken } from '../security/jwt'
 import { AppError } from '../errors/AppError'
 
 export async function manejarRefreshToken(
@@ -39,7 +38,7 @@ export async function manejarRefreshToken(
     })
 
     res.status(200).json({
-      success: true,
+      status: 'ok',
       data: { accessToken: nuevoAccessToken },
     })
   } catch (error) {

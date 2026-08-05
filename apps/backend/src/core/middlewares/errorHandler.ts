@@ -15,10 +15,7 @@ export const errorHandler = (err: Error, req: Request, res: Response, next: Next
   const showStack = isDev && statusCode >= 500;
 
   res.status(statusCode).json({
-    success: false,
-    error: {
-      message,
-      ...(showStack && { stack: err.stack })
-    }
+    status: 'error',
+    message
   });
 };
