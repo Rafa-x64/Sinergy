@@ -15,6 +15,18 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, hideLayout: false },
   },
   {
+    path: '/plantas',
+    name: 'plantas',
+    component: () => import('../modules/plantas/views/PlantasView.vue'),
+    meta: { requiresAuth: true, hideLayout: false },
+  },
+  {
+    path: '/ubicaciones',
+    name: 'ubicaciones',
+    component: () => import('../modules/ubicaciones/views/UbicacionesView.vue'),
+    meta: { requiresAuth: true, hideLayout: false },
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('@/views/NotFoundView.vue'),

@@ -4,6 +4,7 @@ import { useAuthStore, type LoginDTO } from '../auth.store'
 import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { loginRules } from '../validations/login'
+import { VuetifyForm } from '../../../core/types/vuetifyForm'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -11,10 +12,6 @@ const toast = useToast()
 const cargando = ref<boolean>(false)
 const mensajeServidor = ref<string | null>(null)
 const formRef = ref<VuetifyForm | null>(null)
-
-interface VuetifyForm {
-  validate: () => Promise<{ valid: boolean, errors: unknown[] }>
-}
 
 const formulario = reactive<LoginDTO>({
   email: '',
@@ -26,7 +23,7 @@ const manejarSubmit = async (): Promise<void> => {
 
   const { valid } = await formRef.value.validate()
 
-  if(!valid) return
+  if (!valid) return
 
   cargando.value = true
   mensajeServidor.value = null
@@ -58,11 +55,13 @@ const manejarSubmit = async (): Promise<void> => {
           <h1 class="text-h4 font-weight-bold mb-6 text-center">Bienvenido</h1>
 
           <v-form @submit.prevent="manejarSubmit" ref="formRef" class="mt-6">
-            <v-text-field v-model="formulario.email" :rules="loginRules.email" label="Correo" prepend-inner-icon="mdi-email-outline"
-              variant="outlined" placeholder="correo@gmail.com" type="email" class="mb-2" validate-on="blur"></v-text-field>
+            <v-text-field v-model="formulario.email" :rules="loginRules.email" label="Correo"
+              prepend-inner-icon="mdi-email-outline" variant="outlined" placeholder="correo@gmail.com" type="email"
+              class="mb-2" validate-on="blur"></v-text-field>
 
-            <v-text-field v-model="formulario.password" :rules="loginRules.password" label="Contraseña" prepend-inner-icon="mdi-lock-outline"
-              variant="outlined" placeholder="Contraseña123" type="password" class="mb-4" validate-on="blur"></v-text-field>
+            <v-text-field v-model="formulario.password" :rules="loginRules.password" label="Contraseña"
+              prepend-inner-icon="mdi-lock-outline" variant="outlined" placeholder="Contraseña123" type="password"
+              class="mb-4" validate-on="blur"></v-text-field>
 
             <v-btn type="submit" color="primary" size="large" block :loading="cargando">
               {{ cargando ? 'Iniciando Sesión...' : 'Iniciar Sesión' }}

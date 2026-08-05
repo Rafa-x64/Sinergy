@@ -1,37 +1,50 @@
-<script setup="ts">
+<script setup lang="ts">
 import { ref } from 'vue'
+import AppTabs from '@/components/AppTabs.vue'
+import type { TabItem } from '@/core/types/tabs'
 
-const tabs = [
-    { id: 1, name: 'Estadísticas', color: 'warning' },
-    { id: 2, name: 'Historial', color: 'info' },
-    { id: 3, name: 'Reportes', color: 'error' },
-    {id: 4, name: 'Equipos', color: 'success'}
+const pestañasDashboard: TabItem[] = [
+    { id: 'estadisticas', name: 'Estadísticas' },
+    { id: 'historial', name: 'Historial' },
+    { id: 'reportes', name: 'Reportes' },
+    { id: 'equipos', name: 'Equipos' }
 ]
 
-const pestañaActiva = ref(tabs[0].id)
-
-const tab = ref('one')
+const pestañaActiva = ref<string | number>('estadisticas')
 </script>
+
 <template>
-    <v-container fluid class="pa-0">
-        <v-row>
-            <v-col cols="12" class="pa-5">
-                <v-sheet elevation="2" color="background">
-                    <v-tabs v-model="pestañaActiva" color="primary" grow>
-                        <v-tab v-for="tab in tabs" :key="tab.id" :value="tab.id" :color="tab.color">
-                            {{ tab.name }}
-                        </v-tab>
-                    </v-tabs>
-                    <v-tabs-window v-model="pestañaActiva" transition="fade-transition">
-                        <v-tabs-window-item v-for="tab in tabs" :key="tab.id" :value="tab.id">
-                            <v-sheet class="pa-5" color="surface">
-                                este es el contenido del panel {{ tab.id }}
-                            </v-sheet>
-                        </v-tabs-window-item>
-                    </v-tabs-window>
-                </v-sheet>
-            </v-col>
-        </v-row>
-    </v-container>
+    <div class="dashboard-view">
+        <AppTabs v-model="pestañaActiva" :tabs="pestañasDashboard">
+
+            <!-- Ranura específica para Estadísticas -->
+            <template #tab-estadisticas>
+                <div class="text-body-1">
+                    <h3>Panel de Estadísticas del Dashboard</h3>
+                </div>
+            </template>
+
+            <!-- Ranura específica para Historial -->
+            <template #tab-historial>
+                <div class="text-body-1">
+                    <h3>Historial de Actividad</h3>
+                </div>
+            </template>
+
+            <!-- Ranura específica para Reportes -->
+            <template #tab-reportes>
+                <div class="text-body-1">
+                    <h3>Generación de Reportes</h3>
+                </div>
+            </template>
+
+            <!-- Ranura específica para Equipos -->
+            <template #tab-equipos>
+                <div class="text-body-1">
+                    <h3>Vista General de Equipos</h3>
+                </div>
+            </template>
+
+        </AppTabs>
+    </div>
 </template>
-<style scooped></style>
