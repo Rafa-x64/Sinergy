@@ -12,7 +12,7 @@ export interface RespuestaApi<T = void> {
   data?: T
 }
 
-const API_URL = 'http://localhost:3000/api'
+export const API_URL = 'http://localhost:3000/api'
 
 export const useAuthStore = defineStore('auth', () => {
   const accessToken = ref<string | null>(null)
