@@ -69,6 +69,11 @@ api.interceptors.response.use(
 
     try {
       const { data } = await api.post('/auth/refresh')
+
+      if (data.status !== 'ok' || !data.data?.accessToken) {
+        throw new Error('Refresh inválido')
+      }
+
       const nuevoToken: string = data.data.accessToken
 
       const { useAuthStore } = await import('../modules/auth/auth.store')

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express'
-import { verificarAccessToken } from '../../infrastructure/security/jwt'
+import { verificarAccessToken } from '../security/jwt'
 import { AppError } from '../errors/AppError'
 
 /**

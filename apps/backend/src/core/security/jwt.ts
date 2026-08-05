@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken'
-import { AppError } from '../../core/errors/AppError'
-import type { TokenPayload } from '../../core/types/auth.types'
+import { AppError } from '../errors/AppError'
+import type { TokenPayload } from '../types/auth.types'
 
 const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET!
 const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET!

@@ -1,5 +1,5 @@
 import prisma from '../../core/prisma'
-import { RegistrarComponenteDTO, EditarComponenteDTO, FiltrosComponente } from './componente.schema'
+import { RegistrarComponenteDTO, EditarComponenteDTO, FiltrosComponente } from './componente.schemas'
 import { Prisma } from '@prisma/client'
 
 const INCLUDE_COMPONENTE_RELACIONES: Prisma.ComponenteInclude = {

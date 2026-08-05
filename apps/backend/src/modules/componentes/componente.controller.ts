@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express'
 import { ResponseDTO } from '../../core/types/response.dto'
-import { RegistrarComponenteDTO, EditarComponenteDTO } from './componente.schema'
+import { RegistrarComponenteDTO, EditarComponenteDTO } from './componente.schemas'
 import { componenteService } from './componente.service'
 import { parsearId } from '../../core/utils/parsearId'
 import { capitalizarPalabras } from '../../core/utils/capitalizarPalabras'

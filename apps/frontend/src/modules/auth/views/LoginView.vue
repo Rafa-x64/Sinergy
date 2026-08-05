@@ -34,7 +34,7 @@ const manejarSubmit = async (): Promise<void> => {
   try {
     const resultado = await authStore.login(formulario)
 
-    if (resultado.success && authStore.estaAutenticado) {
+    if (resultado.status === 'ok' && authStore.estaAutenticado) {
       await router.push({ name: 'dashboard' })
     } else {
       mensajeServidor.value = resultado.message ?? 'Credenciales inválidas'
