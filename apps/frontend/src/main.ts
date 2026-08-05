@@ -9,8 +9,8 @@ import 'bootstrap/dist/css/bootstrap.min.css'           // ✅
 import 'bootstrap-vue-next/dist/bootstrap-vue-next.css' //  ¡Correcto!// ApexCharts
 import VueApexCharts from 'vue3-apexcharts'
 // Toastification
-import Toast from 'vue-toastification'     // ✅
 import 'vue-toastification/dist/index.css' // ✅
+import { Toast, toastOptions } from './plugins/toast'
 
 // FontAwesome
 import { library } from '@fortawesome/fontawesome-svg-core'
@@ -32,20 +32,7 @@ app.use(router)
 app.use(vuetify)
 app.use(createBootstrap())
 app.use(VueApexCharts)
-app.use(Toast, {
-    position: 'top-right',
-    timeout: 3000,
-    closeOnClick: true,
-    pauseOnFocusLoss: true,
-    pauseOnHover: true,
-    draggable: true,
-    draggablePercent: 0.6,
-    showCloseButtonOnHover: false,
-    hideProgressBar: false,
-    closeButton: 'button',
-    icon: true,
-    rtl: false
-})
+app.use(Toast, toastOptions)
 
 app.component('font-awesome-icon', FontAwesomeIcon)
 app.mount('#app')

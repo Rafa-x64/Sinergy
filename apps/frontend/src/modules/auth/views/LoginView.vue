@@ -2,19 +2,32 @@
 import { reactive, ref } from 'vue'
 import { useAuthStore, type LoginDTO } from '../auth.store'
 import { useRouter } from 'vue-router'
+import { useToast } from 'vue-toastification'
+import { loginRules } from '../validations/login'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const toast = useToast()
+const cargando = ref<boolean>(false)
+const mensajeServidor = ref<string | null>(null)
+const formRef = ref<VuetifyForm | null>(null)
+
+interface VuetifyForm {
+  validate: () => Promise<{ valid: boolean, errors: unknown[] }>
+}
 
 const formulario = reactive<LoginDTO>({
   email: '',
   password: ''
 })
 
-const cargando = ref<boolean>(false)
-const mensajeServidor = ref<string | null>(null)
-
 const manejarSubmit = async (): Promise<void> => {
+  if (!formRef.value) return
+
+  const { valid } = await formRef.value.validate()
+
+  if(!valid) return
+
   cargando.value = true
   mensajeServidor.value = null
 
@@ -25,9 +38,11 @@ const manejarSubmit = async (): Promise<void> => {
       await router.push({ name: 'dashboard' })
     } else {
       mensajeServidor.value = resultado.message ?? 'Credenciales inválidas'
+      toast.error(mensajeServidor.value)
     }
   } catch (error: unknown) {
     mensajeServidor.value = 'Error de conexión con el servidor'
+    toast.error(mensajeServidor.value)
   } finally {
     cargando.value = false
   }
@@ -40,14 +55,14 @@ const manejarSubmit = async (): Promise<void> => {
       <v-row no-gutters class="fill-height">
         <!-- Columna de Formulario -->
         <v-col cols="12" md="6" class="pa-8 d-flex flex-column justify-center">
-          <h1 class="text-h4 font-weight-bold mb-6">Bienvenido</h1>
+          <h1 class="text-h4 font-weight-bold mb-6 text-center">Bienvenido</h1>
 
-          <v-form @submit.prevent="manejarSubmit">
-            <v-text-field v-model="formulario.email" label="Correo" prepend-inner-icon="mdi-email-outline"
-              variant="outlined" placeholder="correo@gmail.com" type="email" class="mb-2"></v-text-field>
+          <v-form @submit.prevent="manejarSubmit" ref="formRef" class="mt-6">
+            <v-text-field v-model="formulario.email" :rules="loginRules.email" label="Correo" prepend-inner-icon="mdi-email-outline"
+              variant="outlined" placeholder="correo@gmail.com" type="email" class="mb-2" validate-on="blur"></v-text-field>
 
-            <v-text-field v-model="formulario.password" label="Contraseña" prepend-inner-icon="mdi-lock-outline"
-              variant="outlined" placeholder="Contraseña123" type="password" class="mb-4"></v-text-field>
+            <v-text-field v-model="formulario.password" :rules="loginRules.password" label="Contraseña" prepend-inner-icon="mdi-lock-outline"
+              variant="outlined" placeholder="Contraseña123" type="password" class="mb-4" validate-on="blur"></v-text-field>
 
             <v-btn type="submit" color="primary" size="large" block :loading="cargando">
               {{ cargando ? 'Iniciando Sesión...' : 'Iniciar Sesión' }}
