@@ -1,597 +1,428 @@
 # Guía del Desarrollador — Sinergy
 
-Sinergy es un sistema de gestión de mantenimiento industrial construido como monorepo. Esta guía está escrita de forma cronológica: sigue cada sección en orden y al final del proceso tendrás un feature completo y funcional conectado de punta a punta.
+Sinergy es un sistema de gestión de mantenimiento industrial construido como monorepo. Esta guía está escrita de forma cronológica e instructiva: sigue cada sección en orden y al final del proceso tendrás las bases para crear features completos y funcionales conectados de punta a punta entre el Backend (Express + Prisma) y el Frontend (Vue 3 + Pinia + Vuetify 3).
 
 ---
 
 ## Tabla de Contenidos
 
-### 0. Introducción
-- [0.1 ¿Qué es Sinergy?](#01-qué-es-sinergy)
-- [0.2 Arquitectura general](#02-arquitectura-general)
-- [0.3 Estructura del monorepo](#03-estructura-del-monorepo)
-
-### Requisitos e Instalación
-- [1. Requisitos previos](#1-requisitos-previos)
-- [2. Instalación del proyecto](#2-instalación-del-proyecto)
-- [3. Variables de entorno](#3-variables-de-entorno)
-- [4. Arrancar el sistema](#4-arrancar-el-sistema)
-
-### Parte A — Backend (Feature-Based Architecture)
-- [A1. Entendiendo la arquitectura Feature-Based](#a1-entendiendo-la-arquitectura-feature-based)
-- [A2. Crear un modelo en Prisma](#a2-crear-un-modelo-en-prisma)
-- [A3. Crear un módulo (Routes, Controller, Service)](#a3-crear-un-módulo-routes-controller-service)
-- [A4. Registrar el módulo en Express](#a4-registrar-el-módulo-en-express)
-- [A5. Manejo global de errores](#a5-manejo-global-de-errores)
-
-### Parte B — Frontend (Vue 3 SPA)
-- [B1. Entendiendo la estructura del frontend](#b1-entendiendo-la-estructura-del-frontend)
-- [B2. Crear una vista dentro de un módulo](#b2-crear-una-vista-dentro-de-un-módulo)
-- [B3. Registrar la ruta en Vue Router](#b3-registrar-la-ruta-en-vue-router)
-- [B4. Crear un store de Pinia en el módulo](#b4-crear-un-store-de-pinia-en-el-módulo)
-- [B5. Consumir la API del backend](#b5-consumir-la-api-del-backend)
-- [B6. Crear un formulario con validación](#b6-crear-un-formulario-con-validación)
-- [B7. Mostrar notificaciones al usuario](#b7-mostrar-notificaciones-al-usuario)
-
-### Flujo Completo
-- [C. Ejemplo end-to-end: módulo de Maquinaria (Equipment)](#c-ejemplo-end-to-end-módulo-de-maquinaria-equipment)
+- [0. Introducción y Arquitectura](#0-introducción-y-arquitectura)
+  - [0.1 ¿Qué es Sinergy?](#01-qué-es-sinergy)
+  - [0.2 Arquitectura General](#02-arquitectura-general)
+  - [0.3 Estructura del Monorepo](#03-estructura-del-monorepo)
+- [1. Guía de Inicio Rápido](#1-guía-de-inicio-rápido)
+  - [1.1 Requisitos Previos](#11-requisitos-previos)
+  - [1.2 Instalación del Monorepo](#12-instalación-del-monorepo)
+  - [1.3 Variables de Entorno (.env)](#13-variables-de-entorno-env)
+  - [1.4 Ejecución del Sistema](#14-ejecución-del-sistema)
+- [2. Parte A — Backend (Feature-Based Architecture)](#2-parte-a--backend-feature-based-architecture)
+  - [2.1 Principios de la Arquitectura por Módulos](#21-principios-de-la-arquitectura-por-módulos)
+  - [2.2 Modelado de Base de Datos con Prisma](#22-modelado-de-base-de-datos-con-prisma)
+  - [2.3 Estándar Unificado de Respuestas HTTP ({ status, message, data })](#23-estándar-unificado-de-respuestas-http--status-message-data-)
+  - [2.4 Creación de un Módulo Backend (Routes, Controller, Service)](#24-creación-de-un-módulo-backend-routes-controller-service)
+  - [2.5 Registro del Módulo en Express Server](#25-registro-del-módulo-en-express-server)
+  - [2.6 Manejo Global de Errores (AppError & ErrorHandler)](#26-manejo-global-de-errores-apperror--errorhandler)
+- [3. Parte B — Frontend (Vue 3 SPA, Pinia & Vuetify 3)](#3-parte-b--frontend-vue-3-spa-pinia--vuetify-3)
+  - [3.1 Estructura Modular del Frontend](#31-estructura-modular-del-frontend)
+  - [3.2 Gestión del Token de Sesión y Autenticación (Access Token + Refresh Cookie)](#32-gestión-del-token-de-sesión-y-autenticación-access-token--refresh-cookie)
+  - [3.3 Creación y Estructura de Stores en Pinia (*.store.ts)](#33-creación-y-estructura-de-stores-en-pinia-storets)
+  - [3.4 Consumo Directo del Backend con authStore.apiFetch](#34-consumo-directo-del-backend-con-authstoreapifetch)
+  - [3.5 Creación de Vistas (*View.vue) y Configuración en Vue Router (router.ts)](#35-creación-de-vistas-viewvue-y-configuración-en-vue-router-routerts)
+  - [3.6 Validaciones de Formularios en Tiempo Real (Vuetify 3 & :rules)](#36-validaciones-de-formularios-en-tiempo-real-vuetify-3--rules)
+  - [3.7 Sistema de Notificaciones Globales (useToast)](#37-sistema-de-notificaciones-globales-usetoast)
+  - [3.8 Ejemplo Práctico: Módulo de Plantas (PlantasView.vue + plantas.store.ts)](#38-ejemplo-práctico-módulo-de-plantas-plantasviewvue--plantasstorets)
+  - [3.9 Ejemplo Práctico: Formulario de Login (LoginView.vue + auth.store.ts)](#39-ejemplo-práctico-formulario-de-login-loginviewvue--authstorets)
+- [4. Parte C — Flujo End-to-End Paso a Paso](#4-parte-c--flujo-end-to-end-paso-a-paso)
+  - [4.1 Ejemplo Completo de Feature: Módulo de Equipos](#41-ejemplo-completo-de-feature-módulo-de-equipos)
+  - [4.2 Checklist para Implementar un Nuevo Feature](#42-checklist-para-implementar-un-nuevo-feature)
 
 ---
 
-## 0.1 ¿Qué es Sinergy?
+## 0. Introducción y Arquitectura
 
-Sinergy es una **SPA (Single Page Application)** de gestión de mantenimiento industrial. Permite a técnicos capturar datos de inspección de equipos (montacargas, compresores, generadores, chillers) en planta, con soporte **offline-first** para cuando no haya conexión a internet. Los supervisores tienen un panel con estadísticas, reportes y control de roles.
+### 0.1 ¿Qué es Sinergy?
 
-**Tres plantas:**
+Sinergy es una **Single Page Application (SPA)** de gestión de mantenimiento industrial y control de activos. Permite a los técnicos capturar métricas e inspecciones en planta (montacargas, compresores, generadores, chillers) con soporte **offline-first**, y a los supervisores visualizar estadísticas en tiempo real, generar reportes y administrar la estructura operativa.
+
+**Plantas principales:**
 - Extrusión
 - Inyección
 - Planta de Mezcla
 
-**Dos tipos de usuarios principales:**
-
+**Roles de usuario:**
 | Rol | Acceso |
 |---|---|
-| `TECNICO` | Captura de datos, visualización de sus registros |
-| `SUPERVISOR` | Dashboard de estadísticas, creación de usuarios, reportes |
+| `TECNICO` | Captura de inspecciones, consulta de sus registros en planta |
+| `SUPERVISOR` / `ADMIN` | Dashboard estadístico, gestión de usuarios, catálogo de roles y reportes |
 
 ---
 
-## 0.2 Arquitectura General
+### 0.2 Arquitectura General
 
 ```
-Navegador (Vue 3 SPA)
-        ↓ HTTP/REST (Axios)
-Backend Node.js (Express)
-        ↓ Prisma ORM
-Base de datos PostgreSQL
+Navegador Client (Vue 3 SPA + Pinia + Vuetify 3)
+        │
+        ├── Peticiones HTTP (authStore.apiFetch)
+        ├── Access Token en Memoria (Header Authorization: Bearer <token>)
+        └── Refresh Token en Cookie HttpOnly (SameSite=Strict)
+        │
+        ▼
+Backend REST API (Node.js + Express + TypeScript)
+        │
+        ├── Middlewares (autenticar, errorHandler, cors, cookieParser)
+        ├── Módulos (Routes → Controller → Service)
+        └── Prisma ORM (Driver Adapter Postgres)
+        │
+        ▼
+Base de Datos (PostgreSQL)
 ```
-
-El frontend y el backend son proyectos independientes que se comunican únicamente a través de la API HTTP. Nunca comparten código de lógica de negocio.
 
 ---
 
-## 0.3 Estructura del Monorepo
+### 0.3 Estructura del Monorepo
 
 ```
 Sinergy/                          ← Raíz del monorepo
 ├── apps/
-│   ├── shared/                   ← Tipos e interfaces comunes (TS)
-│   │   ├── types/                ← Interfaces TS compartidas
-│   │   └── constants/            ← Constantes globales (roles, estados)
-│   ├── frontend/                 ← Vue 3 + TypeScript + Bootstrap
+│   ├── shared/                   ← Tipos e interfaces comunes
+│   ├── frontend/                 ← Vue 3 + TypeScript + Vuetify 3 + Pinia
 │   │   └── src/
-│   │       ├── core/             ← router.ts, api.ts
-│   │       ├── shared/           ← componentes y layouts reutilizables
-│   │       └── modules/          ← auth/, equipment/, maintenance/
-│   └── backend/                  ← Node.js + Express + Prisma
-│       ├── prisma/               ← DDL, schema.prisma y migraciones
+│   │       ├── components/       ← Componentes globales (Menu.vue, AppTabs.vue)
+│   │       ├── core/             ← router.ts, vuetify.ts, types/
+│   │       ├── plugins/          ← toast.ts (vue-toastification)
+│   │       └── modules/          ← auth/, plantas/, equipo/, mantenimiento/
+│   └── backend/                  ← Node.js + Express + Prisma ORM
+│       ├── prisma/               ← schema.prisma, DDL SQL
 │       └── src/
-│           ├── core/             ← server.ts, prisma.ts, errors/, middlewares/
-│           ├── modules/          ← auth/, equipment/, maintenance/
-│           └── index.ts          ← Punto de entrada (listen & shutdown)
-├── docs/                         ← Documentación del proyecto
-├── package.json                  ← Scripts globales del monorepo
-└── pnpm-workspace.yaml           ← Declaración de workspaces
+│         ├── core/               ← server.ts, prisma.ts, errors/, middlewares/
+│         └── modules/            ← auth/, roles/, equipment/, maintenance/
+├── docs/                         ← Documentación oficial
+├── package.json                  ← Coordinador monorepo (pnpm)
+└── pnpm-workspace.yaml           ← Espacios de trabajo declarados
 ```
 
 ---
 
-## 1. Requisitos Previos
+## 1. Guía de Inicio Rápido
 
-Antes de clonar el proyecto, asegúrate de tener instalado:
+### 1.1 Requisitos Previos
 
-| Herramienta | Versión mínima | Verificar |
+| Herramienta | Versión recomendada | Verificación |
 |---|---|---|
-| Node.js | 20.x | `node -v` |
-| pnpm | 8.x o superior | `pnpm -v` |
-| PostgreSQL | 14.x | `psql --version` |
-| Git | cualquiera | `git --version` |
-
-Si no tienes pnpm:
-```powershell
-npm install -g pnpm
-```
+| Node.js | >= 20.x | `node -v` |
+| pnpm | >= 8.x | `pnpm -v` |
+| PostgreSQL | >= 14.x | `psql --version` |
 
 ---
 
-## 2. Instalación del Proyecto
+### 1.2 Instalación del Monorepo
 
 ```powershell
 # 1. Clonar el repositorio
 git clone <url-del-repositorio>
 cd Sinergy
 
-# 2. Instalar todas las dependencias de todos los workspaces
+# 2. Instalar dependencias de todos los workspaces
 pnpm install --ignore-scripts
 
-# 3. Verificar que los dos proyectos compilan sin errores
+# 3. Validar compilación TypeScript en el monorepo
 pnpm --filter @sinergy/backend build
 pnpm --filter @sinergy/frontend build
 ```
 
-> [!NOTE]
-> `--ignore-scripts` es necesario porque pnpm bloquea los build scripts de paquetes nativos por seguridad. Las dependencias que lo requieren ya están configuradas en `pnpm.ignoredBuiltDependencies` del `package.json` raíz.
-
 ---
 
-## 3. Variables de Entorno
+### 1.3 Variables de Entorno (.env)
 
-### Backend (`apps/backend/.env`)
-
+#### Backend (`apps/backend/.env`)
 ```env
-# Cadena de conexión a PostgreSQL
-DATABASE_URL="postgresql://postgres:tu_password@localhost:5432/sinergy_db"
-
-# Puerto del servidor Express
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/Sinergy?schema=public"
 PORT=3000
-
-# Entorno de ejecución
 NODE_ENV=development
+
+# Claves secretas de firma JWT (reemplazar en producción)
+JWT_ACCESS_SECRET=sinergy_access_secret_CAMBIAR_EN_PRODUCCION
+JWT_REFRESH_SECRET=sinergy_refresh_secret_CAMBIAR_EN_PRODUCCION
 ```
 
-### Frontend (`apps/frontend/.env`)
-
+#### Frontend (`apps/frontend/.env`)
 ```env
-# URL base de la API del backend
 VITE_API_URL=http://localhost:3000/api
-
-# Nombre de la app (aparece en el título del navegador)
 VITE_APP_NAME=Sinergy
 ```
 
-> [!CAUTION]
-> Nunca subas archivos `.env` al repositorio. El `.gitignore` ya los excluye, pero verifica que sea así antes de hacer un commit.
-
 ---
 
-## 4. Arrancar el Sistema
-
-### Opción A — Ambos proyectos a la vez (recomendado para desarrollo)
+### 1.4 Ejecución del Sistema
 
 ```powershell
-# Desde la raíz del monorepo
+# Iniciar Frontend (puerto 5173) y Backend (puerto 3000) en paralelo
 pnpm dev
 ```
 
-Esto ejecuta frontend y backend de forma paralela usando `concurrently`.
+---
 
-### Opción B — Por separado
+## 2. Parte A — Backend (Feature-Based Architecture)
 
-```powershell
-# Solo el frontend (Vite, puerto 5173)
-pnpm dev:frontend
+### 2.1 Principios de la Arquitectura por Módulos
 
-# Solo el backend (Express, puerto 3000)
-pnpm dev:backend
+La arquitectura backend organiza el código en carpetas aisladas por **funcionalidad de negocio** (`src/modules/<modulo>/`). Cada módulo agrupa exclusivamente sus piezas de ejecución:
+
 ```
-
-### Verificar que funciona
-
-- Frontend: `http://localhost:5173`
-- Backend (health check): `http://localhost:3000/api/health`
-
-La respuesta del health check debe ser:
-```json
-{ "status": "ok", "message": "Sinergy Backend running", "db": "connected" }
+src/modules/plantas/
+├── plantas.routes.ts     ← Definición de endpoints HTTP y middlewares
+├── plantas.controller.ts ← Extracción de req, validaciones nativas y envío de res
+├── plantas.service.ts    ← Lógica de negocio y consultas directas con Prisma
+└── plantas.schemas.ts    ← Interfaces DTO de TypeScript puras
 ```
 
 ---
 
----
+### 2.2 Modelado de Base de Datos con Prisma
 
-# Parte A — Backend (Feature-Based Architecture)
-
-La arquitectura del backend agrupa el código por **contexto de negocio (módulos aislados)**. Cada módulo contiene sus propias rutas, controlador y servicio en una misma carpeta:
-
-```
-src/modules/equipment/
-├── equipment.routes.ts     ← Enrutamiento y middlewares de la feature
-├── equipment.controller.ts ← Extracción de parámetros HTTP y llamadas al servicio
-└── equipment.service.ts    ← Lógica de negocio y consultas directas a Prisma
-```
-
----
-
-## A1. Entendiendo la Arquitectura Feature-Based
-
-| Componente | Archivo | Responsabilidad |
-|---|---|---|
-| Rutas | `*.routes.ts` | Define endpoints HTTP y delega la ejecución al controlador |
-| Controlador | `*.controller.ts` | Extrae `req.params`, `req.body` y llama al servicio |
-| Servicio | `*.service.ts` | Contiene la lógica de negocio y realiza consultas mediante Prisma Client |
-| Core | `src/core/` | Conexión a BD (`prisma.ts`), servidor Express (`server.ts`) y middlewares globales |
-
-**Flujo de una petición HTTP:**
-
-```
-Request → Routes (modules/) → Controller (modules/)
-        → Service (modules/) → Prisma Client (core/prisma.ts)
-        → PostgreSQL → Response
-```
-
----
-
-## A2. Crear un Modelo en Prisma
-
-Todo empieza en el schema. Modifica `apps/backend/prisma/schema.prisma`:
+Edita `apps/backend/prisma/schema.prisma` para incorporar o actualizar modelos:
 
 ```prisma
-// Agrega el nuevo modelo al final del archivo
-model Tecnico {
-  id           Int          @id @default(autoincrement())
-  nombre       String
-  cedula       String       @unique
-  plantaId     Int
-  planta       Planta       @relation(fields: [plantaId], references: [id])
-  inspecciones Inspeccion[]
-  creadoEn     DateTime     @default(now())
+model Planta {
+  id        Int      @id @default(autoincrement())
+  codigo    String   @unique @db.VarChar(50)
+  nombre    String   @db.VarChar(100)
+  activa    Boolean  @default(true)
+  creadoEn  DateTime @default(now()) @map("creado_en")
 
-  @@index([plantaId])
+  @@map("plantas")
 }
 ```
 
-Luego genera la migración:
-
+Posteriormente ejecuta la migración:
 ```powershell
-# Desde apps/backend/
-npx prisma migrate dev --name add_tecnico_model
+pnpm --filter @sinergy/backend exec prisma migrate dev --name agregar_tabla_plantas
 ```
-
-Esto crea el archivo de migración en `prisma/migrations/` y regenera el cliente TypeScript automáticamente.
-
-> [!IMPORTANT]
-> Cada vez que cambias el schema, debes correr `prisma migrate dev`. El cliente de Prisma que importas en el código se actualiza automáticamente con los nuevos tipos.
 
 ---
 
-## A3. Crear un Módulo (Routes, Controller, Service)
+### 2.3 Estándar Unificado de Respuestas HTTP (`{ status, message, data }`)
 
-Crea la carpeta del módulo en `apps/backend/src/modules/equipment/`:
+Todo controlador backend debe responder **exclusivamente** utilizando el formato unificado `ResponseDTO`:
 
-### 1. El Servicio (`equipment.service.ts`)
+#### Petición Exitosa (HTTP 2xx)
+```json
+{
+  "status": "ok",
+  "message": "Operación realizada correctamente",
+  "data": { ... }
+}
+```
 
+#### Petición Fallida (HTTP 4xx / 5xx)
+```json
+{
+  "status": "error",
+  "message": "Descripción directa del error para el usuario"
+}
+```
+
+---
+
+### 2.4 Creación de un Módulo Backend (Routes, Controller, Service)
+
+#### 1. Servicio (`src/modules/plantas/plantas.service.ts`)
 ```typescript
-// apps/backend/src/modules/equipment/equipment.service.ts
-import prisma from '../../core/prisma';
+import prisma from '../../core/prisma'
 
-export class EquipmentService {
-  async obtenerTodos() {
-    return prisma.equipo.findMany({
-      orderBy: { nombre: 'asc' }
-    });
+export class PlantasService {
+  async listar() {
+    return prisma.planta.findMany({ orderBy: { nombre: 'asc' } })
   }
 
-  async obtenerPorId(id: number) {
-    return prisma.equipo.findUnique({ where: { id } });
-  }
-
-  async crear(datos: { nombre: string; codigo: string; plantaId: number }) {
-    return prisma.equipo.create({ data: datos });
+  async crear(datos: { codigo: string; nombre: string; activa?: boolean }) {
+    return prisma.planta.create({ data: datos })
   }
 }
 
-export const equipmentService = new EquipmentService();
+export const plantasService = new PlantasService()
 ```
 
-### 2. El Controlador (`equipment.controller.ts`)
-
+#### 2. Controlador (`src/modules/plantas/plantas.controller.ts`)
 ```typescript
-// apps/backend/src/modules/equipment/equipment.controller.ts
-import { Request, Response, NextFunction } from 'express';
-import { equipmentService } from './equipment.service';
+import { Request, Response, NextFunction } from 'express'
+import { plantasService } from './plantas.service'
 
-export const equipmentController = {
+export const plantasController = {
   async listar(req: Request, res: Response, next: NextFunction) {
     try {
-      const equipos = await equipmentService.obtenerTodos();
-      res.json({ success: true, data: equipos });
+      const plantas = await plantasService.listar()
+      return res.status(200).json({ status: 'ok', data: plantas })
     } catch (error) {
-      next(error);
+      next(error)
     }
   },
 
   async crear(req: Request, res: Response, next: NextFunction) {
     try {
-      const nuevoEquipo = await equipmentService.crear(req.body);
-      res.status(201).json({ success: true, data: nuevoEquipo });
+      const { codigo, nombre, activa } = req.body
+
+      if (!codigo || typeof codigo !== 'string' || !codigo.trim()) {
+        return res.status(400).json({ status: 'error', message: 'El código de la planta es requerido' })
+      }
+
+      if (!nombre || typeof nombre !== 'string' || !nombre.trim()) {
+        return res.status(400).json({ status: 'error', message: 'El nombre de la planta es requerido' })
+      }
+
+      const nuevaPlanta = await plantasService.crear({
+        codigo: codigo.trim().toUpperCase(),
+        nombre: nombre.trim(),
+        activa: typeof activa === 'boolean' ? activa : true,
+      })
+
+      return res.status(201).json({
+        status: 'ok',
+        message: 'Planta registrada exitosamente',
+        data: nuevaPlanta,
+      })
     } catch (error) {
-      next(error);
+      next(error)
     }
-  }
-};
-```
-
-### 3. Las Rutas (`equipment.routes.ts`)
-
-```typescript
-// apps/backend/src/modules/equipment/equipment.routes.ts
-import { Router } from 'express';
-import { equipmentController } from './equipment.controller';
-
-const router = Router();
-
-router.get('/', equipmentController.listar);
-router.post('/', equipmentController.crear);
-
-export default router;
-```
-
----
-
-## A4. Registrar el Módulo en Express
-
-Edita `apps/backend/src/core/server.ts` para importar y montar las rutas del módulo:
-
-```typescript
-import equipmentRoutes from '../modules/equipment/equipment.routes';
-
-// ... otros middlewares ...
-
-app.use('/api/equipment', equipmentRoutes);
-```
-
----
-
-## A5. Manejo Global de Errores
-
-El error handler centralizado vive en `apps/backend/src/core/middlewares/errorHandler.ts`:
-
-```typescript
-import { Request, Response, NextFunction } from 'express';
-import { AppError } from '../errors/AppError';
-
-export const errorHandler = (err: Error, req: Request, res: Response, next: NextFunction) => {
-  let statusCode = 500;
-  let message = 'Error interno del servidor';
-
-  if (err instanceof AppError) {
-    statusCode = err.statusCode;
-    message = err.message;
-  }
-
-  const isDev = process.env.NODE_ENV !== 'production';
-
-  res.status(statusCode).json({
-    success: false,
-    error: {
-      message,
-      ...(isDev && statusCode >= 500 && { stack: err.stack })
-    }
-  });
-};
-```
-
----
-
----
-
-# Parte B — Frontend (Vue 3 SPA)
-
-El frontend es una SPA construida con Vue 3, TypeScript, Bootstrap 5, Vuetify 3 (con Material Design Icons `@mdi/font`) y Pinia. Sigue la **Composition API** con `<script setup>` en todos los componentes. La lógica reutilizable va en composables, el estado compartido en stores de Pinia, y los estilos en clases utilitarias de Bootstrap y componentes de Vuetify. Para una referencia detallada sobre la configuración y uso de Vuetify 3, consulta [extensions.md](file:///c:/xampp/htdocs/Sinergy/docs/extensions/extensions.md#21-vuetify-3--mdifont).
-
----
-
-## B1. Entendiendo la Estructura del Frontend
-
-```
-src/
-├── components/     ← Componentes globales de UI y Layout (Menu.vue, SinergyChip.vue)
-├── core/           ← Router (router.ts) y plugins (vuetify.ts)
-├── shared/         ← Componentes y utilidades compartidas
-└── modules/        ← Módulos aislados por negocio (Feature-Based)
-    ├── auth/       ← views/ (LoginView.vue), auth.store.ts
-    ├── dashboard/  ← views/ (DashboardView.vue), dashboard.store.ts
-    ├── equipment/  ← views/, components/, equipment.store.ts
-    └── maintenance/← views/, maintenance.store.ts
-```
-
-### Componentes de Layout Responsivos (`App.vue`, `Menu.vue`, `SinergyChip.vue`)
-
-El layout de la aplicación se gestiona globalmente en `App.vue` en combinación con la propiedad de ruta `meta.hideLayout`:
-
-```vue
-<!-- apps/frontend/src/App.vue -->
-<script setup lang="ts">
-import { RouterView, useRoute } from 'vue-router'
-import { computed } from 'vue'
-import Menu from './components/Menu.vue'
-
-const route = useRoute()
-const ocultarLayout = computed(() => !!route.meta.hideLayout)
-</script>
-
-<template>
-  <v-app>
-    <Menu :ocultarLayout="ocultarLayout" />
-    <v-main>
-      <RouterView />
-    </v-main>
-  </v-app>
-</template>
-```
-
-- `<Menu.vue>` renderiza de forma adaptativa un `<v-navigation-drawer>` permanente en escritorios (`>= 960px`) y un `<v-app-bar>` con menú desplegable en dispositivos móviles (`< 960px`) usando `useMediaQuery` de `@vueuse/core`.
-- `<SinergyChip.vue>` es el componente de marca oficial que muestra el gradiente, logo de Vuetify y tipografía adaptativa.
-
----
-
-## B2. Crear una Vista dentro de un Módulo (Estándar Vuetify 3)
-
-Las vistas viven dentro de `src/modules/<modulo>/views/` y deben usar componentes de Vuetify 3 (`v-container`, `v-row`, `v-col`, `v-sheet`, `v-card`, `v-tabs`, `v-form`, etc.) con TypeScript explícito.
-
-Ejemplo de vista de Dashboard (`src/modules/dashboard/views/DashboardView.vue`):
-
-```vue
-<script setup lang="ts">
-import { ref } from 'vue'
-
-const tabs = [
-  { id: 1, name: 'Estadísticas', color: 'warning' },
-  { id: 2, name: 'Historial', color: 'info' },
-  { id: 3, name: 'Reportes', color: 'error' },
-  { id: 4, name: 'Equipos', color: 'success' }
-]
-
-const pestañaActiva = ref(tabs[0].id)
-</script>
-
-<template>
-  <v-container fluid class="pa-0">
-    <v-row>
-      <v-col cols="12" class="pa-5">
-        <v-sheet elevation="2" color="background">
-          <v-tabs v-model="pestañaActiva" color="primary" grow>
-            <v-tab v-for="tab in tabs" :key="tab.id" :value="tab.id" :color="tab.color">
-              {{ tab.name }}
-            </tab>
-          </v-tabs>
-          <v-tabs-window v-model="pestañaActiva" transition="fade-transition">
-            <v-tabs-window-item v-for="tab in tabs" :key="tab.id" :value="tab.id">
-              <v-sheet class="pa-5" color="surface">
-                Contenido del panel {{ tab.name }}
-              </v-sheet>
-            </v-tabs-window-item>
-          </v-tabs-window>
-        </v-sheet>
-      </v-col>
-    </v-row>
-  </v-container>
-</template>
-```
-
----
-
-## B3. Registrar la Ruta en Vue Router (`router.ts`)
-
-Registra las rutas en `apps/frontend/src/core/router.ts` definiendo los metadatos `requiresAuth` y `hideLayout`:
-
-```typescript
-import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
-import { useAuthStore } from '../modules/auth/auth.store'
-
-const routes: RouteRecordRaw[] = [
-  {
-    path: '/',
-    name: 'login',
-    component: () => import('../modules/auth/views/LoginView.vue'),
-    meta: { requiresAuth: false, hideLayout: true }
   },
-  {
-    path: '/dashboard',
-    name: 'dashboard',
-    component: () => import('../modules/dashboard/views/DashboardView.vue'),
-    meta: { requiresAuth: true, hideLayout: false }
-  },
-  {
-    path: '/:pathMatch(.*)*',
-    name: 'not-found',
-    component: () => import('@/views/NotFoundView.vue'),
-    meta: { requiresAuth: false, hideLayout: true }
-  }
-]
+}
+```
 
-const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
-  routes,
-  scrollBehavior(_to, _from, savedPosition) {
-    return savedPosition || { top: 0 }
-  }
-})
+#### 3. Rutas (`src/modules/plantas/plantas.routes.ts`)
+```typescript
+import { Router } from 'express'
+import { plantasController } from './plantas.controller'
+import { validarJWT } from '../../core/middlewares/autenticar'
 
-/**
- * Navigation Guard global para gestión de sesión persistente.
- */
-router.beforeEach(async (to) => {
-  const authStore = useAuthStore()
-  const requiereAuth = to.meta.requiresAuth === true
+const router = Router()
 
-  if (requiereAuth && !authStore.estaAutenticado) {
-    // Intenta restaurar la sesión desde la cookie HttpOnly en /auth/refresh
-    const sesionRestaurada = await authStore.refrescarToken()
-    if (!sesionRestaurada) {
-      return { name: 'login' }
-    }
-  }
-
-  if (!requiereAuth && authStore.estaAutenticado && to.name === 'login') {
-    return { name: 'dashboard' }
-  }
-})
+router.get(['/listar', '/listar/'], validarJWT, plantasController.listar)
+router.post(['/crear', '/crear/'],   validarJWT, plantasController.crear)
 
 export default router
 ```
 
-> [!TIP]
-> Usa **siempre** lazy loading (`() => import(...)`) para las vistas. Así Vite divide el bundle en chunks por vista y el usuario solo descarga el código que necesita.
+---
+
+### 2.5 Registro del Módulo en Express Server
+
+Edita `apps/backend/src/core/server.ts` para conectar las rutas del nuevo módulo:
+
+```typescript
+import plantasRoutes from '../modules/plantas/plantas.routes'
+
+// ...
+app.use('/api/plantas', plantasRoutes)
+```
 
 ---
 
-## B4. Crear un Store de Pinia y Autenticación (`auth.store.ts`)
+### 2.6 Manejo Global de Errores (AppError & ErrorHandler)
 
-El store centraliza el estado global de la sesión. Sigue la arquitectura de **Doble Token JWT**: Access Token mantenido en memoria (`accessToken`) + Refresh Token almacenado en cookie segura `HttpOnly`.
+Los errores conocidos de negocio se lanzan con `AppError(mensaje, statusCode)`. El middleware centralizado `errorHandler.ts` transforma cualquier excepción no capturada en una respuesta unificada de error:
+
+```typescript
+// apps/backend/src/core/middlewares/errorHandler.ts
+import { Request, Response, NextFunction } from 'express'
+import { AppError } from '../errors/AppError'
+
+export const errorHandler = (err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  let statusCode = 500
+  let message = 'Error interno del servidor'
+
+  if (err instanceof AppError) {
+    statusCode = err.statusCode
+    message = err.message
+  }
+
+  return res.status(statusCode).json({
+    status: 'error',
+    message,
+  })
+}
+```
+
+---
+
+## 3. Parte B — Frontend (Vue 3 SPA, Pinia & Vuetify 3)
+
+El frontend está desarrollado con Vue 3, Composition API (`<script setup lang="ts">`), Vuetify 3, Pinia y `vue-toastification`.
+
+---
+
+### 3.1 Estructura Modular del Frontend
+
+```
+src/modules/plantas/
+├── components/          ← Componentes UI específicos del módulo
+├── validations/         ← Esquemas de validación de Vuetify/TypeScript
+├── views/               ← Componentes de vista (.vue)
+│   └── PlantasView.vue
+└── plantas.store.ts     ← Estado global del módulo en Pinia
+```
+
+---
+
+### 3.2 Gestión del Token de Sesión y Autenticación (Access Token + Refresh Cookie)
+
+Sinergy utiliza la estrategia de **Doble Token JWT**:
+
+1. **Access Token (15 min):** Retornado en el body JSON tras el login. Se guarda exclusivamente en la **memoria de Pinia** (`accessToken = ref<string | null>(null)`). Nunca se guarda en `localStorage` por protección contra XSS.
+2. **Refresh Token (7 días):** Transmitido como **HttpOnly Cookie** en la cabecera del navegador. Permite restaurar la sesión automáticamente sin intervención del usuario.
+
+---
+
+### 3.3 Creación y Estructura de Stores en Pinia (`*.store.ts`)
+
+Los stores de Pinia se definen utilizando la sintaxis de **Composition API** (`defineStore('nombre', () => { ... })`).
+
+#### Estructura Estándar de la Respuesta API (`RespuestaApi<T>`)
+
+```typescript
+export interface RespuestaApi<T = void> {
+  status: 'ok' | 'error'
+  message?: string
+  data?: T
+}
+```
+
+---
+
+### 3.4 Consumo Directo del Backend con `authStore.apiFetch`
+
+El `useAuthStore` provee la función helper `apiFetch(endpoint, options)` que automatiza:
+- Concatenación de la URL base (`http://localhost:3000/api`)
+- Inyección del header `Authorization: Bearer <accessToken>`
+- Inclusión del parámetro `credentials: 'include'` para transmitir cookies HttpOnly
 
 ```typescript
 // apps/frontend/src/modules/auth/auth.store.ts
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 
-export interface LoginDTO {
-  email: string
-  password: string
-}
-
 export interface RespuestaApi<T = void> {
-  success: boolean
+  status: 'ok' | 'error'
   message?: string
   data?: T
-  error?: { message: string }
 }
 
-const API_URL = 'http://localhost:3000/api'
+export const API_URL = 'http://localhost:3000/api'
 
 export const useAuthStore = defineStore('auth', () => {
   const accessToken = ref<string | null>(null)
-
   const estaAutenticado = computed<boolean>(() => accessToken.value !== null)
 
-  async function login(credenciales: LoginDTO): Promise<RespuestaApi> {
-    const response = await fetch(`${API_URL}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+  async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<Response> {
+    const headers = new Headers(options.headers)
+    if (accessToken.value) {
+      headers.set('Authorization', `Bearer ${accessToken.value}`)
+    }
+
+    return fetch(`${API_URL}${endpoint}`, {
+      ...options,
+      headers,
       credentials: 'include',
-      body: JSON.stringify(credenciales)
     })
-
-    const resultado: RespuestaApi<{ accessToken: string }> = await response.json()
-
-    if (resultado.success && resultado.data) {
-      accessToken.value = resultado.data.accessToken
-    }
-
-    return {
-      success: resultado.success,
-      message: resultado.message ?? resultado.error?.message ?? 'Error inesperado'
-    }
   }
 
   async function refrescarToken(): Promise<boolean> {
@@ -599,7 +430,7 @@ export const useAuthStore = defineStore('auth', () => {
       const response = await fetch(`${API_URL}/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include'
+        credentials: 'include',
       })
 
       if (!response.ok) {
@@ -608,12 +439,10 @@ export const useAuthStore = defineStore('auth', () => {
       }
 
       const resultado: RespuestaApi<{ accessToken: string }> = await response.json()
-
-      if (resultado.success && resultado.data?.accessToken) {
+      if (resultado.status === 'ok' && resultado.data?.accessToken) {
         accessToken.value = resultado.data.accessToken
         return true
       }
-
       return false
     } catch {
       cerrarSesion()
@@ -621,85 +450,259 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<Response> {
-    const headers = new Headers(options.headers)
-
-    if (accessToken.value) {
-      headers.set('Authorization', `Bearer ${accessToken.value}`)
-    }
-
-    return fetch(`${API_URL}${endpoint}`, {
-      ...options,
-      headers,
-      credentials: 'include'
-    })
-  }
-
   function cerrarSesion(): void {
     accessToken.value = null
   }
 
-  return {
-    accessToken,
-    estaAutenticado,
-    login,
-    refrescarToken,
-    apiFetch,
-    cerrarSesion
-  }
+  return { accessToken, estaAutenticado, apiFetch, refrescarToken, cerrarSesion }
 })
 ```
 
 ---
 
-## B5. Consumir la API del Backend con `apiFetch`
+### 3.5 Creación de Vistas (`*View.vue`) y Configuración en Vue Router (`router.ts`)
 
-Toda interacción de red que requiera comunicarse con el backend Express debe realizarse utilizando la función `apiFetch` expuesta por `useAuthStore()`.
+Registra la ruta en `apps/frontend/src/core/router.ts` configurando el Guard de navegación global:
 
-### Firma de la función
 ```typescript
-apiFetch(endpoint: string, options?: RequestInit): Promise<Response>
-```
-
-### Garantías de `apiFetch`
-1. **Header Authorization Automático**: Si el usuario está autenticado (`accessToken` en memoria), agrega automáticamente el header `Authorization: Bearer <accessToken>`.
-2. **Envío de Cookies HttpOnly**: Incluye nativamente `credentials: 'include'`, asegurando el intercambio del Refresh Token en peticiones cruzadas.
-3. **Ruta Base Centralizada**: Concatena automáticamente el endpoint indicado con la constante `${API_URL}` (`http://localhost:3000/api`).
-
-### Ejemplo de uso en Cierre de Sesión (`Menu.vue`)
-```typescript
+// apps/frontend/src/core/router.ts
+import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '../modules/auth/auth.store'
-import { useRouter } from 'vue-router'
 
-const authStore = useAuthStore()
-const router = useRouter()
+const routes: RouteRecordRaw[] = [
+  {
+    path: '/',
+    name: 'login',
+    component: () => import('../modules/auth/views/LoginView.vue'),
+    meta: { requiresAuth: false, hideLayout: true },
+  },
+  {
+    path: '/plantas',
+    name: 'plantas',
+    component: () => import('../modules/plantas/views/PlantasView.vue'),
+    meta: { requiresAuth: true, hideLayout: false },
+  },
+]
 
-const cerrarSesion = async (): Promise<void> => {
-  try {
-    const respuesta = await authStore.apiFetch('/auth/logout', {
-      method: 'POST'
-    })
+const router = createRouter({
+  history: createWebHistory(import.meta.env.BASE_URL),
+  routes,
+})
 
-    if (!respuesta.ok) {
-      throw new Error('Error al comunicarse con el servidor')
-    }
+router.beforeEach(async (to) => {
+  const authStore = useAuthStore()
+  const requiereAuth = to.meta.requiresAuth === true
 
-    authStore.cerrarSesion()
-    await router.push({ name: 'login' })
-  } catch (error) {
-    console.error('Fallo durante el cierre de sesión:', error)
+  if (requiereAuth && !authStore.estaAutenticado) {
+    const sesionRestaurada = await authStore.refrescarToken()
+    if (!sesionRestaurada) return { name: 'login' }
   }
-}
-```
+})
 
-> [!IMPORTANT]
-> **Prohibido guardar Access Tokens en `localStorage` o `sessionStorage`**. El Access Token debe residir únicamente en la memoria de Pinia por motivos de seguridad contra ataques XSS.
+export default router
+```
 
 ---
 
-## B6. Formulario de Inicio de Sesión (`LoginView.vue`)
+### 3.6 Validaciones de Formularios en Tiempo Real (Vuetify 3 & `:rules`)
 
-Ejemplo del flujo de autenticación consumiendo `useAuthStore` y campos reactivos de TypeScript:
+En Vuetify 3, los formularios se validan utilizando el componente `<v-form ref="formRef">` y la propiedad `:rules` en cada campo de texto.
+
+#### Definición de Tipo del Formulario (`src/core/types/vuetifyForm.ts`)
+```typescript
+export interface VuetifyForm {
+  validate: () => Promise<{ valid: boolean }>
+  reset: () => void
+  resetValidation: () => void
+}
+```
+
+#### Reglas de Validación
+```typescript
+export const plantasRules = {
+  codigo: [
+    (v: string) => !!v || 'El código es requerido',
+    (v: string) => v.length >= 2 || 'El código debe tener al menos 2 caracteres',
+  ],
+  nombre: [
+    (v: string) => !!v || 'El nombre de la planta es requerido',
+  ],
+}
+```
+
+---
+
+### 3.7 Sistema de Notificaciones Globales (`useToast`)
+
+Las notificaciones de feedback al usuario se manejan con `useToast()` de `vue-toastification`:
+
+```typescript
+import { useToast } from 'vue-toastification'
+
+const toast = useToast()
+
+// Ejemplos de uso según el estado de la API:
+if (resultado.status === 'ok') {
+  toast.success(resultado.message ?? 'Operación realizada con éxito')
+} else {
+  toast.error(resultado.message ?? 'Ocurrió un error en la operación')
+}
+```
+
+---
+
+### 3.8 Ejemplo Práctico: Módulo de Plantas (`PlantasView.vue` + `plantas.store.ts`)
+
+#### Store (`src/modules/plantas/plantas.store.ts`)
+```typescript
+import { defineStore } from 'pinia'
+import { ref } from 'vue'
+import { useAuthStore, type RespuestaApi } from '../auth/auth.store'
+
+export interface Planta {
+  id: number
+  codigo: string
+  nombre: string
+  activa: boolean
+}
+
+export interface RegistrarPlantaDTO {
+  codigo: string
+  nombre: string
+  activa: boolean
+}
+
+export const usePlantasStore = defineStore('plantas', () => {
+  const authStore = useAuthStore()
+  const plantas = ref<Planta[]>([])
+
+  async function listarPlantas(): Promise<RespuestaApi<Planta[]>> {
+    try {
+      const response = await authStore.apiFetch('/plantas/listar', { method: 'GET' })
+      const resultado: RespuestaApi<Planta[]> = await response.json()
+
+      if (resultado.status === 'ok' && resultado.data) {
+        plantas.value = resultado.data
+      }
+      return resultado
+    } catch {
+      return { status: 'error', message: 'Error de conexión con el servidor' }
+    }
+  }
+
+  async function registrarPlanta(datos: RegistrarPlantaDTO): Promise<RespuestaApi<Planta>> {
+    try {
+      const response = await authStore.apiFetch('/plantas/crear', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(datos),
+      })
+      const resultado: RespuestaApi<Planta> = await response.json()
+
+      if (resultado.status === 'ok' && resultado.data) {
+        plantas.value.push(resultado.data)
+      }
+      return resultado
+    } catch {
+      return { status: 'error', message: 'Error de conexión con el servidor' }
+    }
+  }
+
+  return { plantas, listarPlantas, registrarPlanta }
+})
+```
+
+#### Vista (`src/modules/plantas/views/PlantasView.vue`)
+```vue
+<script setup lang="ts">
+import { ref, reactive, onMounted } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useToast } from 'vue-toastification'
+import { usePlantasStore, type RegistrarPlantaDTO } from '../plantas.store'
+import type { VuetifyForm } from '../../../core/types/vuetifyForm'
+
+const toast = useToast()
+const plantasStore = usePlantasStore()
+const { plantas } = storeToRefs(plantasStore)
+
+const cargando = ref<boolean>(false)
+const formRef = ref<VuetifyForm | null>(null)
+
+const formulario = reactive<RegistrarPlantaDTO>({
+  codigo: '',
+  nombre: '',
+  activa: true,
+})
+
+const manejarRegistro = async (): Promise<void> => {
+  if (!formRef.value) return
+  const { valid } = await formRef.value.validate()
+  if (!valid) return
+
+  cargando.value = true
+  try {
+    const resultado = await plantasStore.registrarPlanta(formulario)
+
+    if (resultado.status === 'ok') {
+      toast.success(resultado.message ?? 'Planta registrada correctamente')
+      formRef.value.reset()
+    } else {
+      toast.error(resultado.message ?? 'Error al registrar la planta')
+    }
+  } catch {
+    toast.error('Error de conexión con el servidor')
+  } finally {
+    cargando.value = false
+  }
+}
+
+onMounted(async () => {
+  const resultado = await plantasStore.listarPlantas()
+  if (resultado.status === 'error') {
+    toast.error(resultado.message ?? 'Error al cargar las plantas')
+  }
+})
+</script>
+
+<template>
+  <v-container fluid>
+    <v-card class="pa-6 mb-6" elevation="2">
+      <h2 class="text-h5 font-weight-bold mb-4">Registrar Nueva Planta</h2>
+      <v-form ref="formRef" @submit.prevent="manejarRegistro">
+        <v-row>
+          <v-col cols="12" md="4">
+            <v-text-field v-model="formulario.codigo" label="Código" variant="outlined" placeholder="EXT-01" required></v-text-field>
+          </v-col>
+          <v-col cols="12" md="6">
+            <v-text-field v-model="formulario.nombre" label="Nombre de la Planta" variant="outlined" placeholder="Planta Extrusión" required></v-text-field>
+          </v-col>
+          <v-col cols="12" md="2" class="d-flex align-center">
+            <v-switch v-model="formulario.activa" label="Activa" color="primary"></v-switch>
+          </v-col>
+        </v-row>
+        <v-btn type="submit" color="primary" size="large" :loading="cargando">
+          Guardar Planta
+        </v-btn>
+      </v-form>
+    </v-card>
+
+    <v-card elevation="2">
+      <v-card-title class="font-weight-bold">Plantas Registradas</v-card-title>
+      <v-data-table :items="plantas">
+        <template #item.activa="{ item }">
+          <v-chip :color="item.activa ? 'success' : 'error'" size="small">
+            {{ item.activa ? 'Activa' : 'Inactiva' }}
+          </v-chip>
+        </template>
+      </v-data-table>
+    </v-card>
+  </v-container>
+</template>
+```
+
+---
+
+### 3.9 Ejemplo Práctico: Formulario de Login (`LoginView.vue` + `auth.store.ts`)
 
 ```vue
 <!-- apps/frontend/src/modules/auth/views/LoginView.vue -->
@@ -707,32 +710,38 @@ Ejemplo del flujo de autenticación consumiendo `useAuthStore` y campos reactivo
 import { reactive, ref } from 'vue'
 import { useAuthStore, type LoginDTO } from '../auth.store'
 import { useRouter } from 'vue-router'
+import { useToast } from 'vue-toastification'
+import type { VuetifyForm } from '../../../core/types/vuetifyForm'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const toast = useToast()
+
+const cargando = ref<boolean>(false)
+const formRef = ref<VuetifyForm | null>(null)
 
 const formulario = reactive<LoginDTO>({
   email: '',
-  password: ''
+  password: '',
 })
 
-const cargando = ref<boolean>(false)
-const mensajeServidor = ref<string | null>(null)
-
 const manejarSubmit = async (): Promise<void> => {
-  cargando.value = true
-  mensajeServidor.value = null
+  if (!formRef.value) return
+  const { valid } = await formRef.value.validate()
+  if (!valid) return
 
+  cargando.value = true
   try {
     const resultado = await authStore.login(formulario)
 
-    if (resultado.success && authStore.estaAutenticado) {
+    if (resultado.status === 'ok' && authStore.estaAutenticado) {
+      toast.success('Sesión iniciada correctamente')
       await router.push({ name: 'dashboard' })
     } else {
-      mensajeServidor.value = resultado.message ?? 'Credenciales inválidas'
+      toast.error(resultado.message ?? 'Credenciales inválidas')
     }
   } catch {
-    mensajeServidor.value = 'Error de conexión con el servidor'
+    toast.error('Error de conexión con el servidor')
   } finally {
     cargando.value = false
   }
@@ -740,317 +749,112 @@ const manejarSubmit = async (): Promise<void> => {
 </script>
 
 <template>
-  <v-container fluid class="fill-height bg-grey-lighten-4">
-    <v-row justify="center" align="center">
-      <v-col cols="12" sm="8" md="4">
-        <v-card elevation="4" class="pa-6 rounded-lg">
-          <h1 class="text-h4 font-weight-bold mb-6 text-center">Bienvenido</h1>
+  <v-container fluid class="fill-height justify-center align-center">
+    <v-card class="pa-8" max-width="450" width="100%" elevation="4" rounded="lg">
+      <h1 class="text-h4 font-weight-bold mb-6 text-center">Bienvenido a Sinergy</h1>
+      <v-form ref="formRef" @submit.prevent="manejarSubmit">
+        <v-text-field
+          v-model="formulario.email"
+          label="Correo electrónico"
+          variant="outlined"
+          type="email"
+          prepend-inner-icon="mdi-email-outline"
+          class="mb-2"
+        ></v-text-field>
 
-          <v-form @submit.prevent="manejarSubmit">
-            <v-text-field
-              v-model="formulario.email"
-              label="Correo"
-              prepend-inner-icon="mdi-email-outline"
-              variant="outlined"
-              type="email"
-              class="mb-2"
-            ></v-text-field>
+        <v-text-field
+          v-model="formulario.password"
+          label="Contraseña"
+          variant="outlined"
+          type="password"
+          prepend-inner-icon="mdi-lock-outline"
+          class="mb-4"
+        ></v-text-field>
 
-            <v-text-field
-              v-model="formulario.password"
-              label="Contraseña"
-              prepend-inner-icon="mdi-lock-outline"
-              variant="outlined"
-              type="password"
-              class="mb-4"
-            ></v-text-field>
-
-            <v-alert v-if="mensajeServidor" type="error" variant="tonal" class="mb-4">
-              {{ mensajeServidor }}
-            </v-alert>
-
-            <v-btn type="submit" color="primary" size="large" block :loading="cargando">
-              Iniciar Sesión
-            </v-btn>
-          </v-form>
-        </v-card>
-      </v-col>
-    </v-row>
+        <v-btn type="submit" color="primary" size="large" block :loading="cargando">
+          Iniciar Sesión
+        </v-btn>
+      </v-form>
+    </v-card>
   </v-container>
 </template>
 ```
 
 ---
 
-## B8. Crear un Formulario con Validación
+## 4. Parte C — Flujo End-to-End Paso a Paso
 
-Usa VeeValidate + Yup. El esquema de validación va en `src/schemas/`.
+### 4.1 Ejemplo Completo de Feature: Módulo de Equipos
 
+#### 1. Backend Service (`src/modules/equipment/equipment.service.ts`)
 ```typescript
-// apps/frontend/src/schemas/crearTecnicoSchema.ts
-import * as yup from 'yup'
-
-export const crearTecnicoSchema = yup.object({
-  nombre: yup.string().min(3, 'Mínimo 3 caracteres').required('El nombre es obligatorio'),
-  cedula: yup.string().matches(/^\d{7,8}$/, 'La cédula debe tener 7 u 8 dígitos').required('La cédula es obligatoria'),
-  plantaId: yup.number().positive('Selecciona una planta').required('La planta es obligatoria')
-})
-```
-
-```vue
-<!-- apps/frontend/src/components/FormCrearTecnico.vue -->
-<script setup lang="ts">
-import { useForm, useField } from 'vee-validate'
-import { useToast } from 'vue-toastification'
-import { crearTecnicoSchema } from '@/schemas/crearTecnicoSchema'
-import http from '@/utils/http'
-
-const emit = defineEmits<{ creado: [] }>()
-const toast = useToast()
-
-const { handleSubmit, errors, isSubmitting } = useForm({
-  validationSchema: crearTecnicoSchema
-})
-
-const { value: nombre } = useField<string>('nombre')
-const { value: cedula } = useField<string>('cedula')
-const { value: plantaId } = useField<number>('plantaId')
-
-const onSubmit = handleSubmit(async (values) => {
-  try {
-    await http.post('/tecnicos', values)
-    toast.success('Técnico creado correctamente.')
-    emit('creado')
-  } catch {
-    toast.error('No se pudo crear el técnico.')
-  }
-})
-</script>
-
-<template>
-  <form @submit="onSubmit" novalidate>
-    <div class="mb-3">
-      <label class="form-label">Nombre</label>
-      <input v-model="nombre" class="form-control" :class="{ 'is-invalid': errors.nombre }" />
-      <div class="invalid-feedback">{{ errors.nombre }}</div>
-    </div>
-
-    <div class="mb-3">
-      <label class="form-label">Cédula</label>
-      <input v-model="cedula" class="form-control" :class="{ 'is-invalid': errors.cedula }" />
-      <div class="invalid-feedback">{{ errors.cedula }}</div>
-    </div>
-
-    <div class="mb-3">
-      <label class="form-label">Planta</label>
-      <select v-model="plantaId" class="form-select" :class="{ 'is-invalid': errors.plantaId }">
-        <option :value="1">Extrusión</option>
-        <option :value="2">Inyección</option>
-        <option :value="3">Planta de Mezcla</option>
-      </select>
-      <div class="invalid-feedback">{{ errors.plantaId }}</div>
-    </div>
-
-    <BaseButton label="Crear Técnico" type="submit" :loading="isSubmitting" />
-  </form>
-</template>
-```
-
----
-
-## B9. Mostrar Notificaciones al Usuario
-
-Vue Toastification ya está registrado en `main.ts`. Úsalo en cualquier composable o componente:
-
-```typescript
-import { useToast } from 'vue-toastification'
-
-const toast = useToast()
-
-// Tipos de notificación disponibles
-toast.success('Inspección guardada correctamente.')
-toast.error('Error al conectar con el servidor.')
-toast.warning('Sin conexión. Los datos se guardarán localmente.')
-toast.info('Sincronizando 3 registros pendientes...')
-```
-
----
-
-## B10. Exportar Datos (PDF y Excel)
-
-### Excel
-
-```typescript
-// apps/frontend/src/composables/useExportExcel.ts
-import * as XLSX from 'xlsx'
-
-export function useExportExcel() {
-  const exportar = <T extends object>(datos: T[], nombreArchivo: string) => {
-    const hoja = XLSX.utils.json_to_sheet(datos)
-    const libro = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(libro, hoja, 'Reporte')
-    XLSX.writeFile(libro, `${nombreArchivo}.xlsx`)
-  }
-
-  return { exportar }
-}
-```
-
-### PDF
-
-```typescript
-// apps/frontend/src/composables/useExportPDF.ts
-import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
-
-export function useExportPDF() {
-  const exportar = async (elemento: HTMLElement, nombreArchivo: string) => {
-    const canvas = await html2canvas(elemento, { scale: 2 })
-    const imgData = canvas.toDataURL('image/png')
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-    const anchoA4 = 210
-    const alto = (canvas.height * anchoA4) / canvas.width
-    pdf.addImage(imgData, 'PNG', 0, 0, anchoA4, alto)
-    pdf.save(`${nombreArchivo}.pdf`)
-  }
-
-  return { exportar }
-}
-```
-
-**Uso en una vista:**
-
-```vue
-<script setup lang="ts">
-import { ref } from 'vue'
-import { useExportPDF } from '@/composables/useExportPDF'
-import { useExportExcel } from '@/composables/useExportExcel'
-
-const reporteRef = ref<HTMLElement | null>(null)
-const { exportar: exportarPDF } = useExportPDF()
-const { exportar: exportarExcel } = useExportExcel()
-
-const inspecciones = [
-  { fecha: '2026-07-20', tecnico: 'Ana López', equipo: 'Compresor C-01', estado: 'Normal' }
-]
-</script>
-
-<template>
-  <div class="d-flex gap-2 mb-3">
-    <BaseButton label="Exportar PDF" variant="danger" @click="exportarPDF(reporteRef!, 'inspecciones')" />
-    <BaseButton label="Exportar Excel" variant="success" @click="exportarExcel(inspecciones, 'inspecciones')" />
-  </div>
-
-  <div ref="reporteRef">
-    <!-- Contenido del reporte -->
-  </div>
-</template>
-```
-
----
-
----
-
-# C. Ejemplo End-to-End: Módulo de Maquinaria (Equipment)
-
-Este ejemplo conecta la arquitectura Feature-Based en un flujo completo de punta a punta.
-
-### Paso 1 — Shared: Tipo TypeScript (`apps/shared/types/index.ts`)
-
-```typescript
-// apps/shared/types/index.ts
-export interface Equipment {
-  id: number;
-  nombre: string;
-  codigo: string;
-  plantaId: number;
-}
-```
-
-### Paso 2 — Backend: Servicio y Controlador (`apps/backend/src/modules/equipment/`)
-
-```typescript
-// apps/backend/src/modules/equipment/equipment.service.ts
-import prisma from '../../core/prisma';
+import prisma from '../../core/prisma'
 
 export class EquipmentService {
   async obtenerTodos() {
-    return prisma.equipo.findMany();
+    return prisma.equipo.findMany({ include: { planta: true } })
   }
 }
-export const equipmentService = new EquipmentService();
+
+export const equipmentService = new EquipmentService()
 ```
 
+#### 2. Backend Controller (`src/modules/equipment/equipment.controller.ts`)
 ```typescript
-// apps/backend/src/modules/equipment/equipment.controller.ts
-import { Request, Response, NextFunction } from 'express';
-import { equipmentService } from './equipment.service';
+import { Request, Response, NextFunction } from 'express'
+import { equipmentService } from './equipment.service'
 
 export const equipmentController = {
   async listar(_req: Request, res: Response, next: NextFunction) {
     try {
-      const data = await equipmentService.obtenerTodos();
-      res.json({ success: true, data });
+      const equipos = await equipmentService.obtenerTodos()
+      return res.status(200).json({ status: 'ok', data: equipos })
     } catch (error) {
-      next(error);
+      next(error)
     }
-  }
-};
+  },
+}
 ```
 
-### Paso 3 — Backend: Rutas (`apps/backend/src/modules/equipment/equipment.routes.ts`)
-
+#### 3. Frontend Store (`src/modules/equipment/equipment.store.ts`)
 ```typescript
-import { Router } from 'express';
-import { equipmentController } from './equipment.controller';
+import { defineStore } from 'pinia'
+import { ref } from 'vue'
+import { useAuthStore, type RespuestaApi } from '../auth/auth.store'
 
-const router = Router();
-router.get('/', equipmentController.listar);
+export const useEquipmentStore = defineStore('equipment', () => {
+  const authStore = useAuthStore()
+  const equipos = ref([])
 
-export default router;
-```
-
-### Paso 4 — Frontend: Store y Vista (`apps/frontend/src/modules/equipment/`)
-
-```typescript
-// apps/frontend/src/modules/equipment/equipment.store.ts
-import { defineStore } from 'pinia';
-import api from '../../core/api';
-import type { Equipment } from '@sinergy/shared/types';
-
-export const useEquipmentStore = defineStore('equipment', {
-  state: () => ({
-    equipos: [] as Equipment[],
-    cargando: false
-  }),
-  actions: {
-    async cargarEquipos() {
-      this.cargando = true;
-      try {
-        const { data } = await api.get('/equipment');
-        this.equipos = data.data;
-      } finally {
-        this.cargando = false;
+  async function cargarEquipos(): Promise<RespuestaApi> {
+    try {
+      const response = await authStore.apiFetch('/equipos/listar')
+      const resultado = await response.json()
+      if (resultado.status === 'ok') {
+        equipos.value = resultado.data
       }
+      return resultado
+    } catch {
+      return { status: 'error', message: 'Error de red al cargar equipos' }
     }
   }
-});
+
+  return { equipos, cargarEquipos }
+})
 ```
 
 ---
 
-## Checklist para un Feature Completo
+### 4.2 Checklist para Implementar un Nuevo Feature
 
-Usa esta lista cada vez que implementes una nueva funcionalidad:
+Usa esta lista para asegurar el cumplimiento del estándar oficial en cada nueva funcionalidad:
 
-- `[ ]` **Prisma:** Modelo agregado en `schema.prisma` + `npx prisma migrate dev`
-- `[ ]` **Shared:** Interfaces/Tipos agregados en `apps/shared/types/index.ts`
-- `[ ]` **Backend Service:** Lógica de negocio y consultas Prisma en `apps/backend/src/modules/<modulo>/<modulo>.service.ts`
-- `[ ]` **Backend Controller:** Handlers HTTP en `apps/backend/src/modules/<modulo>/<modulo>.controller.ts`
-- `[ ]` **Backend Routes:** Endpoints expuestos en `apps/backend/src/modules/<modulo>/<modulo>.routes.ts`
-- `[ ]` **Backend Server:** Módulo registrado en `apps/backend/src/core/server.ts`
-- `[ ]` **Frontend Store:** Pinia Store creado en `apps/frontend/src/modules/<modulo>/<modulo>.store.ts`
-- `[ ]` **Frontend Vista:** Componente `.vue` creado en `apps/frontend/src/modules/<modulo>/views/`
-- `[ ]` **Frontend Router:** Ruta de la vista registrada en `apps/frontend/src/core/router.ts`
-- `[ ]` **Docs:** Documentación sincronizada y actualizada
-
+- `[ ]` **Prisma:** Modelo en `schema.prisma` + `npx prisma migrate dev`
+- `[ ]` **Backend Service:** Lógica y consultas Prisma en `src/modules/<modulo>/<modulo>.service.ts`
+- `[ ]` **Backend Controller:** Handlers HTTP con envoltura `{ status: 'ok'|'error', message, data }` en `src/modules/<modulo>/<modulo>.controller.ts`
+- `[ ]` **Backend Routes:** Enrutamiento modular en `src/modules/<modulo>/<modulo>.routes.ts`
+- `[ ]` **Backend Server:** Módulo montado en `src/core/server.ts`
+- `[ ]` **Frontend Store:** Store de Pinia con `RespuestaApi<T>` y `authStore.apiFetch` en `src/modules/<modulo>/<modulo>.store.ts`
+- `[ ]` **Frontend Vista:** Vista `.vue` con Vuetify 3, `:rules` y notificaciones `useToast`
+- `[ ]` **Frontend Router:** Ruta registrada en `apps/frontend/src/core/router.ts` con `meta.requiresAuth`
+- `[ ]` **Documentación:** Contratos de la API actualizados en `docs/api/contratos.md`

@@ -20,23 +20,15 @@ Este documento define la estructura oficial de las peticiones, validaciones y re
 
 ---
 
-## Formato Estándar de Respuestas
+## Formato Estándar de Respuestas (`ResponseDTO`)
 
-Todas las respuestas de la API siguen una estructura JSON uniforme:
+Todas las respuestas de la API de Sinergy (tanto para el módulo de Autenticación/Usuarios como para el resto de módulos de negocio) siguen de manera uniforme la estructura `ResponseDTO`:
 
 ### Petición Exitosa (2xx)
 ```json
 {
-  "success": true,
-  "message": "Mensaje descriptivo opcional",
-  "data": { ... }
-}
-```
-*O bien (formato DTO de dominio `ResponseDTO`):*
-```json
-{
   "status": "ok",
-  "message": "Mensaje descriptivo",
+  "message": "Mensaje descriptivo opcional",
   "data": { ... }
 }
 ```
@@ -44,24 +36,13 @@ Todas las respuestas de la API siguen una estructura JSON uniforme:
 ### Petición Fallida (4xx, 5xx)
 ```json
 {
-  "success": false,
-  "error": {
-    "message": "Descripción del error para el usuario o desarrollador",
-    "stack": "Error: ... (únicamente en desarrollo para errores HTTP 500+)"
-  }
-}
-```
-*O bien (formato DTO de dominio `ResponseDTO`):*
-```json
-{
   "status": "error",
-  "message": "Descripción del error para el usuario o desarrollador"
+  "message": "Descripción amigable del error para el usuario o desarrollador"
 }
 ```
 
 > [!NOTE]
-> Los módulos de Autenticación y Usuarios emplean la envoltura `{ success, data/error }`, mientras que los módulos de infraestructura y dominio (Plantas, Ubicaciones, Líneas, Equipos, Componentes) utilizan el estándar `ResponseDTO` `{ status: 'ok'|'error', message, data }`.
-> En entorno de desarrollo (`NODE_ENV !== 'production'`), la propiedad `stack` solo se incluye en respuestas con código HTTP 500+. Los errores de cliente (4xx) omiten el rastreo de pila.
+> La envoltura `ResponseDTO` `{ status: 'ok' | 'error', message, data }` es el único estándar oficial de comunicación entre el Backend Express y el Frontend Vue 3. Facilita la captura en los stores de Pinia y la activación automática de notificaciones con `useToast()`.
 
 ---
 
@@ -101,21 +82,18 @@ Autentica al usuario contra la base de datos (hashing bcrypt) y emite un Access 
 
 - **Acceso:** Público
 - **Request Headers:** `Content-Type: application/json`
-- **Request Body (Zod `loginSchema`):**
+- **Request Body (`LoginDTO`):**
   ```json
   {
     "email": "alvarezrafaelat@gmail.com",
     "password": "rafa123"
   }
   ```
-  *Validaciones:*
-  - `email`: Cadena requerida, formato válido de correo electrónico. Se le aplica `.trim()` y `.toLowerCase()` automáticamente.
-  - `password`: Cadena requerida.
 
 - **Response (200 OK):**
   ```json
   {
-    "success": true,
+    "status": "ok",
     "message": "Sesión iniciada correctamente",
     "data": {
       "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
@@ -126,8 +104,8 @@ Autentica al usuario contra la base de datos (hashing bcrypt) y emite un Access 
   `refreshToken=<jwt>; Path=/; HttpOnly; SameSite=Strict; Max-Age=604800` (7 días)
 
 - **Respuestas de Error:**
-  - `401 Unauthorized`: `"Credenciales inválidas"` (si el correo o la contraseña son incorrectos o el usuario está inactivo).
-  - `422 Unprocessable Entity`: `"Datos de entrada inválidos: El formato del email no es válido"`.
+  - `400 Bad Request`: `"El correo electrónico es requerido"` / `"El formato del correo electrónico no es válido"`.
+  - `401 Unauthorized`: `"Credenciales inválidas"`.
 
 ---
 
@@ -139,14 +117,14 @@ Renueva el Access Token utilizando la HttpOnly Cookie del Refresh Token.
 - **Response (200 OK):**
   ```json
   {
-    "success": true,
+    "status": "ok",
     "data": {
       "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
     }
   }
   ```
 - **Respuestas de Error:**
-  - `401 Unauthorized`: `"No se proporcionó refresh token"` o `"La sesión ha expirado, inicie sesión nuevamente"`.
+  - `401 Unauthorized`: `"La sesión ha expirado, inicie sesión nuevamente"`.
 
 ---
 
@@ -157,7 +135,7 @@ Cierra la sesión del usuario eliminando la cookie HttpOnly de Refresh Token.
 - **Response (200 OK):**
   ```json
   {
-    "success": true,
+    "status": "ok",
     "message": "Sesión cerrada correctamente"
   }
   ```
@@ -175,7 +153,7 @@ Obtiene la lista completa de todos los usuarios registrados en el sistema, orden
 - **Response (200 OK):**
   ```json
   {
-    "success": true,
+    "status": "ok",
     "data": [
       {
         "id": 4,
@@ -184,14 +162,11 @@ Obtiene la lista completa de todos los usuarios registrados en el sistema, orden
         "email": "alvarezrafaelat@gmail.com",
         "activo": true,
         "ultimoAcceso": "2026-07-28T14:32:23.875Z",
-        "creadoEn": "2026-07-28T13:39:50.698Z",
-        "actualizadoEn": "2026-07-28T14:32:23.876Z"
+        "creadoEn": "2026-07-28T13:39:50.698Z"
       }
     ]
   }
   ```
-- **Respuestas de Error:**
-  - `401 Unauthorized`: `"No se proporcionó un token de autenticación"` o `"Token de sesión inválido"`.
 
 ---
 
@@ -220,18 +195,11 @@ Registra un nuevo usuario en la base de datos con contraseña encriptada mediant
     "rolIds": [1]
   }
   ```
-  *Validaciones Nativas:*
-  - `nombre` / `apellido`: Cadenas requeridas no vacías.
-  - `email`: Formato válido de email (normalizado a minúsculas).
-  - `password`: Mínimo 6 caracteres.
-  - `activo`: Booleano opcional (por defecto `true`).
-  - `rolIds`: Arreglo de IDs numéricos opcional.
-  - `rolId`: Número entero positivo opcional (alternativa para asignar un solo rol).
 
 - **Response (201 Created):**
   ```json
   {
-    "success": true,
+    "status": "ok",
     "message": "Usuario creado correctamente",
     "data": {
       "id": 5,
@@ -247,8 +215,8 @@ Registra un nuevo usuario en la base de datos con contraseña encriptada mediant
   }
   ```
 - **Respuestas de Error:**
+  - `400 Bad Request`: Error de validación de campos.
   - `409 Conflict`: `"Ya existe un usuario registrado con el correo carlos.mendoza@sinergy.com"`.
-  - `422 Unprocessable Entity`: Error de validación Zod.
 
 ---
 
@@ -257,31 +225,20 @@ Actualiza parcialmente los datos de un usuario existente.
 
 - **Acceso:** Protegido (`Authorization: Bearer <accessToken>`)
 - **URL Parameters:** `id` (Número entero de usuario)
-- **Request Body (Zod `actualizarUsuarioSchema`):**
-  ```json
-  {
-    "nombre": "Carlos Alberto",
-    "activo": false
-  }
-  ```
 - **Response (200 OK):**
   ```json
   {
-    "success": true,
+    "status": "ok",
     "message": "Usuario actualizado correctamente",
     "data": {
       "id": 5,
       "nombre": "Carlos Alberto",
       "apellido": "Mendoza",
       "email": "carlos.mendoza@sinergy.com",
-      "activo": false,
-      "actualizadoEn": "2026-07-28T14:36:00.000Z"
+      "activo": false
     }
   }
   ```
-- **Respuestas de Error:**
-  - `400 Bad Request`: `"El ID proporcionado no es válido"` o `"Debe proporcionar al menos un campo para actualizar"`.
-  - `404 Not Found`: `"El usuario con el ID 999 no existe"`.
 
 ---
 
@@ -289,11 +246,10 @@ Actualiza parcialmente los datos de un usuario existente.
 Deshabilita lógicamente a un usuario en el sistema (`activo = false`).
 
 - **Acceso:** Protegido (`Authorization: Bearer <accessToken>`)
-- **URL Parameters:** `id` (Número entero de usuario)
 - **Response (200 OK):**
   ```json
   {
-    "success": true,
+    "status": "ok",
     "message": "Usuario deshabilitado correctamente",
     "data": {
       "id": 5,
@@ -303,40 +259,23 @@ Deshabilita lógicamente a un usuario en el sistema (`activo = false`).
     }
   }
   ```
-- **Respuestas de Error:**
-  - `400 Bad Request`: `"El ID proporcionado no es válido"`.
-  - `409 Conflict`: `"El usuario con id 5 ya fue deshabilitado"`.
-  - `404 Not Found`: `"Usuario con id 999 no encontrado"`.
 
 ---
 
 ## 3. Asignación de Roles a Usuarios (`/api/auth/roles`)
 
-> [!IMPORTANT]
-> Todos estos endpoints requieren `Authorization: Bearer <accessToken>`.
-> Las respuestas siempre retornan el usuario con sus roles actualizados incluidos.
-
 ### `PATCH /api/auth/roles/:id`
-Reemplaza **todos** los roles de un usuario con los IDs enviados. Enviar `rolIds: []` deja al usuario sin roles.
+Reemplaza **todos** los roles de un usuario con los IDs enviados.
 
-- **URL Parameters:** `id` (ID del usuario)
-- **Request Body:**
-  ```json
-  { "rolIds": [1, 2] }
-  ```
-  *Validaciones:*
-  - `rolIds`: Array requerido de números enteros positivos.
-  - Si algún `rolId` no existe en la BD, retorna `400`.
-
+- **Request Body:** `{ "rolIds": [1, 2] }`
 - **Response (200 OK):**
   ```json
   {
-    "success": true,
+    "status": "ok",
     "message": "Roles actualizados correctamente",
     "data": {
       "id": 4,
       "nombre": "Rafael",
-      "email": "alvarezrafaelat@gmail.com",
       "rolesUsuario": [
         { "rol": { "id": 1, "nombre": "Administrador" } },
         { "rol": { "id": 2, "nombre": "Supervisor" } }
@@ -344,46 +283,32 @@ Reemplaza **todos** los roles de un usuario con los IDs enviados. Enviar `rolIds
     }
   }
   ```
-- **Respuestas de Error:**
-  - `400`: `"El campo rolIds debe ser un arreglo de IDs numéricos"` / `"Los siguientes IDs de rol no existen: 99"`.
-  - `404`: `"El usuario con ID 999 no existe"`.
 
 ---
 
 ### `POST /api/auth/roles/:id/:rolId`
-Agrega un **único** rol al usuario. Operación **idempotente**: si el rol ya estaba asignado no genera error.
+Agrega un **único** rol al usuario (idempotente).
 
-- **URL Parameters:** `id` (ID usuario), `rolId` (ID del rol a agregar)
-- **Body:** No requerido.
-- **Response (200 OK):** Usuario con sus roles actualizados.
-- **Respuestas de Error:**
-  - `400`: `"El rol con ID 99 no existe"`.
-  - `404`: `"El usuario con ID 999 no existe"`.
+- **Response (200 OK):** Usuario con sus roles actualizados (`status: "ok"`).
 
 ---
 
 ### `DELETE /api/auth/roles/:id/:rolId`
 Quita un **único** rol del usuario.
 
-- **URL Parameters:** `id` (ID usuario), `rolId` (ID del rol a quitar)
-- **Response (200 OK):** Usuario con sus roles actualizados.
-- **Respuestas de Error:**
-  - `404`: `"El usuario 4 no tiene asignado el rol 99"`.
+- **Response (200 OK):** Usuario con sus roles actualizados (`status: "ok"`).
 
 ---
 
 ## 4. Módulo de Roles del Sistema (`/api/roles`)
 
-Gestión CRUD del catálogo de roles disponibles en el sistema.
-
 ### `GET /api/roles/`
-Lista todos los roles disponibles ordenados por nombre.
+Lista todos los roles disponibles.
 
-- **Acceso:** Público
 - **Response (200 OK):**
   ```json
   {
-    "success": true,
+    "status": "ok",
     "data": [
       { "id": 1, "nombre": "Administrador", "descripcion": "Acceso total al sistema" },
       { "id": 2, "nombre": "Supervisor",    "descripcion": null },
@@ -397,62 +322,38 @@ Lista todos los roles disponibles ordenados por nombre.
 ### `POST /api/roles/crear`
 Crea un nuevo rol en el catálogo.
 
-- **Acceso:** Protegido (`Bearer <accessToken>`)
-- **Request Body:**
-  ```json
-  { "nombre": "Tecnico", "descripcion": "Responsable de inspecciones en campo" }
-  ```
-  *Validaciones:*
-  - `nombre`: Requerido, máximo 50 caracteres. Se capitaliza automáticamente.
-  - `descripcion`: Opcional, texto libre.
-
 - **Response (201 Created):**
   ```json
   {
-    "success": true,
+    "status": "ok",
     "message": "Rol creado correctamente",
     "data": { "id": 4, "nombre": "Tecnico", "descripcion": "Responsable de inspecciones en campo" }
   }
   ```
-- **Respuestas de Error:**
-  - `400`: `"El nombre del rol es requerido"` / `"El nombre del rol no puede superar 50 caracteres"`.
-  - `409 Conflict`: `"Ya existe un rol con ese nombre"`.
 
 ---
 
 ### `PATCH /api/roles/editar/:id`
 Actualiza nombre y/o descripción de un rol existente.
 
-- **Acceso:** Protegido (`Bearer <accessToken>`)
-- **URL Parameters:** `id` (ID del rol)
-- **Request Body:** Cualquier combinación de `nombre` y `descripcion`.
-  ```json
-  { "nombre": "Jefe de Planta" }
-  ```
 - **Response (200 OK):**
   ```json
   {
-    "success": true,
+    "status": "ok",
     "message": "Rol actualizado correctamente",
     "data": { "id": 2, "nombre": "Jefe De Planta", "descripcion": null }
   }
   ```
-- **Respuestas de Error:**
-  - `400`: Validación de campo.
-  - `404`: `"El rol con ID 99 no existe"`.
-  - `409`: `"Ya existe un rol con ese nombre"`.
 
 ---
 
 ### `DELETE /api/roles/eliminar/:id`
-Elimina un rol del catálogo. Las asignaciones `UsuarioRol` se eliminan en cascada.
+Elimina un rol del catálogo.
 
-- **Acceso:** Protegido (`Bearer <accessToken>`)
-- **URL Parameters:** `id` (ID del rol)
 - **Response (200 OK):**
   ```json
   {
-    "success": true,
+    "status": "ok",
     "message": "Rol \"Administrador\" eliminado correctamente"
   }
   ```
