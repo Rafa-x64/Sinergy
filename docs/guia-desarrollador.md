@@ -1,5 +1,47 @@
 # Guía del Desarrollador — Sinergy
 
+> Esta guía es el punto de entrada. Para implementar funcionalidades, dirígete directamente a la guía especializada de cada rol.
+
+---
+
+## Guías Especializadas
+
+| Guía | Contenido | Archivo |
+|---|---|---|
+| **Backend** | Módulos Express, Prisma, controladores, servicios, rutas, manejo de errores, seguridad JWT | [guia-backend.md](./guia-backend.md) |
+| **Frontend** | Stores Pinia, instancia Axios `api`, vistas Vue 3, formularios Vuetify, router, toasts | [guia-frontend.md](./guia-frontend.md) |
+
+---
+
+## Qué cubre cada guía
+
+### [guia-backend.md](./guia-backend.md)
+- Estructura de carpetas `src/core/` y `src/modules/`
+- Las 4 capas del módulo: `*.schemas.ts`, `*.service.ts`, `*.controller.ts`, `*.routes.ts`
+- El contrato `ResponseDTO` y los códigos HTTP usados
+- Utilidades del core: `parsearId`, `validarCodigo`, `capitalizarPalabras`, `constantes.ts`
+- Manejo de errores de Prisma: `P2002`, `P2025`, `P2003`
+- Seguridad JWT: `validarJWT` y `req.usuario`
+- Tutorial completo para agregar un módulo nuevo desde cero
+- Tutorial para agregar un endpoint a un módulo existente
+- El orden obligatorio de middlewares en `server.ts`
+- Solución a errores comunes de compilación y runtime
+
+### [guia-frontend.md](./guia-frontend.md)
+- Estructura de carpetas `src/core/` y `src/modules/`
+- La instancia HTTP `api` de `@/core/api` (Axios con interceptores de JWT y auto-refresh)
+- Por qué se usa `api` y no `authStore.apiFetch` ni `fetch` directo
+- El contrato `RespuestaApi<T>` y su manejo en stores y vistas
+- Stores Pinia: Composition API, tipado DTO, manejo de `AxiosError`, `storeToRefs`
+- Vistas `*View.vue`: `AppTabs`, `v-data-table`, `v-dialog`, `useToast`, carga inicial
+- Formularios `*Form.vue`: `VuetifyForm`, props/emits, watch para edición, validaciones Vuetify
+- El archivo `validations/registro.ts`: cómo escribir y vincular reglas de validación
+- El Router: cómo registrar rutas, `meta.requiresAuth`, el Navigation Guard
+- Tutorial completo de módulo nuevo (store + validaciones + formulario + vista + ruta)
+- Solución a errores comunes de reactividad, formularios y peticiones HTTP
+
+---
+
 Sinergy es un sistema de gestión de mantenimiento industrial construido como monorepo. Esta guía está escrita de forma cronológica e instructiva: sigue cada sección en orden y al final del proceso tendrás las bases para crear features completos y funcionales conectados de punta a punta entre el Backend (Express + Prisma) y el Frontend (Vue 3 + Pinia + Vuetify 3).
 
 ---
