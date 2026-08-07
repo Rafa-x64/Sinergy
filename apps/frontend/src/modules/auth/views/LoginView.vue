@@ -14,7 +14,7 @@ const mensajeServidor = ref<string | null>(null)
 const formRef = ref<VuetifyForm | null>(null)
 
 const formulario = reactive<LoginDTO>({
-  email: '',
+  nombreUsuario: '',
   password: ''
 })
 
@@ -55,8 +55,8 @@ const manejarSubmit = async (): Promise<void> => {
           <h1 class="text-h4 font-weight-bold mb-6 text-center">Bienvenido</h1>
 
           <v-form @submit.prevent="manejarSubmit" ref="formRef" class="mt-6">
-            <v-text-field v-model="formulario.email" :rules="loginRules.email" label="Correo"
-              prepend-inner-icon="mdi-email-outline" variant="outlined" placeholder="correo@gmail.com" type="email"
+            <v-text-field v-model="formulario.nombreUsuario" :rules="loginRules.nombreUsuario" label="Nombre de Usuario"
+              prepend-inner-icon="mdi-account" variant="outlined" placeholder="Ejemplo123*." type="text"
               class="mb-2" validate-on="blur"></v-text-field>
 
             <v-text-field v-model="formulario.password" :rules="loginRules.password" label="Contraseña"
