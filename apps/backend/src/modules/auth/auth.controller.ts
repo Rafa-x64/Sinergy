@@ -26,17 +26,21 @@ export const authController = {
 
   async iniciarSesion(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { email, password } = req.body
+      const { nombreUsuario, password } = req.body
 
-      if (!email || !password) {
+      if (!nombreUsuario || !password) {
         res.status(400).json({
           status: 'error',
-          message: 'El correo y la contraseña son requeridos'
+          message: 'El usuario y la contraseña son requeridos',
         })
         return
       }
 
-      const credenciales = { email: String(email).trim().toLowerCase(), password: String(password) }
+      const credenciales = {
+        nombreUsuario: String(nombreUsuario).trim(),
+        password: String(password),
+      }
+
       const { accessToken, refreshToken } = await authService.iniciarSesion(credenciales)
 
       res.cookie('refreshToken', refreshToken, COOKIE_OPTIONS)
@@ -44,16 +48,16 @@ export const authController = {
       res.status(200).json({
         status: 'ok',
         message: 'Sesión iniciada correctamente',
-        data: { accessToken }
+        data: { accessToken },
       })
-    } catch (error) {
+    } catch (error: unknown) {
       next(error)
     }
   },
 
   async registrar(req: Request, res: Response, next: NextFunction) {
     try {
-      const { nombre, apellido, email, password, activo, rolIds, rolId } = req.body
+      const { nombre, apellido, email, nombreUsuario, password, activo, rolId } = req.body
 
       if (!nombre || typeof nombre !== 'string' || !nombre.trim()) {
         return res.status(400).json({ status: 'error', message: 'El nombre es requerido' })
@@ -67,41 +71,51 @@ export const authController = {
         return res.status(400).json({ status: 'error', message: 'El correo electrónico es requerido' })
       }
 
-      const emailNormalizado = email.trim().toLowerCase()
+      const emailLimpio = email.trim()
 
-      if (!esEmailValido(emailNormalizado)) {
+      if (!esEmailValido(emailLimpio)) {
         return res.status(400).json({ status: 'error', message: 'El formato del correo electrónico no es válido' })
       }
+
+      if (!nombreUsuario || typeof nombreUsuario !== 'string' || !nombreUsuario.trim()) {
+        return res.status(400).json({ status: 'error', message: 'El nombre de usuario es requerido' })
+      }
+
+      const nombreUsuarioLimpio = nombreUsuario.trim()
 
       if (!password || typeof password !== 'string' || password.length < 6) {
         return res.status(400).json({ status: 'error', message: 'La contraseña debe tener al menos 6 caracteres' })
       }
 
-      if (rolIds !== undefined && !Array.isArray(rolIds)) {
-        return res.status(400).json({ status: 'error', message: 'El campo rolIds debe ser un arreglo de números' })
+      if (rolId === undefined || typeof rolId !== 'number' || !Number.isInteger(rolId) || rolId <= 0) {
+        return res.status(400).json({ status: 'error', message: 'El campo rolId es requerido y debe ser un número entero positivo' })
       }
 
-      if (rolId !== undefined && (typeof rolId !== 'number' || !Number.isInteger(rolId) || rolId <= 0)) {
-        return res.status(400).json({ status: 'error', message: 'El campo rolId debe ser un número entero positivo' })
+      const nombreUsuarioExistente = await authService.buscarPorNombreUsuario(nombreUsuarioLimpio)
+      if (nombreUsuarioExistente !== null) {
+        return res.status(409).json({ status: 'error', message: `Ya existe un usuario registrado con el nombre ${nombreUsuarioLimpio}` })
       }
 
-      const usuarioExistente = await authService.buscarPorEmail(emailNormalizado)
-      if (usuarioExistente !== null) {
-        return res.status(409).json({ status: 'error', message: `Ya existe un usuario registrado con el correo ${emailNormalizado}` })
+      const correoUsuarioExistente = await authService.buscarPorEmail(emailLimpio)
+      if (correoUsuarioExistente !== null) {
+        return res.status(409).json({ status: 'error', message: `Ya existe un usuario registrado con el correo ${emailLimpio}` })
       }
 
       const usuario = await authService.crear({
         nombre: nombre.trim(),
         apellido: apellido.trim(),
-        email: emailNormalizado,
+        email: emailLimpio,
+        nombreUsuario: nombreUsuarioLimpio,
         password,
         activo: typeof activo === 'boolean' ? activo : true,
-        rolIds,
         rolId,
       })
 
       return res.status(201).json({ status: 'ok', message: 'Usuario creado correctamente', data: usuario })
-    } catch (error) {
+    } catch (error: unknown) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        return res.status(409).json({ status: 'error', message: 'El nombre de usuario o correo ya se encuentra registrado' })
+      }
       next(error)
     }
   },
@@ -113,7 +127,7 @@ export const authController = {
         return res.status(400).json({ status: 'error', message: 'El ID proporcionado no es válido' })
       }
 
-      const { nombre, apellido, email, password, activo } = req.body
+      const { nombre, apellido, email, nombreUsuario, password, activo } = req.body
 
       if (Object.keys(req.body).length === 0) {
         return res.status(400).json({ status: 'error', message: 'Debe proporcionar al menos un campo para actualizar' })
@@ -139,7 +153,14 @@ export const authController = {
         if (typeof email !== 'string' || !esEmailValido(email)) {
           return res.status(400).json({ status: 'error', message: 'El correo electrónico no es válido' })
         }
-        datosActualizados.email = email.trim().toLowerCase()
+        datosActualizados.email = email.trim()
+      }
+
+      if (nombreUsuario !== undefined) {
+        if (typeof nombreUsuario !== 'string' || !nombreUsuario.trim()) {
+          return res.status(400).json({ status: 'error', message: 'El nombre de usuario no es válido' })
+        }
+        datosActualizados.nombreUsuario = nombreUsuario.trim()
       }
 
       if (password !== undefined) {
@@ -157,8 +178,13 @@ export const authController = {
 
       return res.status(200).json({ status: 'ok', message: 'Usuario actualizado correctamente', data: actualizado })
     } catch (error: unknown) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-        return res.status(404).json({ status: 'error', message: `El usuario con el ID ${req.params.id} no existe` })
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2025') {
+          return res.status(404).json({ status: 'error', message: `El usuario con el ID ${req.params.id} no existe` })
+        }
+        if (error.code === 'P2002') {
+          return res.status(409).json({ status: 'error', message: 'El nombre de usuario o correo electrónico ya está en uso' })
+        }
       }
       next(error)
     }

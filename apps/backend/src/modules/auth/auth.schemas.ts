@@ -4,7 +4,7 @@
  */
 
 export interface LoginDTO {
-  email: string
+  nombreUsuario: string
   password: string
 }
 
@@ -12,16 +12,17 @@ export interface CrearUsuarioDTO {
   nombre: string
   apellido: string
   email: string
+  nombreUsuario: string
   password: string
   activo?: boolean
-  rolIds?: number[]
-  rolId?: number
+  rolId: number
 }
 
 export interface ActualizarUsuarioDTO {
   nombre?: string
   apellido?: string
   email?: string
+  nombreUsuario?: string
   password?: string
   activo?: boolean
 }

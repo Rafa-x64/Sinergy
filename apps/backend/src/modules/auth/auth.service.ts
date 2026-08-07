@@ -15,7 +15,7 @@ export class AuthService {
 
   async iniciarSesion(credentials: LoginDTO): Promise<AuthTokens> {
     const usuario = await prisma.usuario.findUnique({
-      where: { email: credentials.email },
+      where: { nombreUsuario: credentials.nombreUsuario },
       include: {
         rolesUsuario: {
           include: { rol: true },
@@ -83,27 +83,25 @@ export class AuthService {
     })
   }
 
+  async buscarPorNombreUsuario(nombreUsuario: string) {
+    return prisma.usuario.findUnique({
+      where: { nombreUsuario },
+      omit: { passwordHash: true },
+    })
+  }
+
   async crear(datos: CrearUsuarioDTO) {
     const ahora = new Date()
     const passwordHash = await encriptar(datos.password)
 
-    let rolIds: number[] = []
-    if (Array.isArray(datos.rolIds)) {
-      rolIds = datos.rolIds
-    } else if (typeof datos.rolId === 'number') {
-      rolIds = [datos.rolId]
-    }
+    // Validar que el único rol solicitado exista realmente en la base de datos
+    const rolExiste = await prisma.rol.findUnique({
+      where: { id: datos.rolId },
+      select: { id: true },
+    })
 
-    if (rolIds.length > 0) {
-      const rolesExistentes = await prisma.rol.findMany({
-        where: { id: { in: rolIds } },
-        select: { id: true },
-      })
-      if (rolesExistentes.length !== rolIds.length) {
-        const encontrados = rolesExistentes.map((r) => r.id)
-        const faltantes = rolIds.filter((id) => !encontrados.includes(id))
-        throw new AppError(`Los siguientes IDs de rol no existen: ${faltantes.join(', ')}`, 400)
-      }
+    if (!rolExiste) {
+      throw new AppError(`El rol con ID ${datos.rolId} no existe en el sistema`, 400)
     }
 
     return prisma.usuario.create({
@@ -111,16 +109,17 @@ export class AuthService {
         nombre: datos.nombre,
         apellido: datos.apellido,
         email: datos.email,
+        nombreUsuario: datos.nombreUsuario,
         passwordHash,
         activo: datos.activo ?? true,
         ultimoAcceso: ahora,
         creadoEn: ahora,
         actualizadoEn: ahora,
-        ...(rolIds.length > 0 && {
-          rolesUsuario: {
-            create: rolIds.map((rolId) => ({ rolId })),
-          },
-        }),
+        // Inserción en la tabla intermedia actual.
+        // Nota: Si actualizas tu schema a 1:N, esto cambiaría a simplemente `rolId: datos.rolId`
+        rolesUsuario: {
+          create: { rolId: datos.rolId },
+        },
       },
       omit: { passwordHash: true },
       include: {
@@ -144,6 +143,7 @@ export class AuthService {
         nombre: datos.nombre,
         apellido: datos.apellido,
         email: datos.email,
+        nombreUsuario: datos.nombreUsuario,
         activo: datos.activo,
         ...(passwordHash !== undefined && { passwordHash }),
         actualizadoEn: new Date(),
