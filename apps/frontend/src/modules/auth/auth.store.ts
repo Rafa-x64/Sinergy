@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 
 export interface LoginDTO {
-  email: string
+  nombreUsuario: string
   password: string
 }
 
@@ -14,10 +14,52 @@ export interface RespuestaApi<T = void> {
 
 export const API_URL = 'http://localhost:3000/api'
 
+export interface TokenPayload {
+  sub: number
+  email: string
+  roles: string[]
+}
+
+function parseJwtPayload(token: string): TokenPayload | null {
+  try {
+    const base64Url = token.split('.')[1]
+    if (!base64Url) return null
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    )
+    return JSON.parse(jsonPayload) as TokenPayload
+  } catch {
+    return null
+  }
+}
+
 export const useAuthStore = defineStore('auth', () => {
   const accessToken = ref<string | null>(null)
 
   const estaAutenticado = computed<boolean>(() => accessToken.value !== null)
+
+  const usuario = computed<TokenPayload | null>(() => {
+    if (!accessToken.value) return null
+    return parseJwtPayload(accessToken.value)
+  })
+
+  const roles = computed<string[]>(() => {
+    return usuario.value?.roles || []
+  })
+
+  function tieneRol(rolesRequeridos?: string[]): boolean {
+    if (!rolesRequeridos || rolesRequeridos.length === 0) return true
+    if (roles.value.length === 0) return false
+    const userRolesUpper = roles.value.map((r) => r.toUpperCase())
+    return rolesRequeridos.some((req) => {
+      const reqUpper = req.toUpperCase()
+      return userRolesUpper.some((userRole) => userRole.includes(reqUpper) || reqUpper.includes(userRole))
+    })
+  }
 
   async function login(credenciales: LoginDTO): Promise<RespuestaApi> {
     const response = await fetch(`${API_URL}/auth/login`, {
@@ -87,6 +129,9 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     accessToken,
     estaAutenticado,
+    usuario,
+    roles,
+    tieneRol,
     login,
     refrescarToken,
     apiFetch,

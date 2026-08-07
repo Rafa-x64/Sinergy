@@ -36,7 +36,7 @@
 - Vistas `*View.vue`: `AppTabs`, `v-data-table`, `v-dialog`, `useToast`, carga inicial
 - Formularios `*Form.vue`: `VuetifyForm`, props/emits, watch para edición, validaciones Vuetify
 - El archivo `validations/registro.ts`: cómo escribir y vincular reglas de validación
-- El Router: cómo registrar rutas, `meta.requiresAuth`, el Navigation Guard
+- El Router: cómo registrar rutas, `meta.requiresAuth`, `meta.roles` y el Navigation Guard por roles (`tieneRol`)
 - Tutorial completo de módulo nuevo (store + validaciones + formulario + vista + ruta)
 - Solución a errores comunes de reactividad, formularios y peticiones HTTP
 

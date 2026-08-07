@@ -18,19 +18,19 @@ const routes: RouteRecordRaw[] = [
     path: '/plantas',
     name: 'plantas',
     component: () => import('../modules/plantas/views/PlantasView.vue'),
-    meta: { requiresAuth: true, hideLayout: false },
+    meta: { requiresAuth: true, hideLayout: false, roles: ['Administrador', 'Admin', 'Supervisor'] },
   },
   {
     path: '/ubicaciones',
     name: 'ubicaciones',
     component: () => import('../modules/ubicaciones/views/UbicacionesView.vue'),
-    meta: { requiresAuth: true, hideLayout: false },
+    meta: { requiresAuth: true, hideLayout: false, roles: ['Administrador', 'Admin', 'Supervisor'] },
   },
   {
     path: '/lineas',
     name: 'lineas',
     component: () => import('../modules/lineas/views/LineasView.vue'),
-    meta: { requiresAuth: true, hideLayout: false },
+    meta: { requiresAuth: true, hideLayout: false, roles: ['Administrador', 'Admin', 'Supervisor'] },
   },
   {
     path: '/:pathMatch(.*)*',
@@ -58,6 +58,8 @@ const router = createRouter({
  * 3. Si falla, redirige al login.
  * 4. Si la ruta no requiere autenticación y el usuario ya está logueado,
  *    redirige al dashboard para evitar que vea el login innecesariamente.
+ * 5. Si la ruta especifica roles permitidos (meta.roles), verifica que el usuario
+ *    tenga al menos uno de los roles requeridos; de lo contrario, redirige al dashboard.
  */
 router.beforeEach(async (to) => {
   const authStore = useAuthStore()
@@ -67,6 +69,13 @@ router.beforeEach(async (to) => {
     const sesionRestaurada = await authStore.refrescarToken()
     if (!sesionRestaurada) {
       return { name: 'login' }
+    }
+  }
+
+  if (requiereAuth && authStore.estaAutenticado) {
+    const rolesPermitidos = to.meta.roles as string[] | undefined
+    if (rolesPermitidos && !authStore.tieneRol(rolesPermitidos)) {
+      return { name: 'dashboard' }
     }
   }
 
