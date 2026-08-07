@@ -10,6 +10,7 @@ export interface EditarUbicacionDTO {
     nombre?: string;
     descripcion?: string;
     plantaId?: number;
+    activa?:boolean
 }
 
 export interface ParamsUbicacion {

@@ -6,117 +6,133 @@ import { createVuetify, type ThemeDefinition } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 
-// Tema claro personalizado de Sinergy
+/*
+ * ======================================================
+ *  TEMA CLARO · "Aire Fresco"   ☁️
+ *  · Fondo gris azulado muy claro (no blanco)
+ *  · Superficies en blanco roto (ligeramente gris)
+ *  · Texto en gris oscuro (no negro)
+ *  · Índigo como primario, tonos suaves para el resto
+ * ======================================================
+ */
 const sinergyLightTheme: ThemeDefinition = {
   dark: false,
   colors: {
-    // 📝 TEXTOS - Contraste máximo
-    'text-primary': '#0B1120',        // Azul noche casi negro (más rico que #1A1A1A)
-    'text-secondary': '#475569',      // Gris pizarra (más legible que #5A6268)
-    'text-muted': '#94A3B8',          // Gris más claro pero visible
+    // ─── TEXTOS ───
+    'text-primary': '#1E293B',     // pizarra oscura
+    'text-secondary': '#475569',   // pizarra media
+    'text-muted': '#94A3B8',       // pizarra clara
 
-    // 🎯 COLORES PRINCIPALES - Más intensos
-    'primary': '#2563EB',             // Azul eléctrico (el mismo, pero lo usaremos mejor)
-    'primary-dark': '#1D4ED8',
-    'primary-light': '#DBEAFE',       // Fondo de selección (más azulado)
+    // ─── PRIMARIOS ─── (índigo IA, pero suave)
+    'primary': '#4F46E5',          // índigo base
+    'primary-dark': '#4338CA',
+    'primary-light': '#E0E7FF',    // fondo de selección
 
-    'secondary': '#64748B',           // Gris azulado más elegante
-    'secondary-light': '#F1F5F9',     // Fondo de elementos secundarios
+    'secondary': '#64748B',        // pizarra
+    'secondary-light': '#F1F5F9',
 
-    // 🟢 SEMÁNTICOS - Más vivos y distinguibles
-    'success': '#059669',             // Verde esmeralda intenso
-    'success-light': '#D1FAE5',       // Fondo de éxito (más verde)
-    'warning': '#D97706',             // Ámbar profundo
-    'warning-light': '#FEF3C7',       // Fondo de advertencia
-    'error': '#DC2626',               // Rojo vivo
-    'error-light': '#FEE2E2',         // Fondo de error
-    'info': '#0891B2',                // Cian intenso
-    'info-light': '#CFFAFE',          // Fondo de info
+    // ─── SEMÁNTICOS ─── (vivos pero sin estridencia)
+    'success': '#0D9488',          // teal
+    'success-light': '#CCFBF1',
+    'warning': '#D97706',          // ámbar
+    'warning-light': '#FEF3C7',
+    'error': '#E11D48',            // rosa/rojo
+    'error-light': '#FFE4E6',
+    'info': '#0284C7',             // cielo
+    'info-light': '#E0F2FE',
 
-    // 🏠 FONDOS - Más contraste
-    'background': '#F1F5F9',          // Gris azulado más oscuro (mejor que #F6F8FA)
-    'surface': '#FFFFFF',             // Blanco puro para tarjetas
-    'surface-variant': '#F8FAFC',
-    'elevated': '#FFFFFF',
+    // ─── FONDOS ─── (sin blanco puro)
+    'background': '#F1F5F9',       // gris azulado muy claro
+    'surface': '#F8FAFC',          // blanco roto para tarjetas
+    'surface-variant': '#F1F5F9',
+    'elevated': '#FFFFFF',         // solo para elementos elevados (opcional)
 
-    // 🧩 BORDES Y DIVISORES - Más definidos
-    'border': '#CBD5E1',              // Gris más oscuro para bordes
+    // ─── BORDES ───
+    'border': '#E2E8F0',
     'divider': '#E2E8F0',
 
-    // ⭐ ON COLORS (texto sobre colores)
+    // ─── ON COLORS ───
     'on-primary': '#FFFFFF',
     'on-secondary': '#FFFFFF',
     'on-success': '#FFFFFF',
     'on-warning': '#FFFFFF',
     'on-error': '#FFFFFF',
     'on-info': '#FFFFFF',
-    'on-background': '#0B1120',
-    'on-surface': '#0B1120'
-  }
+    'on-background': '#1E293B',
+    'on-surface': '#1E293B',
+  },
 }
 
-// Tema oscuro personalizado de Sinergy
+/*
+ * ======================================================
+ *  TEMA OSCURO · "Noche Polar"   🌙
+ *  · Fondo azul noche profundo (no negro)
+ *  · Superficies ligeramente más claras
+ *  · Texto en blanco crema (no puro)
+ *  · Índigo más luminoso, semánticos suaves
+ * ======================================================
+ */
 const sinergyDarkTheme: ThemeDefinition = {
   dark: true,
   colors: {
-    // 📝 TEXTOS - Blanco puro con contraste alto
-    'text-primary': '#F1F5F9',        // Blanco azulado (más brillante)
-    'text-secondary': '#CBD5E1',      // Gris claro (mejor contraste)
+    // ─── TEXTOS ───
+    'text-primary': '#F1F5F9',     // blanco grisáceo
+    'text-secondary': '#CBD5E1',
     'text-muted': '#94A3B8',
 
-    // 🎯 COLORES PRINCIPALES - Más luminosos
-    'primary': '#3B82F6',             // Azul más brillante
-    'primary-dark': '#2563EB',
-    'primary-light': '#1E3A5F',       // Fondo de selección más visible
+    // ─── PRIMARIOS ─── (índigo más brillante pero suave)
+    'primary': '#818CF8',          // índigo claro
+    'primary-dark': '#6366F1',
+    'primary-light': '#1E1B4B',    // fondo de selección
 
     'secondary': '#94A3B8',
     'secondary-light': '#1E293B',
 
-    // 🟢 SEMÁNTICOS - Más vivos
-    'success': '#34D399',             // Verde esmeralda claro
-    'success-light': '#064E3B',
-    'warning': '#FBBF24',             // Ámbar brillante
+    // ─── SEMÁNTICOS ─── (luminosos pero no neón)
+    'success': '#2DD4BF',          // teal claro
+    'success-light': '#134E4A',
+    'warning': '#FBBF24',          // ámbar
     'warning-light': '#78350F',
-    'error': '#F87171',               // Rojo suave pero visible
-    'error-light': '#7F1D1D',
-    'info': '#22D3EE',                // Cian eléctrico
-    'info-light': '#164E63',
+    'error': '#FB7185',            // rosa suave
+    'error-light': '#4C0519',
+    'info': '#38BDF8',             // cielo claro
+    'info-light': '#0C4A6E',
 
-    // 🏠 FONDOS - Más profundidad
-    'background': '#0B1120',          // Azul noche más oscuro
-    'surface': '#1E293B',
-    'surface-variant': '#172032',
-    'elevated': '#26344A',
+    // ─── FONDOS ─── (azul noche, sin negro)
+    'background': '#0B0E14',       // casi negro pero azulado
+    'surface': '#141A24',          // superficie más clara
+    'surface-variant': '#0F131C',
+    'elevated': '#1E2635',
 
-    // 🧩 BORDES Y DIVISORES
-    'border': '#334155',              // Bordes más visibles
-    'divider': '#1E293B',
+    // ─── BORDES ───
+    'border': '#2A3346',
+    'divider': '#1E2635',
 
-    // ⭐ ON COLORS
-    'on-primary': '#0B1120',
-    'on-secondary': '#0B1120',
-    'on-success': '#0B1120',
-    'on-warning': '#0B1120',
-    'on-error': '#0B1120',
-    'on-info': '#0B1120',
+    // ─── ON COLORS ───
+    'on-primary': '#0B0E14',
+    'on-secondary': '#0B0E14',
+    'on-success': '#0B0E14',
+    'on-warning': '#0B0E14',
+    'on-error': '#0B0E14',
+    'on-info': '#0B0E14',
     'on-background': '#F1F5F9',
-    'on-surface': '#F1F5F9'
-  }
+    'on-surface': '#F1F5F9',
+  },
 }
 
 export const vuetify = createVuetify({
   components,
   directives,
   icons: {
-    defaultSet: 'mdi'
+    defaultSet: 'mdi',
   },
   theme: {
     defaultTheme: 'sinergyLightTheme',
     themes: {
       sinergyLightTheme,
-      sinergyDarkTheme
-    }
-  }
+      sinergyDarkTheme,
+    },
+  },
 })
 
 export default vuetify
