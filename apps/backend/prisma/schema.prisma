@@ -58,6 +58,7 @@ model Usuario {
   nombre        String    @db.VarChar(100)
   apellido      String    @db.VarChar(100)
   email         String    @unique @db.VarChar(150)
+  nombreUsuario String    @unique @db.VarChar(50)
   passwordHash  String    @map("password_hash") @db.VarChar(255)
   activo        Boolean   @default(true)
   ultimoAcceso  DateTime? @map("ultimo_acceso")
