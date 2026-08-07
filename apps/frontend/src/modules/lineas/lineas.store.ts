@@ -4,71 +4,74 @@ import { type RespuestaApi } from '../auth/auth.store'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
-export interface Ubicacion {
+export interface UbicacionTecnica {
     id: number
-    codigo: string,
-    nombre: string,
-    descripcion: string,
-    activa: boolean,
-    plantaId: number
+    codigo: string
+    nombre: string
 }
 
-export interface RegistrarUbicacionDTO {
-    codigo: string,
-    nombre: string,
-    descripcion?: string,
-    activa: boolean,
-    plantaId: number
+export interface Linea {
+    id: number
+    codigo: string
+    nombre: string
+    descripcion?: string
+    activa: boolean
+    ubicacionTecnicaId: number
+    ubicacionTecnica?: UbicacionTecnica
 }
 
-export const useUbicacionStore = defineStore('ubicaciones', () => {
+export interface RegistrarLineaDTO {
+    codigo: string
+    nombre: string
+    descripcion?: string
+    activa: boolean
+    ubicacionTecnicaId: number
+}
 
-    const ubicaciones = ref<Ubicacion[]>([])
+export const useLineaStore = defineStore('lineas', () => {
+    const lineas = ref<Linea[]>([])
 
-    async function listarUbicaciones(): Promise<RespuestaApi<Ubicacion[]>> {
+    async function listarLineas(): Promise<RespuestaApi<Linea[]>> {
         try {
-            const { data } = await api.get<RespuestaApi<Ubicacion[]>>('/ubicaciones/listar')
+            const { data } = await api.get<RespuestaApi<Linea[]>>('/lineas/listar')
             if (data.status === 'ok' && data.data) {
-                ubicaciones.value = data.data
+                lineas.value = data.data
             }
             return data
         } catch (error: unknown) {
             const err = error as AxiosError<RespuestaApi>
             return {
                 status: 'error',
-                message: err.response?.data?.message ?? 'Error de red al listar las ubicaciones'
+                message: err.response?.data?.message ?? 'Error de red al listar las líneas'
             }
         }
     }
 
-    async function registrarUbicacion(ubicacion: RegistrarUbicacionDTO): Promise<RespuestaApi<Ubicacion>> {
+    async function registrarLinea(linea: RegistrarLineaDTO): Promise<RespuestaApi<Linea>> {
         try {
-            const { data } = await api.post<RespuestaApi<Ubicacion>>('/ubicaciones/crear', ubicacion)
-
+            const { data } = await api.post<RespuestaApi<Linea>>('/lineas/crear', linea)
             if (data.status === 'ok' && data.data) {
-                ubicaciones.value.push(data.data)
+                lineas.value.push(data.data)
             }
-
             return data
         } catch (error: unknown) {
             const err = error as AxiosError<RespuestaApi>
             return {
                 status: 'error',
-                message: err.response?.data?.message ?? 'Error de red al registrar la ubicacion'
+                message: err.response?.data?.message ?? 'Error de red al registrar la línea'
             }
         }
     }
 
-    async function editarUbicacion(id: number, ubicacion: Partial<RegistrarUbicacionDTO>) {
+    async function editarLinea(id: number, linea: Partial<RegistrarLineaDTO>): Promise<RespuestaApi<Linea>> {
         try {
-            const { data } = await api.patch<RespuestaApi<Ubicacion>>(`/ubicaciones/editar/${id}`, ubicacion)
-
+            const { data } = await api.patch<RespuestaApi<Linea>>(`/lineas/editar/${id}`, linea)
             if (data.status === 'ok') {
-                const index = ubicaciones.value.findIndex(u => u.id === id)
+                const index = lineas.value.findIndex(u => u.id === id)
                 if (index !== -1) {
-                    ubicaciones.value[index] = {
-                        ...ubicaciones.value[index],
-                        ...ubicacion,
+                    lineas.value[index] = {
+                        ...lineas.value[index],
+                        ...linea,
                         ...(data.data || {})
                     }
                 }
@@ -78,19 +81,18 @@ export const useUbicacionStore = defineStore('ubicaciones', () => {
             const err = error as AxiosError<RespuestaApi>
             return {
                 status: 'error',
-                message: err.response?.data?.message ?? 'Error de red al editar la ubicación'
+                message: err.response?.data?.message ?? 'Error de red al editar la línea'
             }
         }
     }
 
-    async function eliminarUbicacion(id: number): Promise<RespuestaApi<Ubicacion>> {
+    async function eliminarLinea(id: number): Promise<RespuestaApi<Linea>> {
         try {
-            const { data } = await api.delete<RespuestaApi<Ubicacion>>(`/ubicaciones/eliminar/${id}`)
-
+            const { data } = await api.delete<RespuestaApi<Linea>>(`/lineas/eliminar/${id}`)
             if (data.status === 'ok') {
-                const index = ubicaciones.value.findIndex(u => u.id === id)
+                const index = lineas.value.findIndex(u => u.id === id)
                 if (index !== -1) {
-                    ubicaciones.value[index].activa = false
+                    lineas.value[index].activa = false
                 }
             }
             return data
@@ -98,18 +100,16 @@ export const useUbicacionStore = defineStore('ubicaciones', () => {
             const err = error as AxiosError<RespuestaApi>
             return {
                 status: 'error',
-                message: err.response?.data?.message ?? 'Error de red al editar la ubicacion'
+                message: err.response?.data?.message ?? 'Error de red al eliminar la línea'
             }
         }
     }
 
     return {
-        ubicaciones,
-        listarUbicaciones,
-        registrarUbicacion,
-        editarUbicacion,
-        eliminarUbicacion
+        lineas,
+        listarLineas,
+        registrarLinea,
+        editarLinea,
+        eliminarLinea
     }
 })
-
-
