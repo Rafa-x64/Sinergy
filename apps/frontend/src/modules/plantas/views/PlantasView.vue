@@ -52,12 +52,12 @@ const prepararEdicion = (planta: Planta): void => {
 const manejarGuardado = async (datosEmitidos: RegistrarPlantaDTO): Promise<void> => {
     cargando.value = true
     try {
-        let resultado;
+        let resultado
 
         if (pestañaActiva.value === 'registrar') {
             resultado = await plantaStore.registrarPlanta(datosEmitidos)
         } else {
-            if (!idPlantaEditar.value) throw new Error("ID no válido para edición");
+            if (!idPlantaEditar.value) throw new Error("ID no válido para edición")
             resultado = await plantaStore.editarPlanta(idPlantaEditar.value, datosEmitidos)
         }
 
@@ -117,8 +117,9 @@ const ejecutarEliminacion = async (): Promise<void> => {
                         </v-chip>
                     </template>
                     <template #item.acciones="{ item }">
-                        <v-btn color="primary" variant="text" size="small" @click="prepararEdicion(item)">Editar</v-btn>
-                        <v-btn color="error" variant="text" size="small" @click="prepararEliminacion(item.id)" :disabled="!item.activa">Eliminar</v-btn>
+                        <v-btn color="primary" variant="text" size="small" @click="prepararEdicion(item)" prepend-icon="mdi-file-edit">Editar</v-btn>
+                        <v-btn color="error" variant="text" size="small" prepend-icon="mdi-minus-circle" @click="prepararEliminacion(item.id)"
+                            :disabled="!item.activa">Eliminar</v-btn>
                     </template>
                 </v-data-table>
             </template>
@@ -127,30 +128,20 @@ const ejecutarEliminacion = async (): Promise<void> => {
             <template #tab-registrar>
                 <v-card class="pa-4" elevation="0">
                     <v-card-title class="px-0 mb-4 text-h5 font-weight-bold">Registrar Nueva Planta</v-card-title>
-                    <PlantaForm
-                        :datos-iniciales="plantaVacia"
-                        :cargando="cargando"
-                        texto-boton="Guardar Planta"
-                        @submit="manejarGuardado"
-                        @cancelar="cancelarEdicion"
-                    />
+                    <PlantaForm :datos-iniciales="plantaVacia" :cargando="cargando" texto-boton="Guardar Planta"
+                        @submit="manejarGuardado" @cancelar="cancelarEdicion" />
                 </v-card>
             </template>
 
             <template #tab-editar>
                 <v-card class="pa-4" elevation="0">
                     <v-card-title class="px-0 mb-4 text-h5 font-weight-bold">Editar Planta</v-card-title>
-                    <v-alert v-if="pestañaActiva === 'editar' && idPlantaEditar === null" type="info" variant="tonal" class="mb-4">
+                    <v-alert v-if="pestañaActiva === 'editar' && idPlantaEditar === null" type="info" variant="tonal"
+                        class="mb-4">
                         Seleccione una planta desde la pestaña "Lista de Plantas".
                     </v-alert>
-                    <PlantaForm
-                        v-else
-                        :datos-iniciales="datosFormulario"
-                        :cargando="cargando"
-                        texto-boton="Actualizar Planta"
-                        @submit="manejarGuardado"
-                        @cancelar="cancelarEdicion"
-                    />
+                    <PlantaForm v-else :datos-iniciales="datosFormulario" :cargando="cargando"
+                        texto-boton="Actualizar Planta" @submit="manejarGuardado" @cancelar="cancelarEdicion" />
                 </v-card>
             </template>
 
@@ -162,8 +153,10 @@ const ejecutarEliminacion = async (): Promise<void> => {
                 <v-card-text>¿Está seguro de que desea eliminar/desactivar esta planta?</v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>
-                    <v-btn color="grey-darken-1" variant="text" @click="mostrarDialogoEliminar = false" :disabled="cargandoEliminacion">Cancelar</v-btn>
-                    <v-btn color="error" variant="flat" @click="ejecutarEliminacion" :loading="cargandoEliminacion">Eliminar</v-btn>
+                    <v-btn color="grey-darken-1" variant="text" @click="mostrarDialogoEliminar = false"
+                        :disabled="cargandoEliminacion">Cancelar</v-btn>
+                    <v-btn color="error" variant="flat" @click="ejecutarEliminacion"
+                        :loading="cargandoEliminacion">Eliminar</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>

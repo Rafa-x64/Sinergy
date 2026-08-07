@@ -10,8 +10,8 @@ import { REGEX_CODIGO_UBICACION } from '../../core/utils/constantes'
 import { validarCodigo } from '../../core/utils/validarCodigo'
 
 export const ubicacionController = {
-    //registrar nueva ubicacion
-    async registrarUbicacion(
+  //registrar nueva ubicacion
+  async registrarUbicacion(
     req: Request<unknown, ResponseDTO, RegistrarUbicacionDTO>,
     res: Response<ResponseDTO>,
     next: NextFunction
@@ -66,8 +66,8 @@ export const ubicacionController = {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         const target = (error.meta?.target as string[]) || []
         const campo = target.includes('codigo') ? 'código'
-                    : target.includes('nombre') ? 'nombre'
-                    : 'código o nombre'
+          : target.includes('nombre') ? 'nombre'
+            : 'código o nombre'
 
         return res.status(409).json({
           status: 'error',
@@ -94,7 +94,7 @@ export const ubicacionController = {
         return res.status(400).json({ status: 'error', message: 'Debe proporcionar al menos un campo para actualizar' })
       }
 
-      const { codigo, nombre, descripcion, plantaId } = req.body
+      const { codigo, nombre, descripcion, plantaId, activa } = req.body
       const datosActualizados: EditarUbicacionDTO = {}
 
       if (codigo !== undefined) {
@@ -136,6 +136,16 @@ export const ubicacionController = {
         datosActualizados.plantaId = plantaId
       }
 
+      if (activa !== undefined) {
+        if (typeof activa !== 'boolean') {
+          return res.status(400).json({
+            status: 'error',
+            message: 'El estado de la ubicación debe ser un valor booleano'
+          })
+        }
+        datosActualizados.activa = activa
+      }
+
       const ubicacionActualizada = await ubicacionService.editarUbicacion(id, datosActualizados)
 
       return res.status(200).json({
@@ -155,8 +165,8 @@ export const ubicacionController = {
         if (error.code === 'P2002') {
           const target = (error.meta?.target as string[]) || []
           const campo = target.includes('codigo') ? 'código'
-                      : target.includes('nombre') ? 'nombre'
-                      : 'código o nombre'
+            : target.includes('nombre') ? 'nombre'
+              : 'código o nombre'
 
           return res.status(409).json({
             status: 'error',
