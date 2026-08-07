@@ -18,6 +18,7 @@ router.patch(['/editar/:id', '/editar/:id/'],     validarJWT, authController.act
 router.delete(['/eliminar/:id', '/eliminar/:id/'], validarJWT, authController.deshabilitar)
 
 // ─── Rutas protegidas: asignación de roles a un usuario ──────────────────────
+router.get(['/roles/listar', '/roles/listar/'],       validarJWT, authController.listarRoles)
 router.patch(['/roles/:id', '/roles/:id/'],           validarJWT, authController.actualizarRoles)
 router.post(['/roles/:id/:rolId', '/roles/:id/:rolId/'], validarJWT, authController.agregarRol)
 router.delete(['/roles/:id/:rolId', '/roles/:id/:rolId/'], validarJWT, authController.quitarRol)

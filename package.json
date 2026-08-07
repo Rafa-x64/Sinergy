@@ -7,10 +7,13 @@
     "dev": "concurrently -c \"bgBlue.bold,bgMagenta.bold\" -n \"FRONTEND,BACKEND\" \"pnpm dev:frontend\" \"pnpm dev:backend\"",
     "build:frontend": "pnpm --filter @sinergy/frontend build",
     "build:backend": "pnpm --filter @sinergy/backend build",
-    "build": "pnpm build:frontend && pnpm build:backend"
+    "build": "pnpm build:frontend && pnpm build:backend",
+    "tunnel": "pnpm exec tunnelmole --port 3000",
+    "dev:tunnel": "concurrently -c \"bgBlue.bold,bgMagenta.bold,bgGreen.bold\" -n \"FRONTEND,BACKEND,TUNNEL\" \"pnpm dev:frontend\" \"pnpm dev:backend\" \"pnpm tunnel\""
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "tunnelmole": "^2.4.0"
   },
   "pnpm": {
     "ignoredBuiltDependencies": [
