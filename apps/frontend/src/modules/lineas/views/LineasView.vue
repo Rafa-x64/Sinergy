@@ -3,94 +3,89 @@ import { ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useToast } from 'vue-toastification'
 import AppTabs from '../../../components/AppTabs.vue'
-import UbicacionForm from '../components/FormularioLinea.vue'
-import { useUbicacionStore, type RegistrarUbicacionDTO, type Ubicacion } from '../lineas.store.ts'
+import FormularioLinea from '../components/FormularioLinea.vue'
+import { useLineaStore, type RegistrarLineaDTO, type Linea } from '../lineas.store'
 import type { TabItem } from '../../../core/types/tabs'
-import { usePlantasStore } from '../../plantas/plantas.store'
-const plantaStore = usePlantasStore()
-const { plantas } = storeToRefs(plantaStore)
+import { useUbicacionStore } from '../../ubicaciones/ubicacion.store'
 
-const toast = useToast()
 const ubicacionStore = useUbicacionStore()
 const { ubicaciones } = storeToRefs(ubicacionStore)
 
+const toast = useToast()
+const lineaStore = useLineaStore()
+const { lineas } = storeToRefs(lineaStore)
+
 const cargando = ref<boolean>(false)
 const pestañaActiva = ref<string | number>('lista')
-const idUbicacionEditar = ref<number | null>(null)
+const idLineaEditar = ref<number | null>(null)
 
-const ubicacionVacia: Partial<RegistrarUbicacionDTO> = {
+const lineaVacia: Partial<RegistrarLineaDTO> = {
     codigo: '',
     nombre: '',
     descripcion: '',
     activa: true,
-    plantaId: undefined
+    ubicacionTecnicaId: undefined
 }
-const datosFormulario = ref<Partial<RegistrarUbicacionDTO>>({ ...ubicacionVacia })
+const datosFormulario = ref<Partial<RegistrarLineaDTO>>({ ...lineaVacia })
 
 const mostrarDialogoEliminar = ref<boolean>(false)
 const idAEliminar = ref<number | null>(null)
 const cargandoEliminacion = ref<boolean>(false)
 
-const pestañasUbicaciones: TabItem[] = [
-    { id: "lista", name: "Lista de Ubicaciones" },
-    { id: "registrar", name: "Añadir Ubicación" },
-    { id: "editar", name: "Editar Ubicación" },
+const pestañasLineas: TabItem[] = [
+    { id: 'lista', name: 'Lista de Lineas' },
+    { id: 'registrar', name: 'Añadir Linea' },
+    { id: 'editar', name: 'Editar Linea' }
 ]
 
 const headersTabla = [
     { title: 'Código', key: 'codigo' },
     { title: 'Nombre', key: 'nombre' },
-    { title: 'Planta', key: 'planta' },
+    { title: 'Ubicacion', key: 'ubicacion' },
     { title: 'Estado', key: 'activa' },
-    { title: 'Descripción', key: 'descripcion' },
     { title: 'Fecha Creación', key: 'creadoEn' },
     { title: 'Última Actualización', key: 'actualizadoEn' },
     { title: 'Acciones', key: 'acciones', sortable: false, align: 'end' as const }
 ]
 
-const obtenerNombrePlanta = (plantaId: number): string => {
-    const plantaEncontrada = plantas.value.find((p) => p.id === plantaId)
-    return plantaEncontrada ? plantaEncontrada.nombre : 'Planta no asignada'
-}
-
 const inicializarDatos = async (): Promise<void> => {
-    const [resUbicaciones, resPlantas] = await Promise.all([
-        ubicacionStore.listarUbicaciones(),
-        plantaStore.listarPlantas()
+    const [resLineas, resUbicaciones] = await Promise.all([
+        lineaStore.listarLineas(),
+        ubicacionStore.listarUbicaciones()
     ])
 
+    if (resLineas.status === 'error') toast.error(resLineas.message ?? 'Error al listar líneas')
     if (resUbicaciones.status === 'error') toast.error(resUbicaciones.message ?? 'Error al listar ubicaciones')
-    if (resPlantas.status === 'error') toast.error(resPlantas.message ?? 'Error al listar plantas')
 }
 inicializarDatos()
 
-const prepararEdicion = (ubicacion: Ubicacion): void => {
-    idUbicacionEditar.value = ubicacion.id
+const prepararEdicion = (linea: Linea): void => {
+    idLineaEditar.value = linea.id
     datosFormulario.value = {
-        codigo: ubicacion.codigo,
-        nombre: ubicacion.nombre,
-        descripcion: ubicacion.descripcion,
-        activa: ubicacion.activa,
-        plantaId: ubicacion.plantaId
+        codigo: linea.codigo,
+        nombre: linea.nombre,
+        descripcion: linea.descripcion,
+        activa: linea.activa,
+        ubicacionTecnicaId: linea.ubicacionTecnicaId
     }
     pestañaActiva.value = 'editar'
 }
 
 const cancelarEdicion = (): void => {
     pestañaActiva.value = 'lista'
-    datosFormulario.value = { ...ubicacionVacia }
-    idUbicacionEditar.value = null
+    datosFormulario.value = { ...lineaVacia }
+    idLineaEditar.value = null
 }
 
-const manejarGuardado = async (datosEmitidos: RegistrarUbicacionDTO): Promise<void> => {
+const manejarGuardado = async (datosEmitidos: RegistrarLineaDTO): Promise<void> => {
     cargando.value = true
     try {
         let resultado
         if (pestañaActiva.value === 'registrar') {
-            resultado = await ubicacionStore.registrarUbicacion(datosEmitidos)
+            resultado = await lineaStore.registrarLinea(datosEmitidos)
         } else {
-            if (!idUbicacionEditar.value) throw new Error("ID no válido para edición")
-            resultado = await ubicacionStore.editarUbicacion(idUbicacionEditar.value, datosEmitidos)
+            if (!idLineaEditar.value) throw new Error('ID no válido para edición')
+            resultado = await lineaStore.editarLinea(idLineaEditar.value, datosEmitidos)
         }
 
         if (resultado.status === 'ok') {
@@ -115,9 +110,9 @@ const ejecutarEliminacion = async (): Promise<void> => {
     if (idAEliminar.value === null) return
     cargandoEliminacion.value = true
     try {
-        const resultado = await ubicacionStore.eliminarUbicacion(idAEliminar.value)
+        const resultado = await lineaStore.eliminarLinea(idAEliminar.value)
         if (resultado.status === 'ok') {
-            toast.success('Ubicación eliminada/desactivada')
+            toast.success('Línea desactivada correctamente')
             mostrarDialogoEliminar.value = false
         } else {
             toast.error(resultado.message ?? 'Error al eliminar')
@@ -132,13 +127,12 @@ const ejecutarEliminacion = async (): Promise<void> => {
 </script>
 
 <template>
-    <v-container fluid class="ubicaciones-dashboard">
-        <AppTabs v-model="pestañaActiva" :tabs="pestañasUbicaciones">
-
+    <v-container fluid class="lineas-dashboard">
+        <AppTabs v-model="pestañaActiva" :tabs="pestañasLineas">
             <template #tab-lista>
-                <v-data-table :items="ubicaciones" :headers="headersTabla">
-                    <template #item.planta="{ item }">
-                        <span>{{ obtenerNombrePlanta(item.plantaId) }}</span>
+                <v-data-table :items="lineas" :headers="headersTabla">
+                    <template #item.ubicacion="{ item }">
+                        <span>{{ item.ubicacionTecnica?.nombre ?? 'Ubicación no asignada' }}</span>
                     </template>
                     <template #item.activa="{ item }">
                         <v-chip :color="item.activa ? 'success' : 'error'" size="small">
@@ -146,53 +140,56 @@ const ejecutarEliminacion = async (): Promise<void> => {
                         </v-chip>
                     </template>
                     <template #item.acciones="{ item }">
-                        <!-- Conectamos el botón con la función para inyectar la data -->
                         <v-btn color="primary" variant="text" size="small" @click="prepararEdicion(item)">Editar</v-btn>
                         <v-btn color="error" variant="text" size="small" @click="prepararEliminacion(item.id)"
-                            :disabled="!item.activa">Eliminar</v-btn>
+                            :disabled="!item.activa">
+                            Eliminar
+                        </v-btn>
                     </template>
                 </v-data-table>
             </template>
 
             <template #tab-registrar>
                 <v-card class="pa-4" elevation="0">
-                    <v-card-title class="px-0 mb-4 text-h5 font-weight-bold">Registrar Nueva Ubicación</v-card-title>
-                    <UbicacionForm :plantas="plantas" :datos-iniciales="ubicacionVacia" :cargando="cargando"
-                        texto-boton="Guardar Ubicación" @submit="manejarGuardado" @cancelar="cancelarEdicion" />
+                    <v-card-title class="px-0 mb-4 text-h5 font-weight-bold">Registrar Nueva Línea</v-card-title>
+                    <FormularioLinea :ubicaciones="ubicaciones" :datos-iniciales="lineaVacia" :cargando="cargando"
+                        texto-boton="Guardar Línea" @submit="manejarGuardado" @cancelar="cancelarEdicion" />
                 </v-card>
             </template>
 
             <template #tab-editar>
                 <v-card class="pa-4" elevation="0">
-                    <v-card-title class="px-0 mb-4 text-h5 font-weight-bold">Editar Ubicación</v-card-title>
+                    <v-card-title class="px-0 mb-4 text-h5 font-weight-bold">Editar Línea</v-card-title>
 
-                    <v-alert v-if="pestañaActiva === 'editar' && idUbicacionEditar === null" type="info" variant="tonal"
+                    <v-alert v-if="pestañaActiva === 'editar' && idLineaEditar === null" type="info" variant="tonal"
                         class="mb-4">
-                        Seleccione una ubicación desde la pestaña "Lista de Ubicaciones".
+                        Seleccione una línea desde la pestaña "Lista de Líneas".
                     </v-alert>
 
-                    <UbicacionForm v-else :plantas="plantas" :datos-iniciales="datosFormulario" :cargando="cargando"
-                        texto-boton="Actualizar Ubicación" @submit="manejarGuardado" @cancelar="cancelarEdicion" />
+                    <FormularioLinea v-else :ubicaciones="ubicaciones" :datos-iniciales="datosFormulario"
+                        :cargando="cargando" texto-boton="Actualizar Línea" @submit="manejarGuardado"
+                        @cancelar="cancelarEdicion" />
                 </v-card>
             </template>
         </AppTabs>
 
         <v-dialog v-model="mostrarDialogoEliminar" max-width="500px" persistent>
-            <!-- Eliminado el v-card duplicado para mantener el DOM limpio -->
             <v-card>
                 <v-card-title class="text-h6 font-weight-bold text-error">Confirmar Acción</v-card-title>
                 <v-card-text>¿Está seguro de que desea desactivar este elemento?</v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>
                     <v-btn color="grey-darken-1" variant="text" @click="mostrarDialogoEliminar = false"
-                        :disabled="cargandoEliminacion">Cancelar</v-btn>
-                    <v-btn color="error" variant="flat" @click="ejecutarEliminacion"
-                        :loading="cargandoEliminacion">Eliminar</v-btn>
+                        :disabled="cargandoEliminacion">
+                        Cancelar
+                    </v-btn>
+                    <v-btn color="error" variant="flat" @click="ejecutarEliminacion" :loading="cargandoEliminacion">
+                        Eliminar
+                    </v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
     </v-container>
 </template>
 
-<!-- Corregido el typo de scoped -->
 <style scoped></style>

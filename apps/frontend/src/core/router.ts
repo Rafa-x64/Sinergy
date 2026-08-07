@@ -27,6 +27,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, hideLayout: false },
   },
   {
+    path: '/lineas',
+    name: 'lineas',
+    component: () => import('../modules/lineas/views/LineasView.vue'),
+    meta: { requiresAuth: true, hideLayout: false },
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('@/views/NotFoundView.vue'),
