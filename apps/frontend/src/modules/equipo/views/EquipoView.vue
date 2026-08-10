@@ -302,7 +302,7 @@ const ejecutarEliminacionTipo = async (): Promise<void> => {
 
                             <!-- Estado Operativo con chip de color -->
                             <template #item.estadoOperativo="{ item }">
-                                <v-chip :color="colorEstado(item.estadoOperativo)" size="small" label>
+                                <v-chip :color="colorEstado(item.estadoOperativo)" size="small">
                                     {{ labelEstado(item.estadoOperativo) }}
                                 </v-chip>
                             </template>

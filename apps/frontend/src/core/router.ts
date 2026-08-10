@@ -75,6 +75,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, hideLayout: false, tipoFiltro: 'Chiller', titulo: 'Chillers' },
   },
   {
+    path: '/componentes',
+    name: 'componentes',
+    component: () => import('../modules/componentes/views/ComponentesView.vue'),
+    meta: { requiresAuth: true, hideLayout: false, tipoFiltro: 'Chiller', titulo: 'Chillers' },
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('@/views/NotFoundView.vue'),

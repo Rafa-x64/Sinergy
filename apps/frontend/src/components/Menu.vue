@@ -23,18 +23,19 @@ interface ModuloItem {
 
 const modulos: ModuloItem[] = [
     { title: 'Principal', icon: 'mdi-view-dashboard', to: '/dashboard' },
+    { title: 'Equipos', icon: 'mdi-engine', to: '/equipos' },
     { title: 'Montacargas', icon: 'mdi-forklift', to: '/montacargas' },
     { title: 'Compresor', icon: 'mdi-car-turbocharger', to: '/compresor' },
     { title: 'Generador', icon: 'mdi-generator-mobile', to: '/generador' },
     { title: 'Chiller', icon: 'mdi-snowflake', to: '/chiller' },
-    { title: 'Equipos', icon: 'mdi-engine', to: '/equipos' },
+    { title: 'Componentes', icon: 'mdi-view-grid', to: '/componentes' },
+    { title: 'Variables', icon: 'mdi-variable-box', to: '/variables' },
     { title: 'Inspecciones', icon: 'mdi-clipboard-check', to: '/inspecciones' },
-    { title: 'Usuarios', icon: 'mdi-account-group', to: '/usuarios', roles: ['Administrador', 'Admin'] },
     { title: 'Plantas', icon: 'mdi-factory', to: '/plantas', roles: ['Administrador', 'Admin', 'Supervisor'] },
     { title: 'Ubicaciones Técnicas', icon: 'mdi-map-marker-radius', to: '/ubicaciones', roles: ['Administrador', 'Admin', 'Supervisor'] },
     { title: 'Líneas Operativas', icon: 'mdi-chart-timeline', to: '/lineas', roles: ['Administrador', 'Admin', 'Supervisor'] },
+    { title: 'Usuarios', icon: 'mdi-account-group', to: '/usuarios', roles: ['Administrador', 'Admin'] },
     { title: 'Roles', icon: 'mdi-account-key', to: '/roles', roles: ['Administrador', 'Admin'] },
-    { title: 'Configuración', icon: 'mdi-cog', to: '/configuracion', roles: ['Administrador', 'Admin'] },
 ]
 
 const modulosVisibles = computed(() => {
@@ -76,8 +77,8 @@ const cerrarSesion = async (): Promise<void> => {
                 </v-btn>
             </template>
             <v-list>
-                <v-list-item v-for="modulo in modulosVisibles" :key="modulo.title" :to="modulo.to" :prepend-icon="modulo.icon"
-                    :title="modulo.title" />
+                <v-list-item v-for="modulo in modulosVisibles" :key="modulo.title" :to="modulo.to"
+                    :prepend-icon="modulo.icon" :title="modulo.title" />
                 <v-list-item @click="cerrarSesion()" title="Cerrar Sesión" prepend-icon="mdi-logout-variant" />
             </v-list>
         </v-menu>
@@ -104,7 +105,8 @@ const cerrarSesion = async (): Promise<void> => {
         <template v-slot:append>
             <v-divider></v-divider>
             <v-list density="compact" nav>
-                <v-list-item prepend-icon="mdi-account-circle" :title="authStore.usuario?.email || 'Usuario'" :subtitle="authStore.roles.length > 0 ? authStore.roles.join(', ') : 'Sin Rol'" />
+                <v-list-item prepend-icon="mdi-account-circle" :title="authStore.usuario?.email || 'Usuario'"
+                    :subtitle="authStore.roles.length > 0 ? authStore.roles.join(', ') : 'Sin Rol'" />
             </v-list>
             <v-list-item>
                 <v-footer class="text-secondary d-flex flex-row justify-content-around">
