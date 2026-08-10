@@ -23,10 +23,12 @@ const props = withDefaults(
         textoBoton: string
         tiposEquipo: TipoEquipo[]
         lineas: LineaSelect[]
+        bloquearTipo?: boolean
     }>(),
     {
         tiposEquipo: () => [],
-        lineas: () => []
+        lineas: () => [],
+        bloquearTipo: false
     }
 )
 
@@ -93,7 +95,9 @@ const manejarEnvio = async (): Promise<void> => {
                     label="Tipo de Equipo"
                     variant="outlined"
                     :rules="equipoRules.tipoEquipoId"
-                    :disabled="cargando"
+                    :disabled="cargando || bloquearTipo"
+                    :hint="bloquearTipo ? 'Tipo de equipo fijado por la sección actual' : undefined"
+                    :persistent-hint="bloquearTipo"
                     required
                 />
             </v-col>
