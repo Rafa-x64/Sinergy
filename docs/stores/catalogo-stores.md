@@ -98,7 +98,11 @@ async function listarPlantas(): Promise<RespuestaApi<Planta[]>> {
 
 - **Ubicación**: `apps/frontend/src/modules/equipo/equipo.store.ts`
 - **Estado Reactivo**: `equipos`: `ref<Equipo[]>([])`, `tiposEquipo`: `ref<TipoEquipo[]>([])`.
-- **Acciones**: `listarEquipos()`, `registrarEquipo()`, `editarEquipo()`, `eliminarEquipo()`, `listarTiposEquipo()`.
+- **DTOs Exportados**: `Equipo`, `TipoEquipo`, `RegistrarEquipoDTO`, `RegistrarTipoEquipoDTO`, `EstadoOperativo`.
+- **Acciones de Equipos**: `listarEquipos()`, `registrarEquipo()`, `editarEquipo()`, `eliminarEquipo()`.
+- **Acciones de Tipos de Equipo**: `listarTiposEquipo()`, `registrarTipoEquipo()`, `editarTipoEquipo()`, `eliminarTipoEquipo()`.
+- **Patrón Reactivo**: Cada acción de mutación invoca automáticamente la recarga (`listarEquipos()` / `listarTiposEquipo()`), garantizando que la UI se actualice en tiempo real sin recargar la página.
+
 
 ---
 

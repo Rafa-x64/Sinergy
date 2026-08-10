@@ -13,8 +13,9 @@ Este manual documenta todas las vistas (componentes de página) de la Single Pag
 - [5. Vista `UbicacionesView.vue`](#5-vista-ubicacionesviewvue)
 - [6. Vista `LineasView.vue`](#6-vista-lineasviewvue)
 - [7. Vista `EquipoView.vue`](#7-vista-equipoviewvue)
-- [8. Vista `MantenimientoView.vue`](#8-vista-mantenimientoviewvue)
-- [9. Vista `NotFoundView.vue` (404)](#9-vista-notfoundviewvue-404)
+- [8. Vista `EquiposPorTipoView.vue`](#8-vista-equiposportipoviewvue)
+- [9. Vista `MantenimientoView.vue`](#9-vista-mantenimientoviewvue)
+- [10. Vista `NotFoundView.vue` (404)](#10-vista-notfoundviewvue-404)
 
 ---
 
@@ -27,7 +28,8 @@ Este manual documenta todas las vistas (componentes de página) de la Single Pag
 | `PlantasView.vue` | `/plantas` | Privada (`requiresAuth: true`) | Con Menú Lateral | Catálogo de plantas industriales (CRUD + Soft Delete) |
 | `UbicacionesView.vue` | `/ubicaciones` | Privada (`requiresAuth: true`) | Con Menú Lateral | Gestión de ubicaciones técnicas vinculadas a plantas |
 | `LineasView.vue` | `/lineas` | Privada (`requiresAuth: true`) | Con Menú Lateral | Administración de líneas de producción por ubicación |
-| `EquipoView.vue` | `/equipo` | Privada (`requiresAuth: true`) | Con Menú Lateral | Catálogo de activos/equipos y tipos de equipo |
+| `EquipoView.vue` | `/equipos` | Privada (`requiresAuth: true`) | Con Menú Lateral | Catálogo general de equipos y administración de Tipos de Equipo |
+| `EquiposPorTipoView.vue` | `/montacargas`, `/compresor`, `/generador`, `/chiller` | Privada (`requiresAuth: true`) | Con Menú Lateral | Vista reutilizable parametrizada que filtra la maquinaria por su tipo correspondiente |
 | `MantenimientoView.vue` | `/mantenimiento` | Privada (`requiresAuth: true`) | Con Menú Lateral | Órdenes de trabajo, inspecciones e historial técnico |
 | `NotFoundView.vue` | `/:pathMatch(.*)*` | Pública (`requiresAuth: false`) | Sin Menú (`hideLayout: true`) | Pantalla 404 para rutas inexistentes |
 
@@ -104,12 +106,21 @@ inicializarDatos()
 
 - **Ubicación**: `apps/frontend/src/modules/equipo/views/EquipoView.vue`
 - **Store Consumido**: `useEquipoStore`
-- **Componentes Incrustados**: `AppTabs.vue`, `EquipoForm.vue`
-- **Propósito**: Catálogo principal de activos industriales. Permite filtrar equipos por planta/línea, gestionar tipos de equipo y consultar el estado operativo.
+- **Componentes Incrustados**: `AppTabs.vue`, `FormularioEquipo.vue`, `FormularioTipoEquipo.vue`
+- **Propósito**: Catálogo principal de activos industriales. Muestra pestañas de primer nivel para alternar entre la gestión de Equipos y la administración de Tipos de Equipo.
 
 ---
 
-## 8. Vista `MantenimientoView.vue`
+## 8. Vista `EquiposPorTipoView.vue`
+
+- **Ubicación**: `apps/frontend/src/modules/equipo/views/EquiposPorTipoView.vue`
+- **Store Consumido**: `useEquipoStore`, `useLineaStore`
+- **Componentes Incrustados**: `AppTabs.vue`, `FormularioEquipo.vue`
+- **Propósito**: Vista reutilizable parametrizada mediante metadatos de ruta (`route.meta.tipoFiltro`). Servida en las rutas `/montacargas`, `/compresor`, `/generador` y `/chiller`. Filtra reactivamente la maquinaria del tipo correspondiente y preselecciona el tipo de equipo en la pestaña de registro sin duplicar código ni carpetas.
+
+---
+
+## 9. Vista `MantenimientoView.vue`
 
 - **Ubicación**: `apps/frontend/src/modules/mantenimiento/views/MantenimientoView.vue`
 - **Store Consumido**: `useMantenimientoStore`
@@ -117,7 +128,8 @@ inicializarDatos()
 
 ---
 
-## 9. Vista `NotFoundView.vue` (404)
+## 10. Vista `NotFoundView.vue` (404)
 
 - **Ubicación**: `apps/frontend/src/views/NotFoundView.vue`
 - **Propósito**: Captura cualquier ruta no registrada en Vue Router y ofrece un botón de retorno seguro al Dashboard o Login.
+
