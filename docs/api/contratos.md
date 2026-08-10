@@ -6,7 +6,7 @@ Este documento define la estructura oficial de las peticiones, validaciones y re
 
 ## Índice de Navegación
 
-- [Formato Estándar de Respuestas](#formato-estándar-de-respuestas)
+- [Formato Estándar de Respuestas (`ResponseDTO`)](#formato-estándar-de-respuestas-responsedto)
 - [0. Diagnóstico y Salud del Servidor](#0-diagnóstico-y-salud-del-servidor)
 - [1. Módulo de Autenticación (`/api/auth`)](#1-módulo-de-autenticación-apiauth)
 - [2. Gestión de Usuarios (`/api/auth`)](#2-gestión-de-usuarios-apiauth)
@@ -17,6 +17,8 @@ Este documento define la estructura oficial de las peticiones, validaciones y re
 - [7. Módulo de Líneas Operativas (`/api/lineas`)](#7-módulo-de-líneas-operativas-apilineas)
 - [8. Módulo de Equipos y Tipos de Equipo (`/api/equipos`)](#8-módulo-de-equipos-y-tipos-de-equipo-apiequipos)
 - [9. Módulo de Componentes de Equipos (`/api/componentes`)](#9-módulo-de-componentes-de-equipos-apicomponentes)
+- [10. Módulo de Variables Críticas (`/api/variables-criticas`)](#10-módulo-de-variables-críticas-apivariables-criticas)
+- [11. Módulo de Inspecciones (`/api/inspecciones`)](#11-módulo-de-inspecciones-apiinspecciones)
 
 ---
 
@@ -936,4 +938,187 @@ Desactiva lógicamente un componente.
   }
   ```
 
+---
 
+## 10. Módulo de Variables Críticas (`/api/variables-criticas`)
+
+Gestiona el catálogo de variables evaluables (`Variable`) vinculadas a un componente. Soporta cuatro tipos de evaluación: `NUMERICO_ENTERO`, `NUMERICO_DECIMAL`, `TEMPERATURA`, `SELECCION`. El borrado es lógico (`activa = false`).
+
+### `POST /api/variables-criticas/crear`
+Registra una nueva variable crítica asociada a un componente.
+
+- **Acceso:** Protegido
+- **Request Body (`RegistrarVariableDTO`):**
+  ```json
+  {
+    "componenteId": 1,
+    "nombre": "Temperatura de operación",
+    "tipoEvaluacion": "TEMPERATURA",
+    "unidad": "°C",
+    "valorMinimo": 15,
+    "valorMaximo": 80,
+    "ordenPosicion": 1
+  }
+  ```
+- **Response (201 Created):**
+  ```json
+  {
+    "status": "ok",
+    "message": "Variable crítica registrada correctamente",
+    "data": { "id": 1, "nombre": "Temperatura De Operación", "tipoEvaluacion": "TEMPERATURA" }
+  }
+  ```
+- **Errores posibles:** `400` campo inválido, `404` componente no existe, `401` no autenticado.
+
+---
+
+### `GET /api/variables-criticas/listar`
+Retorna variables críticas filtradas. Por defecto devuelve solo las activas.
+
+- **Acceso:** Protegido
+- **Query Parameters:** `componenteId` (number), `tipoEvaluacion` (enum), `activo` (`"true"` | `"false"`)
+- **Response (200 OK):**
+  ```json
+  {
+    "status": "ok",
+    "message": "Lista de variables críticas obtenida correctamente",
+    "data": [ { "id": 1, "nombre": "...", "componente": { "id": 1, "nombre": "..." }, "opcionesSeleccion": [] } ]
+  }
+  ```
+- **Errores posibles:** `400` parámetro inválido, `404` sin resultados.
+
+---
+
+### `PATCH /api/variables-criticas/editar/:id`
+Actualiza campos parciales de una variable crítica.
+
+- **Acceso:** Protegido
+- **URL Parameters:** `id` (ID de la variable)
+- **Request Body (`EditarVariableDTO`):** `nombre`, `tipoEvaluacion`, `unidad`, `valorMinimo`, `valorMaximo`, `ordenPosicion`, `activa`.
+- **Errores posibles:** `400` campo inválido, `404` variable no existe.
+
+---
+
+### `DELETE /api/variables-criticas/eliminar/:id`
+Desactiva lógicamente una variable crítica.
+
+- **Acceso:** Protegido
+- **URL Parameters:** `id` (ID de la variable)
+- **Response (200 OK):**
+  ```json
+  { "status": "ok", "message": "Variable crítica eliminada correctamente", "data": { "id": 1, "activa": false } }
+  ```
+- **Errores posibles:** `400` ID inválido, `404` variable no existe o ya inactiva.
+
+---
+
+## 11. Módulo de Inspecciones (`/api/inspecciones`)
+
+Registra y gestiona inspecciones técnicas. Los `id` de `Inspeccion` e `InspeccionDetalle` son `BigInt` y se serializan como **strings** en todas las respuestas JSON para compatibilidad con JavaScript.
+
+> [!IMPORTANT]
+> Los IDs de inspección (`id`) son strings en el JSON de respuesta aunque en la base de datos sean `BigInt`. El frontend debe tratar estos campos como strings.
+
+### `POST /api/inspecciones/crear`
+Registra una inspección completa con todos sus detalles de variables en una sola transacción atómica.
+
+- **Acceso:** Protegido
+- **Nota:** `elaboradoPorId` se inyecta automáticamente desde el token JWT (`req.usuario.id`).
+- **Request Body (`RegistrarInspeccionDTO`):**
+  ```json
+  {
+    "codigoInspeccion": "INSP-2026-001",
+    "tipoInspeccion": "VARIABLES_CRITICAS",
+    "equipoId": 3,
+    "origenDatos": "ONLINE",
+    "observacionesGenerales": "Inspección rutinaria diaria",
+    "detalles": [
+      {
+        "variableId": 1,
+        "valorNumerico": 72.5,
+        "valorSeleccion": null,
+        "observaciones": null,
+        "estadoComponente": true
+      }
+    ]
+  }
+  ```
+- **Response (201 Created):**
+  ```json
+  {
+    "status": "ok",
+    "message": "Inspección registrada correctamente",
+    "data": { "id": "1", "codigoInspeccion": "INSP-2026-001", "detalles": [ { "id": "1", "variableId": 1, "valorNumerico": "72.5" } ] }
+  }
+  ```
+- **Errores posibles:** `400` campo inválido o detalles vacíos, `401` no autenticado, `404` equipo o variable no existe, `409` código duplicado.
+
+---
+
+### `GET /api/inspecciones/listar`
+Retorna inspecciones filtradas, ordenadas por `fechaRegistro DESC`.
+
+- **Acceso:** Protegido
+- **Query Parameters:** `equipoId`, `tipoInspeccion`, `estadoInspeccion`, `elaboradoPorId`.
+- **Response (200 OK):**
+  ```json
+  {
+    "status": "ok",
+    "message": "Lista de inspecciones obtenida correctamente",
+    "data": [ { "id": "1", "codigoInspeccion": "INSP-2026-001", "estadoInspeccion": "PENDIENTE" } ]
+  }
+  ```
+
+---
+
+### `GET /api/inspecciones/buscar/:id`
+Busca una inspección específica por su BigInt ID (pasado como string en la URL).
+
+- **Acceso:** Protegido
+- **URL Parameters:** `id` (string numérico que representa el BigInt)
+- **Response (200 OK):** Objeto completo de inspección con todos sus detalles.
+- **Errores posibles:** `400` ID no numérico, `404` no existe.
+
+---
+
+### `PATCH /api/inspecciones/editar-estado/:id`
+Actualiza el estado de flujo de una inspección (`BORRADOR` → `PENDIENTE` → `APROBADO` | `RECHAZADO`).
+
+- **Acceso:** Protegido
+- **URL Parameters:** `id` (BigInt como string)
+- **Request Body (`EditarEstadoInspeccionDTO`):**
+  ```json
+  {
+    "estadoInspeccion": "APROBADO",
+    "revisadoPorId": 2,
+    "aprobadoPorId": 1
+  }
+  ```
+- **Errores posibles:** `400` estado inválido, `404` inspección no existe.
+
+---
+
+### `DELETE /api/inspecciones/eliminar/:id`
+Elimina físicamente una inspección (solo recomendado para inspecciones en estado `BORRADOR`).
+
+- **Acceso:** Protegido
+- **URL Parameters:** `id` (BigInt como string)
+- **Response (200 OK):** Objeto de la inspección eliminada.
+- **Errores posibles:** `404` inspección no existe.
+
+---
+
+### `GET /api/equipos/tipo/buscar/:id`
+Busca un tipo de equipo específico por su ID.
+
+- **Acceso:** Protegido
+- **URL Parameters:** `id` (ID del tipo de equipo)
+- **Response (200 OK):**
+  ```json
+  {
+    "status": "ok",
+    "message": "Tipo de equipo encontrado",
+    "data": { "id": 1, "nombre": "Montacargas", "descripcion": null }
+  }
+  ```
+- **Errores posibles:** `400` ID inválido, `404` tipo no existe.

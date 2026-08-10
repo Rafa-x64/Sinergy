@@ -45,11 +45,42 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, hideLayout: false, roles: ['Administrador', 'Admin', 'Supervisor'] },
   },
   {
+    path: '/equipos',
+    name: 'equipos',
+    component: () => import('../modules/equipo/views/EquipoView.vue'),
+    meta: { requiresAuth: true, hideLayout: false },
+  },
+  {
+    path: '/montacargas',
+    name: 'montacargas',
+    component: () => import('../modules/equipo/views/EquiposPorTipoView.vue'),
+    meta: { requiresAuth: true, hideLayout: false, tipoFiltro: 'Montacargas', titulo: 'Montacargas' },
+  },
+  {
+    path: '/compresor',
+    name: 'compresor',
+    component: () => import('../modules/equipo/views/EquiposPorTipoView.vue'),
+    meta: { requiresAuth: true, hideLayout: false, tipoFiltro: 'Compresor', titulo: 'Compresores' },
+  },
+  {
+    path: '/generador',
+    name: 'generador',
+    component: () => import('../modules/equipo/views/EquiposPorTipoView.vue'),
+    meta: { requiresAuth: true, hideLayout: false, tipoFiltro: 'Generador', titulo: 'Generadores' },
+  },
+  {
+    path: '/chiller',
+    name: 'chiller',
+    component: () => import('../modules/equipo/views/EquiposPorTipoView.vue'),
+    meta: { requiresAuth: true, hideLayout: false, tipoFiltro: 'Chiller', titulo: 'Chillers' },
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('@/views/NotFoundView.vue'),
     meta: { requiresAuth: false, hideLayout: true }
   }
+
 ]
 
 const router = createRouter({

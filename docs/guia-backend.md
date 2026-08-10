@@ -1,6 +1,6 @@
 # Guía del Desarrollador Backend — Sinergy
 
-Esta guía es la referencia técnica definitiva para hacer crecer el backend de Sinergy. Está basada exclusivamente en el código real del proyecto. Si sigues cada sección en orden, al final serás capaz de agregar cualquier funcionalidad nueva sin consultar a nadie.
+Esta guía es la referencia técnica definitiva para hacer crecer el backend de Sinergy. Está ordenada estrictamente por el **orden de creación de código** (orden de dependencias): desde el modelado en base de datos hasta el montaje en el servidor Express. Si sigues cada sección en orden, serás capaz de construir cualquier módulo nuevo sin errores de dependencia ni dudas técnicas.
 
 ---
 
@@ -10,35 +10,30 @@ Esta guía es la referencia técnica definitiva para hacer crecer el backend de 
   - [1.1 Estructura de carpetas](#11-estructura-de-carpetas)
   - [1.2 Capa `src/core/` — Infraestructura transversal](#12-capa-srccore--infraestructura-transversal)
   - [1.3 Capa `src/modules/` — Funcionalidades de negocio](#13-capa-srcmodules--funcionalidades-de-negocio)
-- [2. El Estándar de Respuesta HTTP](#2-el-estándar-de-respuesta-http)
-  - [2.1 `ResponseDTO` — el contrato único](#21-responsedto--el-contrato-único)
-  - [2.2 Tabla de códigos de estado usados](#22-tabla-de-códigos-de-estado-usados)
-- [3. Las Cuatro Capas del Módulo](#3-las-cuatro-capas-del-módulo)
-  - [3.1 `*.schemas.ts` — Contratos de datos (DTOs)](#31-schemasts--contratos-de-datos-dtos)
-  - [3.2 `*.service.ts` — Lógica de negocio y acceso a datos](#32-servicets--lógica-de-negocio-y-acceso-a-datos)
-  - [3.3 `*.controller.ts` — Recepción HTTP y validación de entradas](#33-controllerts--recepción-http-y-validación-de-entradas)
-  - [3.4 `*.routes.ts` — Mapa de endpoints y middlewares](#34-routests--mapa-de-endpoints-y-middlewares)
-- [4. Utilidades del Core — Cuándo y Cómo Usarlas](#4-utilidades-del-core--cuándo-y-cómo-usarlas)
-  - [4.1 `parsearId` — Validar parámetros de URL](#41-parsearid--validar-parámetros-de-url)
-  - [4.2 `validarCodigo` — Validar códigos con formato RegEx](#42-validarcódigo--validar-códigos-con-formato-regex)
-  - [4.3 `capitalizarPalabras` y `capitalizar`](#43-capitalizarpalabras-y-capitalizar)
-  - [4.4 `constantes.ts` — Expresiones regulares de dominio](#44-constantests--expresiones-regulares-de-dominio)
-- [5. Manejo de Errores de Prisma](#5-manejo-de-errores-de-prisma)
-  - [5.1 Tabla de errores conocidos](#51-tabla-de-errores-conocidos)
-  - [5.2 Patrón de captura en el controlador](#52-patrón-de-captura-en-el-controlador)
-- [6. Seguridad y Autenticación](#6-seguridad-y-autenticación)
-  - [6.1 El middleware `validarJWT`](#61-el-middleware-validarjwt)
-  - [6.2 Acceder al usuario autenticado en el controlador](#62-acceder-al-usuario-autenticado-en-el-controlador)
-- [7. Tutorial Completo: Agregar un Módulo Nuevo](#7-tutorial-completo-agregar-un-módulo-nuevo)
-  - [7.1 Paso 1 — Modelar en Prisma](#71-paso-1--modelar-en-prisma)
-  - [7.2 Paso 2 — Crear los Schemas (DTOs)](#72-paso-2--crear-los-schemas-dtos)
-  - [7.3 Paso 3 — Crear el Service](#73-paso-3--crear-el-service)
-  - [7.4 Paso 4 — Crear el Controller](#74-paso-4--crear-el-controller)
-  - [7.5 Paso 5 — Crear las Routes](#75-paso-5--crear-las-routes)
-  - [7.6 Paso 6 — Montar el módulo en `server.ts`](#76-paso-6--montar-el-módulo-en-serverts)
-- [8. Tutorial: Agregar un Endpoint a un Módulo Existente](#8-tutorial-agregar-un-endpoint-a-un-módulo-existente)
-- [9. El Servidor Express — `server.ts`](#9-el-servidor-express--serverts)
-- [10. Solución a Errores Comunes](#10-solución-a-errores-comunes)
+- [2. El Orden de Creación de un Módulo Backend](#2-el-orden-de-creación-de-un-módulo-backend)
+- [3. Paso 1 — Modelado de Datos con Prisma (`schema.prisma` y `prisma.ts`)](#3-paso-1--modelado-de-datos-con-prisma-schemaprisma-y-prismats)
+  - [3.1 Definir el modelo en `schema.prisma`](#31-definir-el-modelo-en-schemaprisma)
+  - [3.2 Migrar y generar tipos Prisma](#32-migrar-y-generar-tipos-prisma)
+  - [3.3 El singleton `prisma.ts`](#33-el-singleton-prismats)
+- [4. Paso 2 — Schemas y DTOs (`*.schemas.ts`)](#4-paso-2--schemas-y-dtos-schemasts)
+  - [4.1 Definir interfaces de entrada y salida](#41-definir-interfaces-de-entrada-y-salida)
+- [5. Paso 3 — Lógica de Negocio y Servicio (`*.service.ts`)](#5-paso-3--lógica-de-negocio-y-servicio-servicets)
+  - [5.1 Construcción del servicio singleton](#51-construcción-del-servicio-singleton)
+- [6. Paso 4 — Controladores y Respuesta HTTP (`*.controller.ts`)](#6-paso-4--controladores-y-respuesta-http-controllerts)
+  - [6.1 El contrato `ResponseDTO`](#61-el-contrato-responsedto)
+  - [6.2 Tabla de códigos HTTP usados](#62-tabla-de-códigos-http-usados)
+  - [6.3 Utilidades del Core (`parsearId`, `validarCodigo`, `capitalizarPalabras`, `constantes.ts`)](#63-utilidades-del-core-parsearid-validarcodigo-capitalizarpalabras-constantests)
+  - [6.4 Manejo explícito de errores de Prisma](#64-manejo-explícito-de-errores-de-prisma)
+  - [6.5 Patrón completo de un controlador](#65-patrón-completo-de-un-controlador)
+- [7. Paso 5 — Rutas y Seguridad (`*.routes.ts`)](#7-paso-5--rutas-y-seguridad-routests)
+  - [7.1 Definición de rutas y verbos HTTP](#71-definición-de-rutas-y-verbos-http)
+  - [7.2 El middleware `validarJWT` y `req.usuario`](#72-el-middleware-validarjwt-y-requsuario)
+- [8. Paso 6 — Montaje en el Servidor Express (`server.ts`)](#8-paso-6--montaje-en-el-servidor-express-serverts)
+  - [8.1 Orden estricto de middlewares en `server.ts`](#81-orden-estricto-de-middlewares-en-serverts)
+  - [8.2 Registrar el nuevo módulo](#82-registrar-el-nuevo-módulo)
+- [9. Tutorial Completo Paso a Paso: Crear el Módulo `proveedores`](#9-tutorial-completo-paso-a-paso-crear-el-módulo-proveedores)
+- [10. Tutorial: Agregar un Endpoint a un Módulo Existente](#10-tutorial-agregar-un-endpoint-a-un-módulo-existente)
+- [11. Solución a Errores Comunes](#11-solución-a-errores-comunes)
 
 ---
 
@@ -93,7 +88,7 @@ Esta carpeta contiene **únicamente** código transversal a todos los módulos. 
 |---|---|---|
 | `prisma.ts` | Instancia singleton de Prisma. Importar siempre desde aquí. | `*.service.ts` |
 | `server.ts` | Configura Express y registra módulos con `app.use()`. | Solo en el montaje de módulos nuevos |
-| `middlewares/autenticar.ts` | Verifica el JWT y inyecta `req.usuario`. | `*.routes.ts` de rutas privadas |
+| `middlewares/autenticar.ts` | Verifica el JWT e inyecta `req.usuario`. | `*.routes.ts` de rutas privadas |
 | `middlewares/errorHandler.ts` | Captura cualquier `next(error)` y responde en formato estándar. | Se registra al final de `server.ts` |
 | `types/response.dto.ts` | Interfaz `ResponseDTO` para tipar las respuestas del controlador. | `*.controller.ts` |
 | `utils/parsearId.ts` | Convierte `string` de `req.params.id` en `number \| null`. | `*.controller.ts` en rutas `/:id` |
@@ -106,51 +101,174 @@ Cada carpeta dentro de `modules/` representa un dominio de negocio aislado. Un m
 
 ```
 src/modules/plantas/
-├── planta.schemas.ts     ← Interfaces TypeScript (DTOs). Solo tipos, sin lógica.
+├── planta.schemas.ts     ← Contratos TypeScript (DTOs). Solo tipos, sin lógica.
 ├── planta.service.ts     ← Consultas a la base de datos con Prisma. Sin validaciones HTTP.
 ├── planta.controller.ts  ← Recepción HTTP, validaciones nativas y respuesta.
 └── planta.routes.ts      ← Definición de endpoints y middlewares.
 ```
 
-> Para un módulo `proveedores`, los archivos serían: `proveedor.schemas.ts`, `proveedor.service.ts`, `proveedor.controller.ts`, `proveedor.routes.ts`.
+---
+
+## 2. El Orden de Creación de un Módulo Backend
+
+Para garantizar que el código compile siempre a medida que lo escribes y evitar referencias circulares o inexistentes, un módulo backend **debe crearse strictly en este orden**:
+
+```mermaid
+flowchart LR
+    A["Paso 1: Prisma Model<br/>(schema.prisma)"] --> B["Paso 2: Schemas DTO<br/>(*.schemas.ts)"]
+    B --> C["Paso 3: Service<br/>(*.service.ts)"]
+    C --> D["Paso 4: Controller<br/>(*.controller.ts)"]
+    D --> E["Paso 5: Routes<br/>(*.routes.ts)"]
+    E --> F["Paso 6: Server Integration<br/>(server.ts)"]
+```
+
+> **¿Por qué este orden?**
+> - El **Service** requiere los **Schemas/DTOs** para tipar sus parámetros.
+> - El **Controller** requiere el **Service** para invocar la base de datos.
+> - Las **Routes** requieren los métodos del **Controller** para mapear los endpoints.
+> - El **Server Express** requiere el archivo de **Routes** para hacer el `app.use()`.
 
 ---
 
-## 2. El Estándar de Respuesta HTTP
+## 3. Paso 1 — Modelado de Datos con Prisma (`schema.prisma` y `prisma.ts`)
 
-### 2.1 `ResponseDTO` — el contrato único
+### 3.1 Definir el modelo en `schema.prisma`
 
-**Toda respuesta** del backend usa el mismo formato. Definido en `src/core/types/response.dto.ts`:
+Antes de escribir cualquier TypeScript, la tabla debe existir en la base de datos a través de `apps/backend/prisma/schema.prisma`.
+
+```prisma
+model Planta {
+  id            Int       @id @default(autoincrement()) // Clave primaria autoincremental
+  codigo        String    @unique @db.VarChar(50)      // Código único de la planta (ej: "1000-EXT")
+  nombre        String    @db.VarChar(255)             // Nombre descriptivo de la planta
+  activa        Boolean   @default(true)               // Estado activo/inactivo (soporte para soft delete)
+  creadoEn      DateTime  @default(now())  @map("creado_en")      // Timestamp de creación automática
+  actualizadoEn DateTime  @updatedAt       @map("actualizado_en")  // Timestamp de actualización automática
+
+  @@map("plantas") // Mapeo explícito al nombre de la tabla en la BD PostgreSQL
+}
+```
+
+### 3.2 Migrar y generar tipos Prisma
+
+Ejecuta la migración para crear la tabla y actualizar los tipos generados automáticamente en `@prisma/client`:
+
+```powershell
+# Crear y aplicar migración oficial
+pnpm --filter @sinergy/backend exec prisma migrate dev --name crear_tabla_plantas
+```
+
+O para sincronización directa en entorno de desarrollo local sin historial de migraciones:
+```powershell
+# Sincronizar esquema directamente con la base de datos
+pnpm --filter @sinergy/backend exec prisma db push
+```
+
+### 3.3 El singleton `prisma.ts`
+
+Toda interacción con Prisma debe pasar por la instancia singleton exportada en `apps/backend/src/core/prisma.ts`. **Nunca crees una nueva instancia `new PrismaClient()` en un servicio.**
+
+---
+
+## 4. Paso 2 — Schemas y DTOs (`*.schemas.ts`)
+
+### 4.1 Definir interfaces de entrada y salida
+
+Define **únicamente interfaces TypeScript**. Sin lógica, sin funciones, sin clases. Su propósito es establecer el contrato de los datos que entran y salen del módulo.
+
+**Patrón real del proyecto (`planta.schemas.ts`):**
+```typescript
+// apps/backend/src/modules/plantas/planta.schemas.ts
+
+// DTO de creación: campos requeridos en el body del HTTP POST para registrar
+export interface RegistrarPlantaDTO {
+  codigo: string;   // Código único obligatorio
+  nombre: string;   // Nombre de la planta obligatorio
+  activa?: boolean; // Booleano opcional (si se omite, el controlador asigna true)
+}
+
+// DTO de edición: campos opcionales para el HTTP PATCH (el cliente envía solo lo que modifica)
+export interface EditarPlantaDTO {
+  codigo?: string;
+  nombre?: string;
+  activa?: boolean;
+}
+
+// DTO de parámetros de URL: para rutas con variables como /editar/:id o /eliminar/:id
+export interface Params {
+  id: string; // Express entrega todos los req.params como string
+}
+```
+
+---
+
+## 5. Paso 3 — Lógica de Negocio y Servicio (`*.service.ts`)
+
+### 5.1 Construcción del servicio singleton
+
+El servicio es una clase que encapsula **todas las consultas a Prisma**. No valida entradas HTTP ni construye respuestas HTTP. Solo recibe datos ya validados y opera sobre la base de datos.
+
+**Patrón real del proyecto (`planta.service.ts`):**
+```typescript
+// apps/backend/src/modules/plantas/planta.service.ts
+import prisma from '../../core/prisma' // Instancia singleton centralizada de PrismaClient
+import { RegistrarPlantaDTO, EditarPlantaDTO } from './planta.schemas' // DTOs de entrada
+
+class PlantaService {
+
+    // Lectura: obtiene el listado completo de plantas desde PostgreSQL
+    async obtener() {
+        return prisma.planta.findMany()
+    }
+
+    // Escritura: crea un nuevo registro en la base de datos con los datos previamente validados
+    async crearPlanta(datos: RegistrarPlantaDTO) {
+        return prisma.planta.create({
+            data: datos
+        })
+    }
+
+    // Escritura: actualiza únicamente los campos presentes en el objeto `datos` para el ID dado
+    async editarPlanta(datos: EditarPlantaDTO, id: number) {
+        return prisma.planta.update({
+            where: { id },
+            data: datos
+        })
+    }
+
+    // Escritura: realiza un borrado lógico (soft delete) marcando activa = false sin destruir el registro
+    async eliminarPlanta(id: number) {
+        return prisma.planta.update({
+            where: { id },
+            data: { activa: false }
+        })
+    }
+}
+
+// Exportar una única instancia singleton (no exportar la clase desinstanciada)
+export const plantaService = new PlantaService()
+```
+
+---
+
+## 6. Paso 4 — Controladores y Respuesta HTTP (`*.controller.ts`)
+
+### 6.1 El contrato `ResponseDTO`
+
+**Toda respuesta** del backend usa el mismo formato, definido en `src/core/types/response.dto.ts`:
 
 ```typescript
 // apps/backend/src/core/types/response.dto.ts
+
+// Contrato único de respuesta JSON para todas las peticiones del backend
 export interface ResponseDTO {
-    status: 'ok' | 'error'
-    message: string
-    data?: Object
+    status: 'ok' | 'error' // Discriminador de éxito o falla
+    message: string       // Mensaje descriptivo para notificaciones/logs
+    data?: Object         // Payload de retorno opcional en caso de éxito
 }
 ```
 
-El frontend espera exactamente este formato en todos los endpoints sin excepción.
-
-**Respuesta de éxito:**
-```json
-{
-  "status": "ok",
-  "message": "Planta registrada correctamente",
-  "data": { "id": 1, "codigo": "1000-EXT", "nombre": "Extrusión", "activa": true }
-}
-```
-
-**Respuesta de error de validación:**
-```json
-{
-  "status": "error",
-  "message": "El código de la planta es inválido o no cumple con el formato requerido"
-}
-```
-
-### 2.2 Tabla de códigos de estado usados
+### 6.2 Tabla de códigos HTTP usados
 
 | Situación | Código HTTP | `status` |
 |---|---|---|
@@ -164,121 +282,30 @@ El frontend espera exactamente este formato en todos los endpoints sin excepció
 | Dependencia de clave foránea (Prisma `P2003`) | `409 Conflict` | `"error"` |
 | Error inesperado del servidor | `500 Internal Server Error` | `"error"` |
 
----
+### 6.3 Utilidades del Core (`parsearId`, `validarCodigo`, `capitalizarPalabras`, `constantes.ts`)
 
-## 3. Las Cuatro Capas del Módulo
+- `parsearId(req.params.id)`: Convierte `string` en `number | null` para prevenir NaN en consultas Prisma.
+- `validarCodigo(codigo, REGEX)`: Valida la estructura del código contra expresiones regulares oficiales.
+- `capitalizarPalabras(texto)`: Normaliza strings de usuario ("planta de mezcla" $\rightarrow$ "Planta De Mezcla").
+- `constantes.ts`: Mantiene de manera centralizada las expresiones regulares del dominio.
 
-### 3.1 `*.schemas.ts` — Contratos de datos (DTOs)
+### 6.4 Manejo explícito de errores de Prisma
 
-Define **únicamente interfaces TypeScript**. Sin lógica, sin funciones, sin clases. Su propósito es establecer el contrato de los datos que entran y salen del módulo.
+| Código Prisma | Cuándo ocurre | Código HTTP | Mensaje Estándar |
+|---|---|---|---|
+| `P2002` | Violación de restricción `@unique` | `409 Conflict` | `"Ya existe un [recurso] con ese [campo]"` |
+| `P2025` | Registro no encontrado en update/delete | `404 Not Found` | `"El [recurso] con ID X no existe"` |
+| `P2003` | Violación de clave foránea | `409 Conflict` | `"No se puede eliminar el [recurso] porque tiene registros dependientes"` |
 
-**Patrón real del proyecto (`planta.schemas.ts`):**
-```typescript
-// apps/backend/src/modules/plantas/planta.schemas.ts
+### 6.5 Patrón completo de un controlador
 
-// DTO de creación: campos obligatorios del recurso
-export interface RegistrarPlantaDTO {
-  codigo: string;
-  nombre: string;
-  activa?: boolean;        // opcional: el controller asigna `true` por defecto
-}
-
-// DTO de edición: todos los campos son opcionales (usuario envía solo lo que cambia)
-export interface EditarPlantaDTO {
-  codigo?: string;
-  nombre?: string;
-  activa?: boolean;
-}
-
-// Para rutas con parámetros de URL como /editar/:id
-export interface Params {
-  id: string;              // Express siempre entrega los params como string
-}
-```
-
-**Reglas:**
-- Solo exporta interfaces. Ninguna función, ninguna clase.
-- El DTO de creación tiene los campos obligatorios tal como los requiere la base de datos.
-- El DTO de edición es una versión `Partial` del de creación.
-- Si el módulo tiene filtros de consulta (ej. `?activo=true`), agrega `interface Filtros<Modulo>`.
-- Si el módulo tiene entidades relacionadas, define interfaces de respuesta con joins (ej. `EquipoConTipo`).
-
----
-
-### 3.2 `*.service.ts` — Lógica de negocio y acceso a datos
-
-El servicio es una clase que encapsula **todas las consultas a Prisma**. No valida entradas de HTTP (eso es trabajo del controlador). No construye respuestas HTTP. Solo recibe datos ya validados y opera sobre la base de datos.
-
-**Patrón real del proyecto (`planta.service.ts`):**
-```typescript
-// apps/backend/src/modules/plantas/planta.service.ts
-import prisma from '../../core/prisma'
-import { RegistrarPlantaDTO, EditarPlantaDTO } from './planta.schemas'
-
-class PlantaService {
-
-    // Lectura: retorna todos los registros
-    async obtener() {
-        return prisma.planta.findMany()
-    }
-
-    // Escritura: crea un registro con los datos ya validados
-    async crearPlanta(datos: RegistrarPlantaDTO) {
-        return prisma.planta.create({
-            data: datos
-        })
-    }
-
-    // Escritura: actualiza solo los campos presentes en `datos`
-    async editarPlanta(datos: EditarPlantaDTO, id: number) {
-        return prisma.planta.update({
-            where: { id },
-            data: datos
-        })
-    }
-
-    // Escritura: eliminación suave (soft delete), no borra el registro
-    async eliminarPlanta(id: number) {
-        return prisma.planta.update({
-            where: { id },
-            data: { activa: false }
-        })
-    }
-}
-
-// Exportar una instancia singleton (no la clase)
-export const plantaService = new PlantaService()
-```
-
-**Reglas:**
-- Exporta siempre una instancia singleton al final: `export const xService = new XService()`.
-- Los errores de Prisma se capturan en el **controlador**, no aquí. El servicio los deja propagar.
-- Usa el modelo correcto de Prisma (en minúscula, singular): `prisma.planta`, `prisma.equipo`, etc.
-- Para eliminaciones, el patrón del proyecto es **soft delete**: `update({ data: { activa: false } })`.
-- Si necesitas relaciones, usa `include` o `select` en la consulta: `prisma.equipo.findMany({ include: { planta: true } })`.
-
----
-
-### 3.3 `*.controller.ts` — Recepción HTTP y validación de entradas
-
-El controlador es el archivo más extenso. Sus responsabilidades en orden:
-
-1. Extraer datos del `req` (body, params, query).
-2. Validar esos datos de forma nativa (TypeScript + utilidades de `core/utils`).
-3. Transformar/sanitizar los datos (mayúsculas, capitalización, trim).
-4. Llamar al servicio con datos ya limpios.
-5. Responder con el `ResponseDTO` apropiado.
-6. Capturar errores de Prisma conocidos y responder con el código HTTP correcto.
-7. Para errores desconocidos, delegar al manejador global con `next(error)`.
-
-**Patrón real del proyecto — método `registrarPlanta`:**
 ```typescript
 // apps/backend/src/modules/plantas/planta.controller.ts
 import { Request, Response, NextFunction } from 'express';
 import { Prisma } from '@prisma/client'
-import { plantaService } from './planta.service'
-import { ResponseDTO } from '../../core/types/response.dto';
-import { RegistrarPlantaDTO, EditarPlantaDTO } from './planta.schemas';
+import { plantaService } from './planta.service' // Invocación de la capa de servicio
+import { ResponseDTO } from '../../core/types/response.dto'; // Contrato estandarizado HTTP
+import { RegistrarPlantaDTO, EditarPlantaDTO } from './planta.schemas'; // DTOs de entrada
 import { capitalizarPalabras } from '../../core/utils/capitalizarPalabras'
 import { parsearId } from '../../core/utils/parsearId'
 import { FORMATO_CODIGO_PLANTA } from '../../core/utils/constantes'
@@ -286,23 +313,29 @@ import { validarCodigo } from '../../core/utils/validarCodigo'
 
 export const plantaController = {
 
+    // GET /api/plantas/listar — Retorna la lista de plantas
     async verPlantas(req: Request, res: Response<ResponseDTO>, next: NextFunction) {
         try {
             const plantas = await plantaService.obtener()
+            
+            // Retornar 404 si la colección está vacía
             if (plantas.length === 0) {
-                return res.status(404).json({ status: 'error', message: 'no hay plantas registradas' })
+                return res.status(404).json({ status: 'error', message: 'No hay plantas registradas' })
             }
-            return res.status(200).json({ status: 'ok', message: 'listado de plantas', data: plantas })
+            
+            // Retornar 200 OK con los datos
+            return res.status(200).json({ status: 'ok', message: 'Listado de plantas', data: plantas })
         } catch (error) {
-            next(error)
+            next(error) // Delegar error no controlado al middleware global
         }
     },
 
+    // POST /api/plantas/crear — Valida y registra una nueva planta
     async registrarPlanta(req: Request<{}, {}, RegistrarPlantaDTO>, res: Response<ResponseDTO>, next: NextFunction) {
         try {
             const { codigo, nombre, activa } = req.body
 
-            // VALIDACIÓN 1: Formato de código con RegEx de dominio
+            // 1. Validar formato de código mediante Expresión Regular de dominio
             if (!validarCodigo(codigo, FORMATO_CODIGO_PLANTA)) {
                 return res.status(400).json({
                     status: 'error',
@@ -310,16 +343,17 @@ export const plantaController = {
                 })
             }
 
-            // VALIDACIÓN 2: Tipo y presencia del campo
+            // 2. Validar presencia y tipo estricto del código
             if (!codigo || typeof codigo !== 'string' || !codigo.trim()) {
                 return res.status(400).json({ status: 'error', message: 'El código de la planta es requerido y debe ser texto' })
             }
 
-            // VALIDACIÓN 3: Longitud máxima
+            // 3. Validar longitud máxima según la columna de BD (VarChar 50)
             if (codigo.trim().length > 50) {
                 return res.status(400).json({ status: 'error', message: 'El código no puede superar los 50 caracteres' })
             }
 
+            // 4. Validar presencia y tipo estricto del nombre
             if (!nombre || typeof nombre !== 'string' || !nombre.trim()) {
                 return res.status(400).json({ status: 'error', message: 'El nombre de la planta es requerido y debe ser texto' })
             }
@@ -328,20 +362,22 @@ export const plantaController = {
                 return res.status(400).json({ status: 'error', message: 'El nombre no puede superar los 255 caracteres' })
             }
 
-            // VALIDACIÓN 4: Tipo correcto para booleanos
+            // 5. Validar tipo booleano si fue proporcionado
             if (activa !== undefined && typeof activa !== 'boolean') {
                 return res.status(400).json({ status: 'error', message: 'El estado activo debe ser un valor booleano' })
             }
 
-            // SANITIZACIÓN: construir el objeto limpio para el servicio
+            // 6. Sanitizar datos: Mayúsculas en código, capitalización de palabras en nombre
             const nuevaPlanta: RegistrarPlantaDTO = {
-                codigo: codigo.trim().toUpperCase(),           // Normalizar a mayúsculas
-                nombre: capitalizarPalabras(nombre.trim()),    // Capitalizar cada palabra
-                activa: activa !== undefined ? activa : true   // Valor por defecto
+                codigo: codigo.trim().toUpperCase(),
+                nombre: capitalizarPalabras(nombre.trim()),
+                activa: activa !== undefined ? activa : true // Valor por defecto true
             }
 
+            // 7. Invocar servicio para persistir en BD
             const plantaRegistrada = await plantaService.crearPlanta(nuevaPlanta)
 
+            // 8. Responder 201 Created con el nuevo recurso
             return res.status(201).json({
                 status: 'ok',
                 message: 'Planta registrada correctamente',
@@ -349,32 +385,31 @@ export const plantaController = {
             })
 
         } catch (error: unknown) {
-            // CAPTURA DE ERRORES PRISMA CONOCIDOS
+            // Capturar violación de unicidad de Prisma (P2002) y responder 409 Conflict
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
                 const target = (error.meta?.target as string[]) || []
-                const campo = target.includes('codigo') ? 'código'
-                            : target.includes('nombre') ? 'nombre'
-                            : 'código o nombre'
+                const campo = target.includes('codigo') ? 'código' : target.includes('nombre') ? 'nombre' : 'código o nombre'
 
                 return res.status(409).json({
                     status: 'error',
                     message: `Ya existe una planta con ese ${campo}`
                 })
             }
-
-            // Errores desconocidos → manejador global
-            next(error)
+            next(error) // Delegar otros errores inesperados
         }
     },
 
+    // PATCH /api/plantas/editar/:id — Actualización parcial de planta
     async actualizarPlanta(req: Request<any, {}, EditarPlantaDTO>, res: Response<ResponseDTO>, next: NextFunction) {
         try {
+            // Parsear y validar que :id sea un entero numérico válido
             const id = parsearId(req.params.id)
 
             if (id === null) {
                 return res.status(400).json({ status: 'error', message: 'El ID proporcionado debe ser un número válido' })
             }
 
+            // Verificar que al menos un campo venga en el body
             if (Object.keys(req.body).length === 0) {
                 return res.status(400).json({ status: 'error', message: 'Debe proporcionar al menos un campo para actualizar' })
             }
@@ -382,12 +417,10 @@ export const plantaController = {
             const { codigo, nombre, activa } = req.body
             const datosActualizados: EditarPlantaDTO = {}
 
+            // Sanitización y validación condicional campo por campo
             if (codigo !== undefined) {
                 if (!validarCodigo(codigo, FORMATO_CODIGO_PLANTA)) {
                     return res.status(400).json({ status: 'error', message: 'El código de la planta es inválido' })
-                }
-                if (codigo.trim().length > 50) {
-                    return res.status(400).json({ status: 'error', message: 'El código no puede superar los 50 caracteres' })
                 }
                 datosActualizados.codigo = codigo.trim().toUpperCase()
             }
@@ -395,9 +428,6 @@ export const plantaController = {
             if (nombre !== undefined) {
                 if (typeof nombre !== 'string' || !nombre.trim()) {
                     return res.status(400).json({ status: 'error', message: 'El nombre de la planta es inválido' })
-                }
-                if (nombre.trim().length > 255) {
-                    return res.status(400).json({ status: 'error', message: 'El nombre no puede superar los 255 caracteres' })
                 }
                 datosActualizados.nombre = capitalizarPalabras(nombre.trim())
             }
@@ -423,15 +453,14 @@ export const plantaController = {
                     return res.status(404).json({ status: 'error', message: `La planta con ID ${req.params.id} no existe` })
                 }
                 if (error.code === 'P2002') {
-                    const target = (error.meta?.target as string[]) || []
-                    const campo = target.includes('codigo') ? 'código' : target.includes('nombre') ? 'nombre' : 'campo'
-                    return res.status(409).json({ status: 'error', message: `Ya existe otra planta con ese ${campo}` })
+                    return res.status(409).json({ status: 'error', message: 'Ya existe otra planta con ese código o nombre' })
                 }
             }
             next(error)
         }
     },
 
+    // DELETE /api/plantas/eliminar/:id — Borrado lógico (soft delete)
     async eliminarPlanta(req: Request, res: Response<ResponseDTO>, next: NextFunction) {
         try {
             const id = parsearId(req.params.id)
@@ -462,35 +491,28 @@ export const plantaController = {
             }
             next(error)
         }
-    },
+    }
 }
 ```
 
-**Reglas del controlador:**
-- Exporta un **objeto literal** con métodos `async`, no una clase.
-- Tipado explícito de `req`: `Request<Params, {}, BodyDTO>`.
-- El orden de validaciones es: formato con RegEx → tipo/presencia → longitud → tipo booleano.
-- Siempre `return res.status(...).json(...)` (sin el `return`, Express puede enviar doble respuesta).
-- El bloque `catch` captura errores de Prisma antes de llamar `next(error)`.
-- Nunca capturar un error y no responder ni delegar: bloque `catch` vacío está prohibido.
-
 ---
 
-### 3.4 `*.routes.ts` — Mapa de endpoints y middlewares
+## 7. Paso 5 — Rutas y Seguridad (`*.routes.ts`)
 
-El archivo de rutas mapea verbos HTTP a métodos del controlador y aplica middlewares. Es el archivo más corto del módulo.
+### 7.1 Definición de rutas y verbos HTTP
+
+El archivo de rutas mapea verbos HTTP a métodos del controlador y aplica el middleware de seguridad.
 
 **Patrón real del proyecto (`planta.routes.ts`):**
 ```typescript
 // apps/backend/src/modules/plantas/planta.routes.ts
 import { Router } from 'express'
-import { plantaController } from './planta.controller'
-import { validarJWT } from '../../core/middlewares/autenticar'
+import { plantaController } from './planta.controller' // Métodos del controlador
+import { validarJWT } from '../../core/middlewares/autenticar' // Middleware de seguridad JWT
 
 const router = Router()
 
-// Normalización de trailing slash: registrar con y sin "/" final
-// Evita errores 404 cuando el frontend llama a /listar/ en vez de /listar
+// Mapear verbos HTTP. Usar arrays ['/path', '/path/'] para soportar opcionalmente la barra final
 router.get(['/listar', '/listar/'], validarJWT, plantaController.verPlantas)
 router.post(['/crear', '/crear/'], validarJWT, plantaController.registrarPlanta)
 router.patch('/editar/:id', validarJWT, plantaController.actualizarPlanta)
@@ -499,236 +521,74 @@ router.delete('/eliminar/:id', validarJWT, plantaController.eliminarPlanta)
 export default router
 ```
 
-**Convención de nombres de endpoints:**
-| Operación | Verbo | Endpoint |
-|---|---|---|
-| Listar todos | `GET` | `/listar` |
-| Crear | `POST` | `/crear` |
-| Editar por ID | `PATCH` | `/editar/:id` |
-| Eliminar por ID | `DELETE` | `/eliminar/:id` |
-| Buscar por ID | `GET` | `/buscar/:id` |
-| Sub-recurso (ej. tipos de equipo) | `POST` | `/tipo/crear` |
+### 7.2 El middleware `validarJWT` y `req.usuario`
 
-> El módulo `equipo` tiene rutas de sub-recursos en el mismo router: `router.post(['/tipo/crear', '/tipo/crear/'], ...)`. Esto es válido cuando los sub-recursos están estrechamente ligados al módulo padre.
+`validarJWT` verifica la validez del Access Token. Si es correcto, inyecta `req.usuario`. Todos los controladores pueden acceder a `req.usuario.id` y `req.usuario.roles`.
 
 ---
 
-## 4. Utilidades del Core — Cuándo y Cómo Usarlas
+## 8. Paso 6 — Montaje en el Servidor Express (`server.ts`)
 
-### 4.1 `parsearId` — Validar parámetros de URL
+### 8.1 Orden estricto de middlewares en `server.ts`
 
-Úsala **siempre** que el endpoint reciba un `:id` como parámetro de URL. Los `req.params` en Express son siempre `string`.
-
-```typescript
-import { parsearId } from '../../core/utils/parsearId'
-
-const id = parsearId(req.params.id)
-
-if (id === null) {
-    return res.status(400).json({ status: 'error', message: 'El ID proporcionado debe ser un número válido' })
-}
-// A partir de aquí, `id` es de tipo `number`
-```
-
-**Implementación:**
-```typescript
-export function parsearId(raw: string): number | null {
-  const id = parseInt(raw, 10)
-  return Number.isNaN(id) ? null : id
-}
-```
-
-Esto protege contra ataques donde el cliente envía `'abc'`, `'null'`, o `' '` como ID.
-
-### 4.2 `validarCodigo` — Validar códigos con formato RegEx
-
-Úsala cuando el campo `codigo` debe cumplir un formato específico.
+El orden en `apps/backend/src/core/server.ts` es obligatorio:
 
 ```typescript
-import { validarCodigo } from '../../core/utils/validarCodigo'
-import { FORMATO_CODIGO_PLANTA } from '../../core/utils/constantes'
+// apps/backend/src/core/server.ts
 
-if (!validarCodigo(codigo, FORMATO_CODIGO_PLANTA)) {
-    return res.status(400).json({ status: 'error', message: 'Formato de código inválido' })
-}
+// 1. Seguridad y parsers globales (SIEMPRE PRIMERO)
+app.use(helmet())       // Headers de seguridad HTTP
+app.use(cors({ ... }))  // Configuración CORS con credenciales habilitadas
+app.use(express.json()) // Parser de body JSON
+app.use(cookieParser()) // Parser de cookies para refresh token
+
+// 2. Rutas públicas de diagnóstico
+app.get('/api/health', ...)
+
+// 3. Módulos de negocio (AQUÍ SE REGISTRA TU MÓDULO NUEVO)
+app.use('/api/auth', authRoutes)
+app.use('/api/plantas', plantaRoutes)
+app.use('/api/proveedores', proveedorRoutes) // ← Nuevo módulo registrado
+
+// 4. Handlers globales de error (SIEMPRE AL FINAL, EN ESTE ORDEN)
+app.use(notFoundHandler) // Captura 404 de rutas no existentes
+app.use(errorHandler)    // Captura centralizada de exceptions con next(error)
 ```
 
-**Implementación:**
-```typescript
-export function validarCodigo(texto: string, regex: RegExp): boolean {
-    if (!texto || typeof texto !== 'string') return false
-    return regex.test(texto.trim())
-}
-```
+### 8.2 Registrar el nuevo módulo
 
-### 4.3 `capitalizarPalabras` y `capitalizar`
-
-Úsalas para sanitizar campos de texto antes de guardar en la base de datos.
-
-```typescript
-import { capitalizarPalabras } from '../../core/utils/capitalizarPalabras'
-
-// "planta de extrusión" → "Planta De Extrusión"
-nombre: capitalizarPalabras(nombre.trim())
-
-// Para un solo token:
-import { capitalizar } from '../../core/utils/capitalizar'
-// "extrusión" → "Extrusión"
-nombre: capitalizar(nombre.trim())
-```
-
-### 4.4 `constantes.ts` — Expresiones regulares de dominio
-
-Define aquí las RegEx de formatos de código del sistema. Cuando agregues un módulo con código propio, añade su constante aquí.
-
-```typescript
-// apps/backend/src/core/utils/constantes.ts
-export const FORMATO_CODIGO_PLANTA  = /^1000-[A-ZÁÉÍÓÚÑ]{3}$/
-export const REGEX_CODIGO_UBICACION = /^\d{4}-[A-Z]{3}-[A-Z]{4}$/
-export const REGEX_CODIGO_LINEA     = /^\d{4}-[A-Z]{3}-[A-Z]{4}-[A-Z0-9]{4}$/
-
-// Para un nuevo módulo con código propio, agregar:
-// export const FORMATO_CODIGO_PROVEEDOR = /^PROV-\d{4}$/
-```
+Para activar el nuevo módulo, agrega dos líneas en `server.ts`:
+1. El import del router: `import proveedorRoutes from '../modules/proveedores/proveedor.routes'`
+2. El montaje: `app.use('/api/proveedores', proveedorRoutes)`
 
 ---
 
-## 5. Manejo de Errores de Prisma
+## 9. Tutorial Completo Paso a Paso: Crear el Módulo `proveedores`
 
-### 5.1 Tabla de errores conocidos
+A continuación se muestra la creación completa del módulo `proveedores` siguiendo estrictamente el orden 1 $\rightarrow$ 6 con comentarios explicativos en cada bloque:
 
-| Código Prisma | Cuándo ocurre | Código HTTP | Qué responder |
-|---|---|---|---|
-| `P2002` | Violación de restricción `@unique` (valor duplicado) | `409 Conflict` | `"Ya existe un [recurso] con ese [campo]"` |
-| `P2025` | Registro no encontrado en `update` o `delete` | `404 Not Found` | `"El [recurso] con ID X no existe"` |
-| `P2003` | Violación de clave foránea (el registro tiene dependencias) | `409 Conflict` | `"No se puede eliminar el [recurso] porque tiene [dependencias]"` |
-
-Para `P2002`, Prisma incluye en `error.meta.target` el array de campos que violaron la unicidad. Úsalo para dar un mensaje específico.
-
-### 5.2 Patrón de captura en el controlador
-
-```typescript
-} catch (error: unknown) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-
-        if (error.code === 'P2025') {
-            return res.status(404).json({
-                status: 'error',
-                message: `La planta con ID ${req.params.id} no existe`
-            })
-        }
-
-        if (error.code === 'P2002') {
-            const target = (error.meta?.target as string[]) || []
-            const campo = target.includes('codigo') ? 'código'
-                        : target.includes('nombre') ? 'nombre'
-                        : 'campo'
-
-            return res.status(409).json({
-                status: 'error',
-                message: `Ya existe una planta con ese ${campo}`
-            })
-        }
-
-        if (error.code === 'P2003') {
-            return res.status(409).json({
-                status: 'error',
-                message: 'No se puede eliminar porque tiene registros dependientes'
-            })
-        }
-    }
-
-    // Cualquier error no reconocido → errorHandler global (responde 500)
-    next(error)
-}
-```
-
----
-
-## 6. Seguridad y Autenticación
-
-### 6.1 El middleware `validarJWT`
-
-`validarJWT` protege las rutas privadas. Extrae el Bearer Token del header `Authorization`, lo verifica con la clave secreta y si es válido, inyecta el payload en `req.usuario`. Si el token no existe, está malformado o expiró, lanza un `AppError(401)` que el `errorHandler` convierte en respuesta HTTP.
-
-```typescript
-// apps/backend/src/core/middlewares/autenticar.ts
-export function validarJWT(req: Request, res: Response, next: NextFunction): void {
-  try {
-    const authHeader = req.headers.authorization
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new AppError('No se proporcionó un token de autenticación', 401)
-    }
-
-    const token = authHeader.slice(7)
-    const payload = verificarAccessToken(token)
-
-    req.usuario = payload   // disponible en el controlador como req.usuario
-    next()
-  } catch (error) {
-    next(error)
-  }
-}
-```
-
-**Regla:** Aplica `validarJWT` a **todas** las rutas que requieran sesión activa. Nunca a `/auth/login` ni `/auth/refresh`.
-
-### 6.2 Acceder al usuario autenticado en el controlador
-
-Después de que `validarJWT` procesa la petición, el controlador puede acceder al usuario autenticado:
-
-```typescript
-async crearRecurso(req: Request, res: Response<ResponseDTO>, next: NextFunction) {
-    try {
-        const usuarioId = req.usuario?.id       // ID del usuario que hace la petición
-        const rolesUsuario = req.usuario?.roles  // Roles del usuario
-        // ...
-    }
-}
-```
-
-El tipo de `req.usuario` está declarado en `src/core/types/express.d.ts` y definido en `src/core/types/auth.types.ts`.
-
----
-
-## 7. Tutorial Completo: Agregar un Módulo Nuevo
-
-Ejemplo: crear el módulo `proveedores` desde cero.
-
-### 7.1 Paso 1 — Modelar en Prisma
-
-Edita `apps/backend/prisma/schema.prisma`:
-
+### Paso 1: `schema.prisma`
 ```prisma
+// Definición del modelo Proveedor en apps/backend/prisma/schema.prisma
 model Proveedor {
-  id            Int       @id @default(autoincrement())
-  codigo        String    @unique @db.VarChar(20)
-  nombre        String    @db.VarChar(255)
-  contacto      String?   @db.VarChar(150)
-  activo        Boolean   @default(true)
+  id            Int       @id @default(autoincrement()) // Clave primaria
+  codigo        String    @unique @db.VarChar(20)      // Código único de proveedor
+  nombre        String    @db.VarChar(255)             // Nombre comercial
+  contacto      String?   @db.VarChar(150)             // Campo opcional de contacto
+  activo        Boolean   @default(true)               // Estado activo
   creadoEn      DateTime  @default(now())  @map("creado_en")
   actualizadoEn DateTime  @updatedAt       @map("actualizado_en")
 
-  @@map("proveedores")
+  @@map("proveedores") // Nombre de la tabla PostgreSQL
 }
 ```
+Ejecutar en terminal: `pnpm --filter @sinergy/backend exec prisma db push`
 
-Ejecuta la migración:
-```powershell
-pnpm --filter @sinergy/backend exec prisma migrate dev --name agregar_tabla_proveedores
-```
-
-Si solo quieres verificar sin migrar (desarrollo sin control de versiones):
-```powershell
-pnpm --filter @sinergy/backend exec prisma db push
-```
-
-### 7.2 Paso 2 — Crear los Schemas (DTOs)
-
-Crea `apps/backend/src/modules/proveedores/proveedor.schemas.ts`:
-
+### Paso 2: `proveedor.schemas.ts`
 ```typescript
+// Contratos DTO en apps/backend/src/modules/proveedores/proveedor.schemas.ts
+
+// DTO para el body de creación (POST)
 export interface RegistrarProveedorDTO {
   codigo: string;
   nombre: string;
@@ -736,6 +596,7 @@ export interface RegistrarProveedorDTO {
   activo?: boolean;
 }
 
+// DTO para el body de edición (PATCH)
 export interface EditarProveedorDTO {
   nombre?: string;
   contacto?: string | null;
@@ -743,41 +604,40 @@ export interface EditarProveedorDTO {
 }
 ```
 
-### 7.3 Paso 3 — Crear el Service
-
-Crea `apps/backend/src/modules/proveedores/proveedor.service.ts`:
-
+### Paso 3: `proveedor.service.ts`
 ```typescript
-import prisma from '../../core/prisma'
+// Capa de servicio en apps/backend/src/modules/proveedores/proveedor.service.ts
+import prisma from '../../core/prisma' // Instancia singleton de PrismaClient
 import { RegistrarProveedorDTO, EditarProveedorDTO } from './proveedor.schemas'
 
 class ProveedorService {
-
+    // Consulta lista ordenada alfabéticamente
     async obtener() {
         return prisma.proveedor.findMany({ orderBy: { nombre: 'asc' } })
     }
 
+    // Insertar nuevo proveedor
     async crearProveedor(datos: RegistrarProveedorDTO) {
         return prisma.proveedor.create({ data: datos })
     }
 
+    // Actualizar proveedor por ID
     async editarProveedor(datos: EditarProveedorDTO, id: number) {
         return prisma.proveedor.update({ where: { id }, data: datos })
     }
 
+    // Borrado lógico (activo = false)
     async eliminarProveedor(id: number) {
         return prisma.proveedor.update({ where: { id }, data: { activo: false } })
     }
 }
 
-export const proveedorService = new ProveedorService()
+export const proveedorService = new ProveedorService() // Exportar instancia única
 ```
 
-### 7.4 Paso 4 — Crear el Controller
-
-Crea `apps/backend/src/modules/proveedores/proveedor.controller.ts`:
-
+### Paso 4: `proveedor.controller.ts`
 ```typescript
+// Capa de controlador HTTP en apps/backend/src/modules/proveedores/proveedor.controller.ts
 import { Request, Response, NextFunction } from 'express';
 import { Prisma } from '@prisma/client'
 import { proveedorService } from './proveedor.service'
@@ -787,7 +647,7 @@ import { capitalizarPalabras } from '../../core/utils/capitalizarPalabras'
 import { parsearId } from '../../core/utils/parsearId'
 
 export const proveedorController = {
-
+    // Controller: Listar proveedores
     async verProveedores(req: Request, res: Response<ResponseDTO>, next: NextFunction) {
         try {
             const proveedores = await proveedorService.obtener()
@@ -800,26 +660,20 @@ export const proveedorController = {
         }
     },
 
+    // Controller: Crear proveedor con validaciones de entrada
     async registrarProveedor(req: Request<{}, {}, RegistrarProveedorDTO>, res: Response<ResponseDTO>, next: NextFunction) {
         try {
             const { codigo, nombre, contacto, activo } = req.body
 
+            // Validar campos requeridos
             if (!codigo || typeof codigo !== 'string' || !codigo.trim()) {
                 return res.status(400).json({ status: 'error', message: 'El código del proveedor es requerido' })
-            }
-            if (codigo.trim().length > 20) {
-                return res.status(400).json({ status: 'error', message: 'El código no puede superar los 20 caracteres' })
             }
             if (!nombre || typeof nombre !== 'string' || !nombre.trim()) {
                 return res.status(400).json({ status: 'error', message: 'El nombre del proveedor es requerido' })
             }
-            if (nombre.trim().length > 255) {
-                return res.status(400).json({ status: 'error', message: 'El nombre no puede superar los 255 caracteres' })
-            }
-            if (activo !== undefined && typeof activo !== 'boolean') {
-                return res.status(400).json({ status: 'error', message: 'El campo activo debe ser un booleano' })
-            }
 
+            // Construir payload sanitizado
             const nuevoProveedor: RegistrarProveedorDTO = {
                 codigo: codigo.trim().toUpperCase(),
                 nombre: capitalizarPalabras(nombre.trim()),
@@ -834,7 +688,6 @@ export const proveedorController = {
                 message: 'Proveedor registrado correctamente',
                 data: proveedorCreado
             })
-
         } catch (error: unknown) {
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
                 return res.status(409).json({ status: 'error', message: 'Ya existe un proveedor con ese código' })
@@ -843,61 +696,40 @@ export const proveedorController = {
         }
     },
 
+    // Controller: Actualizar proveedor parcial
     async actualizarProveedor(req: Request<any, {}, EditarProveedorDTO>, res: Response<ResponseDTO>, next: NextFunction) {
         try {
             const id = parsearId(req.params.id)
-            if (id === null) {
-                return res.status(400).json({ status: 'error', message: 'El ID proporcionado debe ser un número válido' })
-            }
-            if (Object.keys(req.body).length === 0) {
-                return res.status(400).json({ status: 'error', message: 'Debe proporcionar al menos un campo para actualizar' })
-            }
+            if (id === null) return res.status(400).json({ status: 'error', message: 'ID no válido' })
 
             const { nombre, contacto, activo } = req.body
-            const datosActualizados: EditarProveedorDTO = {}
+            const datos: EditarProveedorDTO = {}
 
-            if (nombre !== undefined) {
-                if (typeof nombre !== 'string' || !nombre.trim()) {
-                    return res.status(400).json({ status: 'error', message: 'El nombre del proveedor es inválido' })
-                }
-                datosActualizados.nombre = capitalizarPalabras(nombre.trim())
-            }
-            if (contacto !== undefined) {
-                datosActualizados.contacto = contacto?.trim() ?? null
-            }
-            if (activo !== undefined) {
-                if (typeof activo !== 'boolean') {
-                    return res.status(400).json({ status: 'error', message: 'El campo activo debe ser un booleano' })
-                }
-                datosActualizados.activo = activo
-            }
+            if (nombre !== undefined) datos.nombre = capitalizarPalabras(nombre.trim())
+            if (contacto !== undefined) datos.contacto = contacto?.trim() ?? null
+            if (activo !== undefined) datos.activo = activo
 
-            const proveedorActualizado = await proveedorService.editarProveedor(datosActualizados, id)
-
-            return res.status(200).json({ status: 'ok', message: 'Proveedor actualizado correctamente', data: proveedorActualizado })
-
+            const actualizado = await proveedorService.editarProveedor(datos, id)
+            return res.status(200).json({ status: 'ok', message: 'Proveedor actualizado', data: actualizado })
         } catch (error: unknown) {
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-                return res.status(404).json({ status: 'error', message: `El proveedor con ID ${req.params.id} no existe` })
+                return res.status(404).json({ status: 'error', message: 'Proveedor no encontrado' })
             }
             next(error)
         }
     },
 
+    // Controller: Desactivar proveedor (Soft delete)
     async eliminarProveedor(req: Request, res: Response<ResponseDTO>, next: NextFunction) {
         try {
             const id = parsearId(req.params.id)
-            if (id === null) {
-                return res.status(400).json({ status: 'error', message: 'El ID proporcionado debe ser un número válido' })
-            }
+            if (id === null) return res.status(400).json({ status: 'error', message: 'ID no válido' })
 
-            const proveedorEliminado = await proveedorService.eliminarProveedor(id)
-
-            return res.status(200).json({ status: 'ok', message: 'Proveedor desactivado correctamente', data: proveedorEliminado })
-
+            const eliminado = await proveedorService.eliminarProveedor(id)
+            return res.status(200).json({ status: 'ok', message: 'Proveedor desactivado', data: eliminado })
         } catch (error: unknown) {
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-                return res.status(404).json({ status: 'error', message: `El proveedor con ID ${req.params.id} no existe` })
+                return res.status(404).json({ status: 'error', message: 'Proveedor no encontrado' })
             }
             next(error)
         }
@@ -905,17 +737,16 @@ export const proveedorController = {
 }
 ```
 
-### 7.5 Paso 5 — Crear las Routes
-
-Crea `apps/backend/src/modules/proveedores/proveedor.routes.ts`:
-
+### Paso 5: `proveedor.routes.ts`
 ```typescript
+// Mapeo de rutas en apps/backend/src/modules/proveedores/proveedor.routes.ts
 import { Router } from 'express'
 import { proveedorController } from './proveedor.controller'
 import { validarJWT } from '../../core/middlewares/autenticar'
 
 const router = Router()
 
+// Asociar verbos HTTP con controladores protegidos por JWT
 router.get(['/listar', '/listar/'], validarJWT, proveedorController.verProveedores)
 router.post(['/crear', '/crear/'], validarJWT, proveedorController.registrarProveedor)
 router.patch('/editar/:id', validarJWT, proveedorController.actualizarProveedor)
@@ -924,173 +755,33 @@ router.delete('/eliminar/:id', validarJWT, proveedorController.eliminarProveedor
 export default router
 ```
 
-### 7.6 Paso 6 — Montar el módulo en `server.ts`
-
-Edita `apps/backend/src/core/server.ts`. Agrega exactamente dos líneas:
-
+### Paso 6: `server.ts`
 ```typescript
-// 1. Import al inicio del archivo, junto a los demás imports de módulos:
+// Registro en apps/backend/src/core/server.ts
 import proveedorRoutes from '../modules/proveedores/proveedor.routes'
 
-// 2. Registro de rutas en el bloque de módulos (antes de los handlers globales):
+// Registrar en el bloque de módulos de la API:
 app.use('/api/proveedores', proveedorRoutes)
 ```
 
-Verifica que el módulo compila sin errores:
-```powershell
-pnpm --filter @sinergy/backend build
-```
+---
 
-El módulo está activo. Los endpoints disponibles son:
-- `GET  /api/proveedores/listar`
-- `POST /api/proveedores/crear`
-- `PATCH /api/proveedores/editar/:id`
-- `DELETE /api/proveedores/eliminar/:id`
+## 10. Tutorial: Agregar un Endpoint a un Módulo Existente
+
+Para agregar una acción adicional (ej: `buscarPorCodigo`):
+
+1. **En `*.service.ts`**: Agregar el método de lectura `async buscarPorCodigo(codigo: string) { return prisma.planta.findUnique({ where: { codigo } }) }`.
+2. **En `*.controller.ts`**: Agregar la función que valida `req.params.codigo`, llama al service y retorna `200` o `404`.
+3. **En `*.routes.ts`**: Agregar la ruta `router.get('/buscar/:codigo', validarJWT, plantaController.buscarPorCodigo)`.
+
+> No requiere modificar `server.ts` porque el módulo ya se encuentra montado.
 
 ---
 
-## 8. Tutorial: Agregar un Endpoint a un Módulo Existente
+## 11. Solución a Errores Comunes
 
-Si el módulo ya existe y solo necesitas una ruta nueva, el proceso es más corto. Ejemplo: buscar una planta por su código.
-
-**Paso 1 — Agregar el método en el service:**
-```typescript
-// planta.service.ts
-async buscarPorCodigo(codigo: string) {
-    return prisma.planta.findUnique({ where: { codigo } })
-}
-```
-
-**Paso 2 — Agregar el método en el controller:**
-```typescript
-// planta.controller.ts (dentro del objeto plantaController)
-async buscarPorCodigo(req: Request, res: Response<ResponseDTO>, next: NextFunction) {
-    try {
-        const { codigo } = req.params
-
-        if (!codigo || typeof codigo !== 'string') {
-            return res.status(400).json({ status: 'error', message: 'El código es requerido' })
-        }
-
-        const planta = await plantaService.buscarPorCodigo(codigo.toUpperCase())
-
-        if (!planta) {
-            return res.status(404).json({ status: 'error', message: `No existe una planta con el código ${codigo}` })
-        }
-
-        return res.status(200).json({ status: 'ok', message: 'Planta encontrada', data: planta })
-    } catch (error) {
-        next(error)
-    }
-},
-```
-
-**Paso 3 — Agregar la ruta en el router:**
-```typescript
-// planta.routes.ts
-router.get('/buscar/:codigo', validarJWT, plantaController.buscarPorCodigo)
-```
-
-No necesitas tocar `server.ts` porque el módulo ya está montado.
-
----
-
-## 9. El Servidor Express — `server.ts`
-
-El orden de middlewares en `server.ts` es crítico. No cambiarlo.
-
-```typescript
-// apps/backend/src/core/server.ts
-
-// ─── 1. Seguridad y parseo (SIEMPRE primero) ─────────────────────────────────
-app.use(helmet())           // Headers de seguridad HTTP
-app.use(cors({ ... }))      // Control de orígenes permitidos (credentials: true para cookies)
-app.use(express.json())     // Parsear body JSON
-app.use(cookieParser())     // Parsear cookies (necesario para el refresh token)
-
-// ─── 2. Rutas de diagnóstico (no requieren auth) ─────────────────────────────
-app.get('/', ...)
-app.get('/api/health', ...)
-
-// ─── 3. Módulos de funcionalidades ───────────────────────────────────────────
-app.use('/api/auth', authRoutes)
-app.use('/api/usuarios', authRoutes)
-app.use('/api/roles', rolesRoutes)
-app.use('/api/equipos', equipoRoutes)
-app.use('/api/plantas', plantaRoutes)
-app.use('/api/ubicaciones', ubicacionRoutes)
-app.use('/api/lineas', lineaRoutes)
-app.use('/api/componentes', componenteRoutes)
-app.use('/api/mantenimiento', mantenimientoRoutes)
-// → Aquí se agregan los nuevos módulos
-
-// ─── 4. Handlers globales (SIEMPRE al final, en este orden) ──────────────────
-app.use(notFoundHandler)    // ← 404 para rutas no definidas
-app.use(errorHandler)       // ← 500 (o el statusCode del AppError) para next(error)
-```
-
-> Si el `errorHandler` no está **al final**, los errores de los módulos no llegarán a él.
-
----
-
-## 10. Solución a Errores Comunes
-
-**Error: `Cannot read properties of undefined (reading 'id')` en `req.usuario`**
-
-El middleware `validarJWT` no está aplicado en la ruta. Verifica que en `*.routes.ts` el método tenga `validarJWT` como segundo argumento:
-```typescript
-router.get('/listar', validarJWT, controller.metodo)   // Correcto
-router.get('/listar', controller.metodo)               // Sin auth → req.usuario es undefined
-```
-
----
-
-**Error: `PrismaClientInitializationError` al ejecutar una consulta**
-
-El cliente de Prisma no tiene los tipos del schema actual. Ejecuta:
-```powershell
-pnpm --filter @sinergy/backend exec prisma generate
-```
-
----
-
-**Error: `Property 'usuario' does not exist on type 'Request'`**
-
-El archivo `src/core/types/express.d.ts` no está siendo incluido en la compilación. Verifica que `tsconfig.json` incluya la carpeta `src` en `include`:
-```json
-{ "include": ["src/**/*"] }
-```
-
----
-
-**El endpoint responde 404 aunque la URL parece correcta**
-
-El trailing slash puede ser el problema. Si el frontend llama `/listar/` y la ruta solo está registrada como `/listar`, Express devuelve 404. Usa siempre el array de rutas:
-```typescript
-router.get(['/listar', '/listar/'], validarJWT, controller.metodo)
-```
-
----
-
-**La respuesta llega al frontend pero `data` es `undefined`**
-
-El controlador responde con `status: 'ok'` pero sin incluir `data`. Asegúrate de incluirlo:
-```typescript
-// Incorrecto:
-return res.status(200).json({ status: 'ok', message: 'ok' })
-
-// Correcto:
-return res.status(200).json({ status: 'ok', message: 'ok', data: resultado })
-```
-
----
-
-**Error: `P1001 - Can't reach database server`**
-
-El servidor de PostgreSQL no está corriendo o `DATABASE_URL` en `.env` es incorrecta. Verifica la cadena de conexión y que el servicio esté activo.
-
----
-
-**El módulo no responde aunque está en `server.ts`**
-
-Verifica que el import y el `app.use()` estén antes de los handlers globales (`notFoundHandler` y `errorHandler`). Si el módulo se agrega después del `notFoundHandler`, todas sus rutas responderán 404.
+- **`Cannot read properties of undefined (reading 'id')` en `req.usuario`**: La ruta no incluye el middleware `validarJWT`.
+- **`PrismaClientInitializationError`**: Ejecutar `pnpm --filter @sinergy/backend exec prisma generate`.
+- **`Property 'usuario' does not exist on type 'Request'`**: Verificar `tsconfig.json` incluya `"include": ["src/**/*"]`.
+- **Endpoint responde 404 por trailing slash**: Usar arrays en rutas `router.get(['/listar', '/listar/'], ...)`.
+- **`P1001 - Can't reach database server`**: Verificar servicio PostgreSQL corriendo y la URI `DATABASE_URL` en `.env`.

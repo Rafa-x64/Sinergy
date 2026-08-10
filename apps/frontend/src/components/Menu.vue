@@ -8,7 +8,7 @@ import { useAuthStore } from '../modules/auth/auth.store'
 const authStore = useAuthStore()
 const router = useRouter()
 
-const props = defineProps<{
+const { ocultarLayout } = defineProps<{
     ocultarLayout: boolean
 }>()
 

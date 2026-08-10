@@ -12,7 +12,9 @@ router.delete('/eliminar/:id', validarJWT, equipoController.eliminarEquipo)
 //tipos
 router.post(['/tipo/crear', '/tipo/crear/'], validarJWT, equipoController.registrarTipo)
 router.get(['/tipo/listar','/tipo/listar/'], validarJWT, equipoController.listarTipos)
+router.get('/tipo/buscar/:id', validarJWT, equipoController.verTipo)
 router.patch('/tipo/editar/:id', validarJWT, equipoController.editarTipo)
 router.delete('/tipo/eliminar/:id', validarJWT, equipoController.eliminarTipo )
 
 export default router
+
