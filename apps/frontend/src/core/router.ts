@@ -39,6 +39,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, hideLayout: false, roles: ['Administrador', 'Admin', 'Supervisor'] },
   },
   {
+    path: '/usuarios',
+    name: 'usuarios',
+    component: () => import('../modules/usuarios/views/UsuariosView.vue'),
+    meta: { requiresAuth: true, hideLayout: false, roles: ['Administrador', 'Admin', 'Supervisor'] },
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('@/views/NotFoundView.vue'),
