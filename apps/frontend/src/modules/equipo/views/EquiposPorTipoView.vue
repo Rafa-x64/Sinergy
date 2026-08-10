@@ -279,6 +279,7 @@ const ejecutarEliminacion = async (): Promise<void> => {
                         :texto-boton="`Guardar ${tipoFiltro}`"
                         :tipos-equipo="tiposEquipo"
                         :lineas="lineas"
+                        :bloquear-tipo="true"
                         @submit="manejarGuardado"
                         @cancelar="cancelarEdicion"
                     />
@@ -308,6 +309,7 @@ const ejecutarEliminacion = async (): Promise<void> => {
                         :texto-boton="`Actualizar ${tipoFiltro}`"
                         :tipos-equipo="tiposEquipo"
                         :lineas="lineas"
+                        :bloquear-tipo="true"
                         @submit="manejarGuardado"
                         @cancelar="cancelarEdicion"
                     />
