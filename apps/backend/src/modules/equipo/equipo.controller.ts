@@ -376,7 +376,7 @@ export const equipoController = {
         return res.status(400).json({ status: 'error', message: 'error al registrar el tipo' })
       }
 
-      return res.status(201).json({ status: 'ok', message: 'tipo de equipo registrado correctamente' })
+      return res.status(201).json({ status: 'ok', message: 'tipo de equipo registrado correctamente', data: tipoRegistrado })
     }catch(error: unknown){
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         return res.status(409).json({status: 'error', message: 'ya existe un tipo de equipo con ese nombre'})
@@ -477,5 +477,28 @@ export const equipoController = {
       }catch(error){
         next(error)
       }
+    },
+
+  // buscar tipo por ID
+  async verTipo(req: Request, res: Response<ResponseDTO>, next: NextFunction) {
+    try {
+      const id = parsearId(req.params.id)
+
+      if (id === null) {
+        return res.status(400).json({ status: 'error', message: 'El ID del tipo de equipo debe ser un número válido' })
+      }
+
+      const tipo = await equipoService.buscarTipoId(id)
+
+      if (!tipo) {
+        return res.status(404).json({ status: 'error', message: `No existe un tipo de equipo con ID ${id}` })
+      }
+
+      return res.status(200).json({ status: 'ok', message: 'Tipo de equipo encontrado', data: tipo })
+
+    } catch (error: unknown) {
+      next(error)
     }
+  }
 }
+

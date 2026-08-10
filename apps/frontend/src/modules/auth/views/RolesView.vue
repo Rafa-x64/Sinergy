@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { useRolesStore, type Rol } from '../roles.store'
+import { useRolesStore } from '../roles.store'
 import { useToast } from 'vue-toastification'
 import AppTabs from '../../../components/AppTabs.vue'
 import type { TabItem } from '@/core/types/tabs'

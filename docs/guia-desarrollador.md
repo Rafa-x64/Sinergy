@@ -8,37 +8,50 @@
 
 | Guía | Contenido | Archivo |
 |---|---|---|
-| **Backend** | Módulos Express, Prisma, controladores, servicios, rutas, manejo de errores, seguridad JWT | [guia-backend.md](./guia-backend.md) |
-| **Frontend** | Stores Pinia, instancia Axios `api`, vistas Vue 3, formularios Vuetify, router, toasts | [guia-frontend.md](./guia-frontend.md) |
+| **Backend** | Módulos Express, Prisma, controladores, servicios, rutas, errores, JWT | [guia-backend.md](./guia-backend.md) |
+| **Frontend** | Stores Pinia, cliente Axios `api`, vistas Vue 3, formularios, router | [guia-frontend.md](./guia-frontend.md) |
+| **Componentes** | Diccionario de componentes UI (`AppTabs`, `Menu`, `SinergyChip`, `ThemeToggle`) | [diccionario-componentes.md](./components/diccionario-componentes.md) |
+| **Vistas** | Catálogo de páginas SPA (`Login`, `Dashboard`, `Plantas`, `Ubicaciones`, etc.) | [catalogo-vistas.md](./views/catalogo-vistas.md) |
+| **Módulos** | Mapa integrado de trazabilidad entre Backend (Express) y Frontend (Vue) | [mapa-modulos.md](./modulos/mapa-modulos.md) |
+| **Stores** | Catálogo de stores de estado global reactivo Pinia y DTOs | [catalogo-stores.md](./stores/catalogo-stores.md) |
 
 ---
 
 ## Qué cubre cada guía
 
 ### [guia-backend.md](./guia-backend.md)
+- **Orden de Creación Lógico**: Prisma Model (`schema.prisma`) → Schemas DTO (`*.schemas.ts`) → Service (`*.service.ts`) → Controller (`*.controller.ts`) → Routes (`*.routes.ts`) → Express Server (`server.ts`)
 - Estructura de carpetas `src/core/` y `src/modules/`
-- Las 4 capas del módulo: `*.schemas.ts`, `*.service.ts`, `*.controller.ts`, `*.routes.ts`
-- El contrato `ResponseDTO` y los códigos HTTP usados
+- El contrato `ResponseDTO` y tabla de códigos HTTP usados
 - Utilidades del core: `parsearId`, `validarCodigo`, `capitalizarPalabras`, `constantes.ts`
-- Manejo de errores de Prisma: `P2002`, `P2025`, `P2003`
-- Seguridad JWT: `validarJWT` y `req.usuario`
-- Tutorial completo para agregar un módulo nuevo desde cero
+- Manejo explícito de errores de Prisma: `P2002`, `P2025`, `P2003`
+- Seguridad y autenticación JWT: `validarJWT` y `req.usuario`
+- Tutorial completo paso a paso para crear el módulo `proveedores`
 - Tutorial para agregar un endpoint a un módulo existente
-- El orden obligatorio de middlewares en `server.ts`
 - Solución a errores comunes de compilación y runtime
 
 ### [guia-frontend.md](./guia-frontend.md)
+- **Orden de Creación Lógico**: Cliente HTTP (`api.ts`) + `RespuestaApi<T>` + Core Types → Store Pinia (`*.store.ts`) → Validaciones (`validations/registro.ts`) → Componente Formulario Reusable (`components/*Form.vue`) → Vista Principal (`views/*View.vue`) → Router (`router.ts`) + Menú (`Menu.vue`)
 - Estructura de carpetas `src/core/` y `src/modules/`
-- La instancia HTTP `api` de `@/core/api` (Axios con interceptores de JWT y auto-refresh)
-- Por qué se usa `api` y no `authStore.apiFetch` ni `fetch` directo
-- El contrato `RespuestaApi<T>` y su manejo en stores y vistas
-- Stores Pinia: Composition API, tipado DTO, manejo de `AxiosError`, `storeToRefs`
-- Vistas `*View.vue`: `AppTabs`, `v-data-table`, `v-dialog`, `useToast`, carga inicial
-- Formularios `*Form.vue`: `VuetifyForm`, props/emits, watch para edición, validaciones Vuetify
-- El archivo `validations/registro.ts`: cómo escribir y vincular reglas de validación
-- El Router: cómo registrar rutas, `meta.requiresAuth`, `meta.roles` y el Navigation Guard por roles (`tieneRol`)
-- Tutorial completo de módulo nuevo (store + validaciones + formulario + vista + ruta)
+- La instancia HTTP `api` con interceptores automáticos de JWT y auto-refresh
+- Stores Pinia con Composition API, DTOs locales y desestructuración reactiva con `storeToRefs`
+- Formularios reusables con Vuetify 3, `VuetifyForm`, props/emits y `watch` profundo (`deep: true`)
+- Vistas principales con `AppTabs`, `v-data-table`, `v-dialog` de confirmación y `useToast`
+- Router: registro de rutas protegidas, Navigation Guard y sincronización con `Menu.vue`
+- Tutorial completo paso a paso para crear el módulo `proveedores`
 - Solución a errores comunes de reactividad, formularios y peticiones HTTP
+
+### [diccionario-componentes.md](./components/diccionario-componentes.md)
+- Props, Emits, Slots, Vue Composition API y Vuetify 3 para `AppTabs`, `Menu`, `SinergyChip` y `ThemeToggle`
+
+### [catalogo-vistas.md](./views/catalogo-vistas.md)
+- Rutas, permisos, stores consumidos y componentes incrustados en cada vista SPA del proyecto
+
+### [mapa-modulos.md](./modulos/mapa-modulos.md)
+- Matriz de trazabilidad de punta a punta entre modelos de BD, endpoints Express, stores Pinia y vistas Vue
+
+### [catalogo-stores.md](./stores/catalogo-stores.md)
+- Estado reactivo Pinia, DTOs exportados, llamadas a la API mediante Axios y patrones con `storeToRefs`
 
 ---
 
@@ -60,17 +73,17 @@ Sinergy es un sistema de gestión de mantenimiento industrial construido como mo
 - [2. Parte A — Backend (Feature-Based Architecture)](#2-parte-a--backend-feature-based-architecture)
   - [2.1 Principios de la Arquitectura por Módulos](#21-principios-de-la-arquitectura-por-módulos)
   - [2.2 Modelado de Base de Datos con Prisma](#22-modelado-de-base-de-datos-con-prisma)
-  - [2.3 Estándar Unificado de Respuestas HTTP ({ status, message, data })](#23-estándar-unificado-de-respuestas-http--status-message-data-)
-  - [2.4 Creación de un Módulo Backend (Routes, Controller, Service)](#24-creación-de-un-módulo-backend-routes-controller-service)
+  - [2.3 Estándar Unificado de Respuestas HTTP (status, message, data)](#23-estándar-unificado-de-respuestas-http-status-message-data)
+  - [2.4 Creación de un Módulo Backend (Orden Lógico de Capas)](#24-creación-de-un-módulo-backend-orden-lógico-de-capas)
   - [2.5 Registro del Módulo en Express Server](#25-registro-del-módulo-en-express-server)
-  - [2.6 Manejo Global de Errores (AppError & ErrorHandler)](#26-manejo-global-de-errores-apperror--errorhandler)
-- [3. Parte B — Frontend (Vue 3 SPA, Pinia & Vuetify 3)](#3-parte-b--frontend-vue-3-spa-pinia--vuetify-3)
+  - [2.6 Manejo Global de Errores (AppError y ErrorHandler)](#26-manejo-global-de-errores-apperror-y-errorhandler)
+- [3. Parte B — Frontend (Vue 3 SPA, Pinia y Vuetify 3)](#3-parte-b--frontend-vue-3-spa-pinia-y-vuetify-3)
   - [3.1 Estructura Modular del Frontend](#31-estructura-modular-del-frontend)
   - [3.2 Gestión del Token de Sesión y Autenticación (Access Token + Refresh Cookie)](#32-gestión-del-token-de-sesión-y-autenticación-access-token--refresh-cookie)
   - [3.3 Creación y Estructura de Stores en Pinia (*.store.ts)](#33-creación-y-estructura-de-stores-en-pinia-storets)
-  - [3.4 Consumo Directo del Backend con authStore.apiFetch](#34-consumo-directo-del-backend-con-authstoreapifetch)
-  - [3.5 Creación de Vistas (*View.vue) y Configuración en Vue Router (router.ts)](#35-creación-de-vistas-viewvue-y-configuración-en-vue-router-routerts)
-  - [3.6 Validaciones de Formularios en Tiempo Real (Vuetify 3 & :rules)](#36-validaciones-de-formularios-en-tiempo-real-vuetify-3--rules)
+  - [3.4 Consumo Directo del Backend con la Instancia api](#34-consumo-directo-del-backend-con-la-instancia-api)
+  - [3.5 Componentes Formulario Reusables (*Form.vue) y Validaciones](#35-componentes-formulario-reusables-formvue-y-validaciones)
+  - [3.6 Creación de Vistas (*View.vue) y Configuración en Vue Router (router.ts)](#36-creación-de-vistas-viewvue-y-configuración-en-vue-router-routerts)
   - [3.7 Sistema de Notificaciones Globales (useToast)](#37-sistema-de-notificaciones-globales-usetoast)
   - [3.8 Ejemplo Práctico: Módulo de Plantas (PlantasView.vue + plantas.store.ts)](#38-ejemplo-práctico-módulo-de-plantas-plantasviewvue--plantasstorets)
   - [3.9 Ejemplo Práctico: Formulario de Login (LoginView.vue + auth.store.ts)](#39-ejemplo-práctico-formulario-de-login-loginviewvue--authstorets)
