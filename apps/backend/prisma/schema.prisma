@@ -182,7 +182,8 @@ model TipoEquipo {
   nombre      String  @unique @db.VarChar(50)
   descripcion String? @db.Text
 
-  equipos Equipo[]
+  equipos    Equipo[]
+  plantillas PlantillaVariable[]
 
   @@map("tipos_equipo")
 }
@@ -221,24 +222,27 @@ model Componente {
 }
 
 model Variable {
-  id             Int            @id @default(autoincrement())
-  componenteId   Int            @map("componente_id")
-  componente     Componente     @relation(fields: [componenteId], references: [id], onDelete: Cascade)
-  nombre         String         @db.VarChar(255)
-  tipoEvaluacion TipoEvaluacion @map("tipo_evaluacion")
-  unidad         String?        @db.VarChar(20)
-  valorMinimo    Decimal?       @map("valor_minimo") @db.Decimal(12, 4)
-  valorMaximo    Decimal?       @map("valor_maximo") @db.Decimal(12, 4)
-  ordenPosicion  Int            @default(0) @map("orden_posicion")
-  activa         Boolean        @default(true)
-  creadoEn       DateTime       @default(now()) @map("creado_en")
-  actualizadoEn  DateTime       @updatedAt @map("actualizado_en")
+  id               Int            @id @default(autoincrement())
+  componenteId     Int            @map("componente_id")
+  componente       Componente     @relation(fields: [componenteId], references: [id], onDelete: Cascade)
+  plantillaId      Int?           @map("plantilla_id")  // FK a la plantilla que le dio origen
+  plantilla        PlantillaVariable? @relation(fields: [plantillaId], references: [id], onDelete: SetNull)
+  // Los demás campos se copian de la plantilla al crear la instancia
+  nombre           String         @db.VarChar(255)
+  tipoEvaluacion   TipoEvaluacion @map("tipo_evaluacion")
+  unidad           String?        @db.VarChar(20)
+  valorMinimo      Decimal?       @map("valor_minimo") @db.Decimal(12, 4)
+  valorMaximo      Decimal?       @map("valor_maximo") @db.Decimal(12, 4)
+  ordenPosicion    Int            @default(0) @map("orden_posicion")
+  activa           Boolean        @default(true)
+  creadoEn         DateTime       @default(now()) @map("creado_en")
+  actualizadoEn    DateTime       @updatedAt @map("actualizado_en")
 
-  opcionesSeleccion  OpcionSeleccion[]
+  opcionesSeleccion OpcionSeleccion[]
   inspeccionDetalles InspeccionDetalle[]
 
   @@index([componenteId])
-  @@index([tipoEvaluacion]) // D-06: filtro al construir formulario Data-Driven por tipo de control
+  @@index([plantillaId])
   @@map("variables")
 }
 
@@ -253,6 +257,44 @@ model OpcionSeleccion {
   @@unique([variableId, clave], name: "uq_variable_clave")
   @@index([variableId])
   @@map("opciones_seleccion")
+}
+
+model PlantillaVariable {
+  id             Int            @id @default(autoincrement())
+  tipoEquipoId   Int            @map("tipo_equipo_id")
+  tipoEquipo     TipoEquipo     @relation(fields: [tipoEquipoId], references: [id], onDelete: Cascade)
+  // Opcional: si quieres diferenciar por tipo de inspección
+  tipoInspeccion TipoInspeccion? @map("tipo_inspeccion")
+  nombre         String         @db.VarChar(255)
+  descripcion    String?        @db.Text
+  tipoEvaluacion TipoEvaluacion @map("tipo_evaluacion")
+  unidad         String?        @db.VarChar(20)
+  valorMinimo    Decimal?       @map("valor_minimo") @db.Decimal(12, 4)
+  valorMaximo    Decimal?       @map("valor_maximo") @db.Decimal(12, 4)
+  ordenPosicion  Int            @default(0) @map("orden_posicion")
+  activa         Boolean        @default(true)
+  creadoEn       DateTime       @default(now()) @map("creado_en")
+  actualizadoEn  DateTime       @updatedAt @map("actualizado_en")
+
+  opcionesSeleccion PlantillaOpcionSeleccion[]
+  variablesInstancia Variable[]
+
+  @@index([tipoEquipoId])
+  @@index([tipoInspeccion])
+  @@map("plantilla_variables")
+}
+
+model PlantillaOpcionSeleccion {
+  id             Int              @id @default(autoincrement())
+  plantillaId    Int              @map("plantilla_id")
+  plantilla      PlantillaVariable @relation(fields: [plantillaId], references: [id], onDelete: Cascade)
+  clave          String           @db.VarChar(10)
+  etiqueta       String           @db.VarChar(100)
+  ordenPosicion  Int              @default(0) @map("orden_posicion")
+
+  @@unique([plantillaId, clave], name: "uq_plantilla_clave")
+  @@index([plantillaId])
+  @@map("plantilla_opciones_seleccion")
 }
 
 // -----------------------------------------------------------------------------
