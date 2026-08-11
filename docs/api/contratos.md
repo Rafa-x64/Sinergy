@@ -920,7 +920,7 @@ Actualiza parcialmente un componente.
 
 - **Acceso:** Protegido (`Authorization: Bearer <accessToken>`)
 - **URL Parameters:** `id` (ID del componente)
-- **Request Body (`EditarComponenteDTO`):** `nombre`, `descripcion`, `ordenPosicion`, `activo`.
+- **Request Body (`EditarComponenteDTO`):** `equipoId`, `nombre`, `descripcion`, `ordenPosicion`, `activo`.
 
 ---
 

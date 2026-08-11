@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useToast } from 'vue-toastification'
 import AppTabs from '../../../components/AppTabs.vue'
@@ -34,25 +34,41 @@ const mostrarDialogoEliminar = ref<boolean>(false)
 const idAEliminar = ref<number | null>(null)
 const cargandoEliminacion = ref<boolean>(false)
 
-const pestañasLineas: TabItem[] = [
-    { id: 'lista', name: 'Lista de Usuarios' },
-    { id: 'registrar', name: 'Añadir Usuario' },
-    { id: 'editar', name: 'Editar Usuario' }
-]
+const pestañasUsuarios = computed<TabItem[]>(() => {
+    const items: TabItem[] = [
+        { id: 'lista', name: 'Lista de Usuarios' },
+        { id: 'registrar', name: 'Añadir Usuario' }
+    ]
+    if (idUsuarioEditar.value !== null) {
+        items.push({ id: 'editar', name: 'Editar Usuario' })
+    }
+    return items
+})
 
 const headersTabla = [
-    { title: 'Id', key: 'id' },
-    { title: 'Nombre', key: 'nombre' },
-    { title: 'Apellido', key: 'apellido' },
-    { title: 'Correo', key: 'email' },
-    { title: 'Nombre de Usuario', key: 'nombreUsuario' },
-    { title: 'Rol', key: 'rol' },
-    { title: 'Estado', key: 'activo' },
-    { title: 'Ultimo Acceso', key: 'ultimoAcceso' },
-    { title: 'Fecha Creación', key: 'creadoEn' },
-    { title: 'Última Actualización', key: 'actualizadoEn' },
-    { title: 'Acciones', key: 'acciones', sortable: false, align: 'end' as const }
+    { title: 'Id', key: 'id', align: 'center' as const },
+    { title: 'Nombre', key: 'nombre', align: 'center' as const },
+    { title: 'Apellido', key: 'apellido', align: 'center' as const },
+    { title: 'Correo', key: 'email', align: 'center' as const },
+    { title: 'Nombre de Usuario', key: 'nombreUsuario', align: 'center' as const },
+    { title: 'Rol', key: 'rol', align: 'center' as const },
+    { title: 'Estado', key: 'activo', align: 'center' as const },
+    { title: 'Ultimo Acceso', key: 'ultimoAcceso', align: 'center' as const },
+    { title: 'Fecha Creación', key: 'creadoEn', align: 'center' as const },
+    { title: 'Última Actualización', key: 'actualizadoEn', align: 'center' as const },
+    { title: 'Acciones', key: 'acciones', sortable: false, align: 'center' as const }
 ]
+
+const formatearFecha = (fecha: Date | string | null | undefined): string => {
+    if (!fecha) return '—'
+    return new Date(fecha).toLocaleString('es-ES', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    })
+}
 
 const inicializarDatos = async (): Promise<void> => {
     const [resUsuarios, resRoles] = await Promise.all([
@@ -131,11 +147,18 @@ const prepararEliminacion = (id: number): void => {
     idAEliminar.value = id
     mostrarDialogoEliminar.value = true
 }
+
+watch(pestañaActiva, (nuevaPestana) => {
+    if (nuevaPestana === 'registrar' || nuevaPestana === 'lista') {
+        idUsuarioEditar.value = null
+        datosFormulario.value = { ...usuarioVacio }
+    }
+})
 </script>
 
 <template>
-    <v-container fluid class="lineas-dashboard">
-        <AppTabs v-model="pestañaActiva" :tabs="pestañasLineas">
+    <v-container fluid class="usuarios-dashboard">
+        <AppTabs v-model="pestañaActiva" :tabs="pestañasUsuarios">
             <template #tab-lista>
                 <v-data-table :items="usuarios" :headers="headersTabla">
                     <template #item.rol="{ item }">
@@ -154,12 +177,26 @@ const prepararEliminacion = (id: number): void => {
                         </v-chip>
                     </template>
 
+                    <template #item.ultimoAcceso="{ item }">
+                        <span>{{ formatearFecha(item.ultimoAcceso) }}</span>
+                    </template>
+
+                    <template #item.creadoEn="{ item }">
+                        <span>{{ formatearFecha(item.creadoEn) }}</span>
+                    </template>
+
+                    <template #item.actualizadoEn="{ item }">
+                        <span>{{ formatearFecha(item.actualizadoEn) }}</span>
+                    </template>
+
                     <template #item.acciones="{ item }">
-                        <v-btn color="primary" variant="text" size="small" @click="prepararEdicion(item)">Editar</v-btn>
-                        <v-btn color="error" variant="text" size="small" @click="prepararEliminacion(item.id)"
-                            :disabled="!item.activo">
-                            Eliminar
-                        </v-btn>
+                        <div class="d-flex ga-2 align-center justify-center">
+                            <v-btn color="primary" variant="text" size="small" @click="prepararEdicion(item)" prepend-icon="mdi-file-edit">Editar</v-btn>
+                            <v-btn color="error" variant="text" size="small" @click="prepararEliminacion(item.id)"
+                                :disabled="!item.activo" prepend-icon="mdi-minus-circle">
+                                Eliminar
+                            </v-btn>
+                        </div>
                     </template>
                 </v-data-table>
             </template>
@@ -173,15 +210,10 @@ const prepararEliminacion = (id: number): void => {
             </template>
 
             <template #tab-editar>
-                <v-card class="pa-4" elevation="0">
+                <v-card class="pa-4" elevation="0" v-if="idUsuarioEditar !== null">
                     <v-card-title class="px-0 mb-4 text-h5 font-weight-bold">Editar Usuario</v-card-title>
 
-                    <v-alert v-if="pestañaActiva === 'editar' && idUsuarioEditar === null" type="info" variant="tonal"
-                        class="mb-4">
-                        Seleccione un usuario desde la pestaña "Lista de Usuarios".
-                    </v-alert>
-
-                    <FormularioUsuario v-else :roles="roles" :datos-iniciales="datosFormulario" :cargando="cargando"
+                    <FormularioUsuario :roles="roles" :datos-iniciales="datosFormulario" :cargando="cargando"
                         :es-edicion="true" texto-boton="Actualizar Usuario" @submit="manejarGuardado"
                         @cancelar="cancelarEdicion" />
                 </v-card>
@@ -207,4 +239,10 @@ const prepararEliminacion = (id: number): void => {
     </v-container>
 </template>
 
-<style scoped></style>
+<style scoped>
+.usuarios-dashboard :deep(.v-data-table th),
+.usuarios-dashboard :deep(.v-data-table td) {
+    white-space: nowrap !important;
+    text-align: center !important;
+}
+</style>

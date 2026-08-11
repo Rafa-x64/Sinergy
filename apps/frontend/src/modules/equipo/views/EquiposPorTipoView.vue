@@ -83,22 +83,27 @@ const cargandoEliminacion = ref(false)
 
 // ─── Pestañas ────────────────────────────────────────────────────────────────
 
-const pestañasVista: TabItem[] = [
-    { id: 'lista', name: 'Lista' },
-    { id: 'registrar', name: 'Añadir' },
-    { id: 'editar', name: 'Editar' }
-]
+const pestañasVista = computed<TabItem[]>(() => {
+    const items: TabItem[] = [
+        { id: 'lista', name: 'Lista' },
+        { id: 'registrar', name: 'Añadir' }
+    ]
+    if (idEquipoEditar.value !== null) {
+        items.push({ id: 'editar', name: 'Editar' })
+    }
+    return items
+})
 
 // ─── Headers de tabla ────────────────────────────────────────────────────────
 
 const headersTabla = [
-    { title: 'Código', key: 'codigo' },
-    { title: 'Nombre', key: 'nombre' },
-    { title: 'Línea Operativa', key: 'linea' },
-    { title: 'Marca / Modelo', key: 'marcaModelo' },
-    { title: 'Serial', key: 'serial' },
-    { title: 'Estado', key: 'estadoOperativo' },
-    { title: 'Acciones', key: 'acciones', sortable: false, align: 'end' as const }
+    { title: 'Código', key: 'codigo', align: 'center' as const },
+    { title: 'Nombre', key: 'nombre', align: 'center' as const },
+    { title: 'Línea Operativa', key: 'linea', align: 'center' as const },
+    { title: 'Marca / Modelo', key: 'marcaModelo', align: 'center' as const },
+    { title: 'Serial', key: 'serial', align: 'center' as const },
+    { title: 'Estado', key: 'estadoOperativo', align: 'center' as const },
+    { title: 'Acciones', key: 'acciones', sortable: false, align: 'center' as const }
 ]
 
 // ─── Utilidades de color ─────────────────────────────────────────────────────
@@ -205,6 +210,13 @@ const ejecutarEliminacion = async (): Promise<void> => {
         if (!mostrarDialogoEliminar.value) idAEliminar.value = null
     }
 }
+
+watch(pestañaActiva, (nuevaPestana) => {
+    if (nuevaPestana === 'registrar' || nuevaPestana === 'lista') {
+        idEquipoEditar.value = null
+        datosFormulario.value = { ...equipoVacio.value }
+    }
+})
 </script>
 
 <template>
@@ -246,23 +258,27 @@ const ejecutarEliminacion = async (): Promise<void> => {
                     </template>
 
                     <template #item.acciones="{ item }">
-                        <v-btn
-                            color="primary"
-                            variant="text"
-                            size="small"
-                            @click="prepararEdicion(item)"
-                        >
-                            Editar
-                        </v-btn>
-                        <v-btn
-                            color="error"
-                            variant="text"
-                            size="small"
-                            @click="prepararEliminacion(item.id)"
-                            :disabled="item.estadoOperativo === 'INOPERATIVO'"
-                        >
-                            Desactivar
-                        </v-btn>
+                        <div class="d-flex ga-2 align-center justify-center">
+                            <v-btn
+                                color="primary"
+                                variant="text"
+                                size="small"
+                                @click="prepararEdicion(item)"
+                                prepend-icon="mdi-file-edit"
+                            >
+                                Editar
+                            </v-btn>
+                            <v-btn
+                                color="error"
+                                variant="text"
+                                size="small"
+                                @click="prepararEliminacion(item.id)"
+                                :disabled="item.estadoOperativo === 'INOPERATIVO'"
+                                prepend-icon="mdi-minus-circle"
+                            >
+                                Desactivar
+                            </v-btn>
+                        </div>
                     </template>
                 </v-data-table>
             </template>
@@ -288,22 +304,12 @@ const ejecutarEliminacion = async (): Promise<void> => {
 
             <!-- Pestaña 3: Editar equipo seleccionado -->
             <template #tab-editar>
-                <v-card class="pa-4" elevation="0">
+                <v-card class="pa-4" elevation="0" v-if="idEquipoEditar !== null">
                     <v-card-title class="px-0 mb-4 text-h5 font-weight-bold">
                         Editar {{ tipoFiltro }}
                     </v-card-title>
 
-                    <v-alert
-                        v-if="pestañaActiva === 'editar' && idEquipoEditar === null"
-                        type="info"
-                        variant="tonal"
-                        class="mb-4"
-                    >
-                        Seleccione un elemento desde la pestaña "Lista".
-                    </v-alert>
-
                     <FormularioEquipo
-                        v-else
                         :datos-iniciales="datosFormulario"
                         :cargando="cargando"
                         :texto-boton="`Actualizar ${tipoFiltro}`"
@@ -351,5 +357,10 @@ const ejecutarEliminacion = async (): Promise<void> => {
 <style scoped>
 .equipos-tipo-view {
     padding: 16px;
+}
+.equipos-tipo-view :deep(.v-data-table th),
+.equipos-tipo-view :deep(.v-data-table td) {
+    white-space: nowrap !important;
+    text-align: center !important;
 }
 </style>

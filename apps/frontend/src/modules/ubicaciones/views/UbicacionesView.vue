@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useToast } from 'vue-toastification'
 import AppTabs from '../../../components/AppTabs.vue'
@@ -31,22 +31,38 @@ const mostrarDialogoEliminar = ref<boolean>(false)
 const idAEliminar = ref<number | null>(null)
 const cargandoEliminacion = ref<boolean>(false)
 
-const pestañasUbicaciones: TabItem[] = [
-    { id: "lista", name: "Lista de Ubicaciones" },
-    { id: "registrar", name: "Añadir Ubicación" },
-    { id: "editar", name: "Editar Ubicación" },
-]
+const pestañasUbicaciones = computed<TabItem[]>(() => {
+    const items: TabItem[] = [
+        { id: 'lista', name: 'Lista de Ubicaciones' },
+        { id: 'registrar', name: 'Añadir Ubicación' }
+    ]
+    if (idUbicacionEditar.value !== null) {
+        items.push({ id: 'editar', name: 'Editar Ubicación' })
+    }
+    return items
+})
 
 const headersTabla = [
-    { title: 'Código', key: 'codigo' },
-    { title: 'Nombre', key: 'nombre' },
-    { title: 'Planta', key: 'planta' },
-    { title: 'Estado', key: 'activa' },
-    { title: 'Descripción', key: 'descripcion' },
-    { title: 'Fecha Creación', key: 'creadoEn' },
-    { title: 'Última Actualización', key: 'actualizadoEn' },
-    { title: 'Acciones', key: 'acciones', sortable: false, align: 'end' as const }
+    { title: 'Código', key: 'codigo', align: 'center' as const },
+    { title: 'Nombre', key: 'nombre', align: 'center' as const },
+    { title: 'Planta', key: 'planta', align: 'center' as const },
+    { title: 'Estado', key: 'activa', align: 'center' as const },
+    { title: 'Descripción', key: 'descripcion', align: 'center' as const },
+    { title: 'Fecha Creación', key: 'creadoEn', align: 'center' as const },
+    { title: 'Última Actualización', key: 'actualizadoEn', align: 'center' as const },
+    { title: 'Acciones', key: 'acciones', sortable: false, align: 'center' as const }
 ]
+
+const formatearFecha = (fecha: Date | string | null | undefined): string => {
+    if (!fecha) return '—'
+    return new Date(fecha).toLocaleString('es-ES', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    })
+}
 
 const obtenerNombrePlanta = (plantaId: number): string => {
     const plantaEncontrada = plantas.value.find((p) => p.id === plantaId)
@@ -129,6 +145,13 @@ const ejecutarEliminacion = async (): Promise<void> => {
         if (!mostrarDialogoEliminar.value) idAEliminar.value = null
     }
 }
+
+watch(pestañaActiva, (nuevaPestana) => {
+    if (nuevaPestana === 'registrar' || nuevaPestana === 'lista') {
+        idUbicacionEditar.value = null
+        datosFormulario.value = { ...ubicacionVacia }
+    }
+})
 </script>
 
 <template>
@@ -145,11 +168,18 @@ const ejecutarEliminacion = async (): Promise<void> => {
                             {{ item.activa ? 'Activa' : 'Inactiva' }}
                         </v-chip>
                     </template>
+                    <template #item.creadoEn="{ item }">
+                        <span>{{ formatearFecha(item.creadoEn) }}</span>
+                    </template>
+                    <template #item.actualizadoEn="{ item }">
+                        <span>{{ formatearFecha(item.actualizadoEn) }}</span>
+                    </template>
                     <template #item.acciones="{ item }">
-                        <!-- Conectamos el botón con la función para inyectar la data -->
-                        <v-btn color="primary" variant="text" size="small" @click="prepararEdicion(item)">Editar</v-btn>
-                        <v-btn color="error" variant="text" size="small" @click="prepararEliminacion(item.id)"
-                            :disabled="!item.activa">Eliminar</v-btn>
+                        <div class="d-flex ga-2 align-center justify-center">
+                            <v-btn color="primary" variant="text" size="small" @click="prepararEdicion(item)" prepend-icon="mdi-file-edit">Editar</v-btn>
+                            <v-btn color="error" variant="text" size="small" @click="prepararEliminacion(item.id)"
+                                :disabled="!item.activa" prepend-icon="mdi-minus-circle">Eliminar</v-btn>
+                        </div>
                     </template>
                 </v-data-table>
             </template>
@@ -163,22 +193,15 @@ const ejecutarEliminacion = async (): Promise<void> => {
             </template>
 
             <template #tab-editar>
-                <v-card class="pa-4" elevation="0">
+                <v-card class="pa-4" elevation="0" v-if="idUbicacionEditar !== null">
                     <v-card-title class="px-0 mb-4 text-h5 font-weight-bold">Editar Ubicación</v-card-title>
-
-                    <v-alert v-if="pestañaActiva === 'editar' && idUbicacionEditar === null" type="info" variant="tonal"
-                        class="mb-4">
-                        Seleccione una ubicación desde la pestaña "Lista de Ubicaciones".
-                    </v-alert>
-
-                    <UbicacionForm v-else :plantas="plantas" :datos-iniciales="datosFormulario" :cargando="cargando"
+                    <UbicacionForm :plantas="plantas" :datos-iniciales="datosFormulario" :cargando="cargando"
                         texto-boton="Actualizar Ubicación" @submit="manejarGuardado" @cancelar="cancelarEdicion" />
                 </v-card>
             </template>
         </AppTabs>
 
         <v-dialog v-model="mostrarDialogoEliminar" max-width="500px" persistent>
-            <!-- Eliminado el v-card duplicado para mantener el DOM limpio -->
             <v-card>
                 <v-card-title class="text-h6 font-weight-bold text-error">Confirmar Acción</v-card-title>
                 <v-card-text>¿Está seguro de que desea desactivar este elemento?</v-card-text>
@@ -194,5 +217,10 @@ const ejecutarEliminacion = async (): Promise<void> => {
     </v-container>
 </template>
 
-<!-- Corregido el typo de scoped -->
-<style scoped></style>
+<style scoped>
+.ubicaciones-dashboard :deep(.v-data-table th),
+.ubicaciones-dashboard :deep(.v-data-table td) {
+    white-space: nowrap !important;
+    text-align: center !important;
+}
+</style>

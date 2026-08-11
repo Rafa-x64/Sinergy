@@ -86,8 +86,15 @@ export const componenteController = {
         })
       }
 
-      const { nombre, descripcion, ordenPosicion, activo } = req.body
+      const { equipoId, nombre, descripcion, ordenPosicion, activo } = req.body
       const datosActualizados: EditarComponenteDTO = {}
+
+      if (equipoId !== undefined) {
+        if (typeof equipoId !== 'number') {
+          return res.status(400).json({ status: 'error', message: 'El ID del equipo debe ser un número' })
+        }
+        datosActualizados.equipoId = equipoId
+      }
 
       if (nombre !== undefined) {
         if (typeof nombre !== 'string' || !nombre.trim()) {
@@ -134,6 +141,12 @@ export const componenteController = {
           return res.status(404).json({
             status: 'error',
             message: `El componente con ID ${req.params.id} no existe`
+          })
+        }
+        if (error.code === 'P2003') {
+          return res.status(404).json({
+            status: 'error',
+            message: 'El equipo especificado no existe'
           })
         }
       }
