@@ -6,6 +6,7 @@ export interface RegistrarComponenteDTO {
 }
 
 export interface EditarComponenteDTO {
+  equipoId?: number
   nombre?: string
   descripcion?: string | null
   ordenPosicion?: number

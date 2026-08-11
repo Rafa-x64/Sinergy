@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useToast } from 'vue-toastification'
 import AppTabs from '../../../components/AppTabs.vue'
@@ -20,22 +20,38 @@ const idPlantaAEliminar = ref<number | null>(null)
 const cargandoEliminacion = ref<boolean>(false)
 
 const headersTabla = [
-    { title: 'Código', key: 'codigo' },
-    { title: 'Nombre', key: 'nombre' },
-    { title: 'Estado', key: 'activa' },
-    { title: 'Fecha Creación', key: 'creadoEn' },
-    { title: 'Última Actualización', key: 'actualizadoEn' },
-    { title: 'Acciones', key: 'acciones', sortable: false, align: 'end' as const }
+    { title: 'Código', key: 'codigo', align: 'center' as const },
+    { title: 'Nombre', key: 'nombre', align: 'center' as const },
+    { title: 'Estado', key: 'activa', align: 'center' as const },
+    { title: 'Fecha Creación', key: 'creadoEn', align: 'center' as const },
+    { title: 'Última Actualización', key: 'actualizadoEn', align: 'center' as const },
+    { title: 'Acciones', key: 'acciones', sortable: false, align: 'center' as const }
 ]
 
-const pestañasPlantas: TabItem[] = [
-    { id: 'lista', name: 'Lista de Plantas' },
-    { id: 'registrar', name: 'Añadir Planta' },
-    { id: 'editar', name: 'Editar Planta' }
-]
+const pestañasPlantas = computed<TabItem[]>(() => {
+    const items: TabItem[] = [
+        { id: 'lista', name: 'Lista de Plantas' },
+        { id: 'registrar', name: 'Añadir Planta' }
+    ]
+    if (idPlantaEditar.value !== null) {
+        items.push({ id: 'editar', name: 'Editar Planta' })
+    }
+    return items
+})
 
 const plantaVacia: Partial<RegistrarPlantaDTO> = { codigo: '', nombre: '', activa: true }
 const datosFormulario = ref<Partial<RegistrarPlantaDTO>>({ ...plantaVacia })
+
+const formatearFecha = (fecha: Date | string | null | undefined): string => {
+    if (!fecha) return '—'
+    return new Date(fecha).toLocaleString('es-ES', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    })
+}
 
 const listarPlantas = async (): Promise<void> => {
     const resultado = await plantaStore.listarPlantas()
@@ -63,8 +79,7 @@ const manejarGuardado = async (datosEmitidos: RegistrarPlantaDTO): Promise<void>
 
         if (resultado.status === 'ok') {
             toast.success(resultado.message ?? 'Operación exitosa')
-            pestañaActiva.value = 'lista'
-            datosFormulario.value = { ...plantaVacia } // Limpiamos la memoria
+            cancelarEdicion()
         } else {
             toast.error(resultado.message ?? 'Error en la operación')
         }
@@ -77,6 +92,7 @@ const manejarGuardado = async (datosEmitidos: RegistrarPlantaDTO): Promise<void>
 
 const cancelarEdicion = (): void => {
     pestañaActiva.value = 'lista'
+    idPlantaEditar.value = null
     datosFormulario.value = { ...plantaVacia }
 }
 
@@ -103,6 +119,13 @@ const ejecutarEliminacion = async (): Promise<void> => {
         if (!mostrarDialogoEliminar.value) idPlantaAEliminar.value = null
     }
 }
+
+watch(pestañaActiva, (nuevaPestana) => {
+    if (nuevaPestana === 'registrar' || nuevaPestana === 'lista') {
+        idPlantaEditar.value = null
+        datosFormulario.value = { ...plantaVacia }
+    }
+})
 </script>
 
 <template>
@@ -116,10 +139,18 @@ const ejecutarEliminacion = async (): Promise<void> => {
                             {{ item.activa ? 'Activa' : 'Inactiva' }}
                         </v-chip>
                     </template>
+                    <template #item.creadoEn="{ item }">
+                        <span>{{ formatearFecha(item.creadoEn) }}</span>
+                    </template>
+                    <template #item.actualizadoEn="{ item }">
+                        <span>{{ formatearFecha(item.actualizadoEn) }}</span>
+                    </template>
                     <template #item.acciones="{ item }">
-                        <v-btn color="primary" variant="text" size="small" @click="prepararEdicion(item)" prepend-icon="mdi-file-edit">Editar</v-btn>
-                        <v-btn color="error" variant="text" size="small" prepend-icon="mdi-minus-circle" @click="prepararEliminacion(item.id)"
-                            :disabled="!item.activa">Eliminar</v-btn>
+                        <div class="d-flex ga-2 align-center justify-center">
+                            <v-btn color="primary" variant="text" size="small" @click="prepararEdicion(item)" prepend-icon="mdi-file-edit">Editar</v-btn>
+                            <v-btn color="error" variant="text" size="small" prepend-icon="mdi-minus-circle" @click="prepararEliminacion(item.id)"
+                                :disabled="!item.activa">Eliminar</v-btn>
+                        </div>
                     </template>
                 </v-data-table>
             </template>
@@ -134,13 +165,9 @@ const ejecutarEliminacion = async (): Promise<void> => {
             </template>
 
             <template #tab-editar>
-                <v-card class="pa-4" elevation="0">
+                <v-card class="pa-4" elevation="0" v-if="idPlantaEditar !== null">
                     <v-card-title class="px-0 mb-4 text-h5 font-weight-bold">Editar Planta</v-card-title>
-                    <v-alert v-if="pestañaActiva === 'editar' && idPlantaEditar === null" type="info" variant="tonal"
-                        class="mb-4">
-                        Seleccione una planta desde la pestaña "Lista de Plantas".
-                    </v-alert>
-                    <PlantaForm v-else :datos-iniciales="datosFormulario" :cargando="cargando"
+                    <PlantaForm :datos-iniciales="datosFormulario" :cargando="cargando"
                         texto-boton="Actualizar Planta" @submit="manejarGuardado" @cancelar="cancelarEdicion" />
                 </v-card>
             </template>
@@ -162,3 +189,11 @@ const ejecutarEliminacion = async (): Promise<void> => {
         </v-dialog>
     </v-container>
 </template>
+
+<style scoped>
+.plantas-dashboard :deep(.v-data-table th),
+.plantas-dashboard :deep(.v-data-table td) {
+    white-space: nowrap !important;
+    text-align: center !important;
+}
+</style>

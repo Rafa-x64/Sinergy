@@ -64,17 +64,27 @@ const pestañasPrincipales: TabItem[] = [
     { id: 'tipos', name: 'Tipos de Equipo' }
 ]
 
-const pestañasEquipo: TabItem[] = [
-    { id: 'lista-equipos', name: 'Lista de Equipos' },
-    { id: 'registrar-equipo', name: 'Añadir Equipo' },
-    { id: 'editar-equipo', name: 'Editar Equipo' }
-]
+const pestañasEquipo = computed<TabItem[]>(() => {
+    const items: TabItem[] = [
+        { id: 'lista-equipos', name: 'Lista de Equipos' },
+        { id: 'registrar-equipo', name: 'Añadir Equipo' }
+    ]
+    if (idEquipoEditar.value !== null) {
+        items.push({ id: 'editar-equipo', name: 'Editar Equipo' })
+    }
+    return items
+})
 
-const pestañasTipo: TabItem[] = [
-    { id: 'lista-tipos', name: 'Lista de Tipos' },
-    { id: 'registrar-tipo', name: 'Añadir Tipo' },
-    { id: 'editar-tipo', name: 'Editar Tipo' }
-]
+const pestañasTipo = computed<TabItem[]>(() => {
+    const items: TabItem[] = [
+        { id: 'lista-tipos', name: 'Lista de Tipos' },
+        { id: 'registrar-tipo', name: 'Añadir Tipo' }
+    ]
+    if (idTipoEditar.value !== null) {
+        items.push({ id: 'editar-tipo', name: 'Editar Tipo' })
+    }
+    return items
+})
 
 const pestañaEquipo = ref<string | number>('lista-equipos')
 const pestañaTipo = ref<string | number>('lista-tipos')
@@ -82,21 +92,21 @@ const pestañaTipo = ref<string | number>('lista-tipos')
 // ─── Headers de tablas ────────────────────────────────────────────────────────
 
 const headersEquipos = [
-    { title: 'Código', key: 'codigo' },
-    { title: 'Nombre', key: 'nombre' },
-    { title: 'Tipo', key: 'tipo' },
-    { title: 'Línea', key: 'linea' },
-    { title: 'Marca / Modelo', key: 'marcaModelo' },
-    { title: 'Serial', key: 'serial' },
-    { title: 'Estado', key: 'estadoOperativo' },
-    { title: 'Acciones', key: 'acciones', sortable: false, align: 'end' as const }
+    { title: 'Código', key: 'codigo', align: 'center' as const },
+    { title: 'Nombre', key: 'nombre', align: 'center' as const },
+    { title: 'Tipo', key: 'tipo', align: 'center' as const },
+    { title: 'Línea', key: 'linea', align: 'center' as const },
+    { title: 'Marca / Modelo', key: 'marcaModelo', align: 'center' as const },
+    { title: 'Serial', key: 'serial', align: 'center' as const },
+    { title: 'Estado', key: 'estadoOperativo', align: 'center' as const },
+    { title: 'Acciones', key: 'acciones', sortable: false, align: 'center' as const }
 ]
 
 const headersTipos = [
-    { title: 'ID', key: 'id' },
-    { title: 'Nombre', key: 'nombre' },
-    { title: 'Descripción', key: 'descripcion' },
-    { title: 'Acciones', key: 'acciones', sortable: false, align: 'end' as const }
+    { title: 'ID', key: 'id', align: 'center' as const },
+    { title: 'Nombre', key: 'nombre', align: 'center' as const },
+    { title: 'Descripción', key: 'descripcion', align: 'center' as const },
+    { title: 'Acciones', key: 'acciones', sortable: false, align: 'center' as const }
 ]
 
 // ─── Colores por estado operativo ────────────────────────────────────────────
@@ -261,6 +271,20 @@ const ejecutarEliminacionTipo = async (): Promise<void> => {
         if (!mostrarDialogoEliminarTipo.value) idTipoAEliminar.value = null
     }
 }
+
+watch(pestañaEquipo, (nuevaPestana) => {
+    if (nuevaPestana === 'registrar-equipo' || nuevaPestana === 'lista-equipos') {
+        idEquipoEditar.value = null
+        datosFormularioEquipo.value = { ...equipoVacio }
+    }
+})
+
+watch(pestañaTipo, (nuevaPestana) => {
+    if (nuevaPestana === 'registrar-tipo' || nuevaPestana === 'lista-tipos') {
+        idTipoEditar.value = null
+        datosFormularioTipo.value = { ...tipoVacio }
+    }
+})
 </script>
 
 <template>
@@ -309,23 +333,27 @@ const ejecutarEliminacionTipo = async (): Promise<void> => {
 
                             <!-- Acciones -->
                             <template #item.acciones="{ item }">
-                                <v-btn
-                                    color="primary"
-                                    variant="text"
-                                    size="small"
-                                    @click="prepararEdicionEquipo(item)"
-                                >
-                                    Editar
-                                </v-btn>
-                                <v-btn
-                                    color="error"
-                                    variant="text"
-                                    size="small"
-                                    @click="prepararEliminacionEquipo(item.id)"
-                                    :disabled="item.estadoOperativo === 'INOPERATIVO'"
-                                >
-                                    Desactivar
-                                </v-btn>
+                                <div class="d-flex ga-2 align-center justify-center">
+                                    <v-btn
+                                        color="primary"
+                                        variant="text"
+                                        size="small"
+                                        @click="prepararEdicionEquipo(item)"
+                                        prepend-icon="mdi-file-edit"
+                                    >
+                                        Editar
+                                    </v-btn>
+                                    <v-btn
+                                        color="error"
+                                        variant="text"
+                                        size="small"
+                                        @click="prepararEliminacionEquipo(item.id)"
+                                        :disabled="item.estadoOperativo === 'INOPERATIVO'"
+                                        prepend-icon="mdi-minus-circle"
+                                    >
+                                        Desactivar
+                                    </v-btn>
+                                </div>
                             </template>
                         </v-data-table>
                     </template>
@@ -350,22 +378,12 @@ const ejecutarEliminacionTipo = async (): Promise<void> => {
 
                     <!-- Editar Equipo -->
                     <template #tab-editar-equipo>
-                        <v-card class="pa-4" elevation="0">
+                        <v-card class="pa-4" elevation="0" v-if="idEquipoEditar !== null">
                             <v-card-title class="px-0 mb-4 text-h5 font-weight-bold">
                                 Editar Equipo
                             </v-card-title>
 
-                            <v-alert
-                                v-if="pestañaEquipo === 'editar-equipo' && idEquipoEditar === null"
-                                type="info"
-                                variant="tonal"
-                                class="mb-4"
-                            >
-                                Seleccione un equipo desde la pestaña "Lista de Equipos".
-                            </v-alert>
-
                             <FormularioEquipo
-                                v-else
                                 :datos-iniciales="datosFormularioEquipo"
                                 :cargando="cargando"
                                 texto-boton="Actualizar Equipo"
@@ -395,22 +413,26 @@ const ejecutarEliminacionTipo = async (): Promise<void> => {
                             </template>
 
                             <template #item.acciones="{ item }">
-                                <v-btn
-                                    color="primary"
-                                    variant="text"
-                                    size="small"
-                                    @click="prepararEdicionTipo(item)"
-                                >
-                                    Editar
-                                </v-btn>
-                                <v-btn
-                                    color="error"
-                                    variant="text"
-                                    size="small"
-                                    @click="prepararEliminacionTipo(item.id)"
-                                >
-                                    Eliminar
-                                </v-btn>
+                                <div class="d-flex ga-2 align-center justify-center">
+                                    <v-btn
+                                        color="primary"
+                                        variant="text"
+                                        size="small"
+                                        @click="prepararEdicionTipo(item)"
+                                        prepend-icon="mdi-file-edit"
+                                    >
+                                        Editar
+                                    </v-btn>
+                                    <v-btn
+                                        color="error"
+                                        variant="text"
+                                        size="small"
+                                        @click="prepararEliminacionTipo(item.id)"
+                                        prepend-icon="mdi-minus-circle"
+                                    >
+                                        Eliminar
+                                    </v-btn>
+                                </div>
                             </template>
                         </v-data-table>
                     </template>
@@ -433,22 +455,12 @@ const ejecutarEliminacionTipo = async (): Promise<void> => {
 
                     <!-- Editar Tipo -->
                     <template #tab-editar-tipo>
-                        <v-card class="pa-4" elevation="0">
+                        <v-card class="pa-4" elevation="0" v-if="idTipoEditar !== null">
                             <v-card-title class="px-0 mb-4 text-h5 font-weight-bold">
                                 Editar Tipo de Equipo
                             </v-card-title>
 
-                            <v-alert
-                                v-if="pestañaTipo === 'editar-tipo' && idTipoEditar === null"
-                                type="info"
-                                variant="tonal"
-                                class="mb-4"
-                            >
-                                Seleccione un tipo de equipo desde la pestaña "Lista de Tipos".
-                            </v-alert>
-
                             <FormularioTipoEquipo
-                                v-else
                                 :datos-iniciales="datosFormularioTipo"
                                 :cargando="cargando"
                                 texto-boton="Actualizar Tipo"
@@ -490,12 +502,12 @@ const ejecutarEliminacionTipo = async (): Promise<void> => {
             </v-card>
         </v-dialog>
 
-        <!-- ─── Diálogo confirmación — Eliminar Tipo ─── -->
+        <!-- ─── Diálogo confirmación — Eliminar Tipo de Equipo ─── -->
         <v-dialog v-model="mostrarDialogoEliminarTipo" max-width="500px" persistent>
             <v-card>
-                <v-card-title class="text-h6 font-weight-bold text-error">Confirmar Eliminación</v-card-title>
+                <v-card-title class="text-h6 font-weight-bold text-error">Confirmar Acción</v-card-title>
                 <v-card-text>
-                    ¿Está seguro de que desea eliminar este tipo de equipo? Solo es posible si no tiene equipos asociados.
+                    ¿Está seguro de que desea eliminar este tipo de equipo? Esta acción no se puede deshacer.
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer />

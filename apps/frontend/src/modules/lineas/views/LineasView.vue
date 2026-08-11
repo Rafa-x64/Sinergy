@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useToast } from 'vue-toastification'
 import AppTabs from '../../../components/AppTabs.vue'
@@ -32,21 +32,37 @@ const mostrarDialogoEliminar = ref<boolean>(false)
 const idAEliminar = ref<number | null>(null)
 const cargandoEliminacion = ref<boolean>(false)
 
-const pestañasLineas: TabItem[] = [
-    { id: 'lista', name: 'Lista de Lineas' },
-    { id: 'registrar', name: 'Añadir Linea' },
-    { id: 'editar', name: 'Editar Linea' }
-]
+const pestañasLineas = computed<TabItem[]>(() => {
+    const items: TabItem[] = [
+        { id: 'lista', name: 'Lista de Lineas' },
+        { id: 'registrar', name: 'Añadir Linea' }
+    ]
+    if (idLineaEditar.value !== null) {
+        items.push({ id: 'editar', name: 'Editar Linea' })
+    }
+    return items
+})
 
 const headersTabla = [
-    { title: 'Código', key: 'codigo' },
-    { title: 'Nombre', key: 'nombre' },
-    { title: 'Ubicacion', key: 'ubicacion' },
-    { title: 'Estado', key: 'activa' },
-    { title: 'Fecha Creación', key: 'creadoEn' },
-    { title: 'Última Actualización', key: 'actualizadoEn' },
-    { title: 'Acciones', key: 'acciones', sortable: false, align: 'end' as const }
+    { title: 'Código', key: 'codigo', align: 'center' as const },
+    { title: 'Nombre', key: 'nombre', align: 'center' as const },
+    { title: 'Ubicacion', key: 'ubicacion', align: 'center' as const },
+    { title: 'Estado', key: 'activa', align: 'center' as const },
+    { title: 'Fecha Creación', key: 'creadoEn', align: 'center' as const },
+    { title: 'Última Actualización', key: 'actualizadoEn', align: 'center' as const },
+    { title: 'Acciones', key: 'acciones', sortable: false, align: 'center' as const }
 ]
+
+const formatearFecha = (fecha: Date | string | null | undefined): string => {
+    if (!fecha) return '—'
+    return new Date(fecha).toLocaleString('es-ES', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    })
+}
 
 const inicializarDatos = async (): Promise<void> => {
     const [resLineas, resUbicaciones] = await Promise.all([
@@ -124,6 +140,13 @@ const ejecutarEliminacion = async (): Promise<void> => {
         if (!mostrarDialogoEliminar.value) idAEliminar.value = null
     }
 }
+
+watch(pestañaActiva, (nuevaPestana) => {
+    if (nuevaPestana === 'registrar' || nuevaPestana === 'lista') {
+        idLineaEditar.value = null
+        datosFormulario.value = { ...lineaVacia }
+    }
+})
 </script>
 
 <template>
@@ -139,12 +162,20 @@ const ejecutarEliminacion = async (): Promise<void> => {
                             {{ item.activa ? 'Activa' : 'Inactiva' }}
                         </v-chip>
                     </template>
+                    <template #item.creadoEn="{ item }">
+                        <span>{{ formatearFecha(item.creadoEn) }}</span>
+                    </template>
+                    <template #item.actualizadoEn="{ item }">
+                        <span>{{ formatearFecha(item.actualizadoEn) }}</span>
+                    </template>
                     <template #item.acciones="{ item }">
-                        <v-btn color="primary" variant="text" size="small" @click="prepararEdicion(item)">Editar</v-btn>
-                        <v-btn color="error" variant="text" size="small" @click="prepararEliminacion(item.id)"
-                            :disabled="!item.activa">
-                            Eliminar
-                        </v-btn>
+                        <div class="d-flex ga-2 align-center justify-center">
+                            <v-btn color="primary" variant="text" size="small" @click="prepararEdicion(item)" prepend-icon="mdi-file-edit">Editar</v-btn>
+                            <v-btn color="error" variant="text" size="small" @click="prepararEliminacion(item.id)"
+                                :disabled="!item.activa" prepend-icon="mdi-minus-circle">
+                                Eliminar
+                            </v-btn>
+                        </div>
                     </template>
                 </v-data-table>
             </template>
@@ -158,15 +189,10 @@ const ejecutarEliminacion = async (): Promise<void> => {
             </template>
 
             <template #tab-editar>
-                <v-card class="pa-4" elevation="0">
+                <v-card class="pa-4" elevation="0" v-if="idLineaEditar !== null">
                     <v-card-title class="px-0 mb-4 text-h5 font-weight-bold">Editar Línea</v-card-title>
 
-                    <v-alert v-if="pestañaActiva === 'editar' && idLineaEditar === null" type="info" variant="tonal"
-                        class="mb-4">
-                        Seleccione una línea desde la pestaña "Lista de Líneas".
-                    </v-alert>
-
-                    <FormularioLinea v-else :ubicaciones="ubicaciones" :datos-iniciales="datosFormulario"
+                    <FormularioLinea :ubicaciones="ubicaciones" :datos-iniciales="datosFormulario"
                         :cargando="cargando" texto-boton="Actualizar Línea" @submit="manejarGuardado"
                         @cancelar="cancelarEdicion" />
                 </v-card>
@@ -192,4 +218,10 @@ const ejecutarEliminacion = async (): Promise<void> => {
     </v-container>
 </template>
 
-<style scoped></style>
+<style scoped>
+.lineas-dashboard :deep(.v-data-table th),
+.lineas-dashboard :deep(.v-data-table td) {
+    white-space: nowrap !important;
+    text-align: center !important;
+}
+</style>
