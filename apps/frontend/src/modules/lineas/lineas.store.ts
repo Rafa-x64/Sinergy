@@ -18,6 +18,8 @@ export interface Linea {
     activa: boolean
     ubicacionTecnicaId: number
     ubicacionTecnica?: UbicacionTecnica
+    creadoEn: Date,
+    actualizadoEn: Date
 }
 
 export interface RegistrarLineaDTO {

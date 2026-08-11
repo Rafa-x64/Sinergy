@@ -1,296 +1,92 @@
-# Diseño del Módulo — Variables Críticas (Tubrica)
+# Gestión Jerárquica y Plantillas de Variables Críticas
 
-**Versión:** 1.0
-**Fecha:** 2026-07-21
-**Estado:** Aprobado para implementación
+Este documento define la arquitectura, la experiencia de usuario (UX) y el plan de implementación por etapas para la gestión de variables críticas en componentes de planta. El modelo desacopla la definición de las variables respecto a los componentes individuales mediante la introducción de plantillas asociadas a tipos de equipo (`TipoEquipo`).
 
 ---
 
-## 1. Problema que Resuelve
+## Ventajas del Modelo
 
-Tubrica registra la inspección de variables críticas de planta de forma manual en Excel. Esto genera:
-
-- Pérdida de trazabilidad (sin auditoría de quién, cuándo y qué cambió).
-- Imposibilidad de calcular tendencias o alertas automáticas.
-- Dificultad para onboarding de nuevos técnicos.
-- Duplicación de trabajo al existir múltiples versiones del Excel circulando.
-
-**Solución:** Digitalizar el proceso con una interfaz web adaptativa generada dinámicamente desde la base de datos.
+* **Definición Única:** Las variables se definen a nivel de `TipoEquipo` (ej. Chiller, Compresor, Montacargas) y no por cada componente individual.
+* **Instanciación Automática:** Creación automática de variables al instanciar un componente mediante clonación de plantilla.
+* **Sincronización Masiva:** Propagación centralizada de cambios (creación, edición o eliminación de variables) desde la plantilla hacia todas las instancias activas.
 
 ---
 
-## 2. Error Arquitectónico Descartado: Vistas por Línea
+## Flujo de Navegación y UX
 
-**Propuesta descartada:** Crear una vista HTML individual para cada línea, máquina o componente de la planta.
+### Árbol Jerárquico (Panel Izquierdo)
 
-**Por qué se rechaza:** Este enfoque crea acoplamiento directo entre el código fuente y la realidad física de la planta. Cualquier cambio operacional (nueva máquina, variable renombrada, nueva línea de producción) requeriría:
+El panel izquierdo despliega la estructura de la planta en una vista de árbol:
 
-1. Modificar el código fuente.
-2. Compilar y generar un nuevo bundle.
-3. Hacer un despliegue al servidor.
-
-Con 3 plantas, 6-17 líneas por planta y múltiples equipos, el número de vistas alcanzaría cientos de archivos. El mantenimiento sería inviable.
-
----
-
-## 3. Solución Correcta: Data-Driven UI
-
-> El frontend no sabe qué es un "motor AD" ni cuántas líneas tiene la planta de extrusión.
-> El frontend solo sabe dibujar estructuras de árbol.
-> La base de datos es la única fuente de verdad.
-
-### Principio de Funcionamiento
-
-```
-Base de Datos (estructura de planta)
-        │
-        ▼ (API REST)
-  MachineInspectionView.vue  ← Vista única genérica
-        │
-        ▼ (v-for sobre componentes)
-  ComponenteCard.vue
-        │
-        ▼ (v-for sobre variables)
-  VariableInput.vue  ← Renderiza el control correcto según tipo_evaluacion
+```text
+Planta
+└── Ubicación Técnica
+    └── Línea
+        └── Equipo (asociado a un TipoEquipo: Chiller, Compresor, etc.)
+            └── Componente
+                └── Variables (instancias generadas desde plantilla)
 ```
 
-Un solo bloque de código Vue sirve para absolutamente toda la planta de Tubrica. Si mañana se añade una nueva línea de producción, el equipo de mantenimiento configura los datos en el CRUD administrativo y la interfaz de inspección la muestra automáticamente. Sin tocar una línea de código fuente.
+### Acciones Contextuales
+
+#### Interacción en el Árbol
+* **Clic Izquierdo en Componente:** Carga el listado de variables asociadas en el panel derecho.
+* **Clic Derecho en Componente:** Despliega menú contextual con las siguientes opciones:
+  * `Editar Variables (Plantilla)`: Abre el editor centralizado de la plantilla del `TipoEquipo`.
+  * `Sincronizar con Plantilla`: Actualiza las variables del componente seleccionado acorde a la definición vigente de la plantilla.
+
+#### Interacción en el Panel de Variables (Panel Derecho)
+* **Clic Derecho en Variable (Instancia):** Despliega menú contextual para editar, eliminar o restablecer la instancia seleccionada.
+* **Clic Derecho en Espacio Vacío:** Despliega opciones para:
+  * `Agregar Variable`: Añade una variable exclusiva para el componente actual.
+  * `Agregar a Plantilla`: Modifica la plantilla global afectando a todos los componentes del mismo `TipoEquipo`.
 
 ---
 
-## 4. Jerarquía de Datos
+## Prompts de Implementación para Antigravity
 
-```
-Ubicación Técnica (nullable)
-    └── Planta
-            └── Línea (6-17 por planta)
-                    └── Equipo / Máquina
-                            └── Componente
-                                    └── Variable  ← tipo_evaluacion aquí
-```
+A continuación se detalla la secuencia incremental de prompts para guiar el desarrollo.
 
-Todas las relaciones son 1:N estrictas. La tabla `variables` es el punto de control que define qué tipo de input se renderizará en el formulario.
+### Etapa 1: Estructura del Tree View (Navegación)
 
----
+> Quiero implementar un árbol jerárquico en Vue 3 + Vuetify para navegar por: Planta -> Ubicación Técnica -> Línea -> Equipo -> Componente. Los datos vienen de un store de Pinia que consulta una API REST (o directamente con Prisma). El árbol debe ser dinámico, cargando los hijos al expandir cada nodo. Usa v-treeview de Vuetify o un componente personalizado con v-for recursivo. Muestra íconos de carpeta para nodos con hijos y archivo para componentes (hojas). Al hacer click en un componente, emite un evento que carga sus variables en el panel derecho. Dame el código completo del componente TreeView, el store de Pinia con las acciones para obtener los datos jerárquicos (usando include anidado o llamadas por niveles), y la vista principal que contiene el árbol y el panel de detalles.
 
-## 5. Tipos de Evaluación de Variables
+### Etapa 2: Menú Contextual en el Árbol
 
-| Código | Descripción | Control de UI | Campos en DB |
-|---|---|---|---|
-| `numerico_entero` | Valor entero (RPM, horómetro, PSI) | `<input type="number" step="1">` | `valor_numerico` |
-| `numerico_decimal` | Valor decimal (amperaje, voltaje) | `<input type="number" step="0.01">` | `valor_numerico` |
-| `temperatura` | Grados C o F | `<input type="number">` + badge unidad | `valor_numerico` + `unidad` |
-| `seleccion` | Conjunto predefinido de opciones | `<select>` dinámico | `valor_seleccion` |
+> Agrega un menú contextual (click derecho) a los nodos del árbol. Las opciones varían según el tipo de nodo:
+- Planta: 'Agregar Ubicación Técnica'
+- Ubicación Técnica: 'Agregar Línea'
+- Línea: 'Agregar Equipo'
+- Equipo: 'Agregar Componente', 'Editar Equipo', 'Eliminar Equipo'
+- Componente: 'Agregar Variable (instancia)', 'Editar Componente', 'Eliminar Componente', 'Sincronizar con Plantilla'
 
-### Leyenda Oficial del Sistema (tipo `seleccion`)
+> Usa v-menu posicionado con las coordenadas del evento. Cada acción abre un diálogo con un formulario para ingresar los datos necesarios (nombre, código, etc.). Implementa las funciones en el store para crear/editar/eliminar nodos, y refresca el árbol después de cada operación.
 
-| Clave | Significado |
-|---|---|
-| `N` | Normal |
-| `E` | Existe |
-| `A` | Anormal |
-| `B` | Bajo |
-| `NE` | No Existe |
-| `N/A` | No Aplica |
+### Etapa 3: Panel de Variables y Menú Contextual en Instancias
 
-> Las opciones de selección se almacenan en la tabla `opciones_seleccion` de la base de datos. No están hardcodeadas en el frontend. Nuevas opciones se añaden sin tocar código.
+> En el panel derecho, muestra la lista de variables del componente seleccionado. Cada variable debe mostrar: nombre, tipo, unidad, y un badge de 'activa'. Al hacer click derecho sobre una variable, muestra un menú contextual con: 'Editar Variable', 'Eliminar Variable', 'Duplicar Variable', 'Restablecer desde Plantilla' (solo si tiene plantillaId). En el panel derecho (espacio vacío), agrega un botón 'Agregar Variable' que abra un formulario para crear una nueva variable (instancia). Todas estas acciones deben llamar a métodos del store que actualicen la base de datos y refresquen la lista.
+
+### Etapa 4: Gestión de Plantillas de Variables por TipoEquipo
+
+> Implementa una vista/pestaña para administrar las plantillas de variables por TipoEquipo. Debe mostrar una tabla con las variables de la plantilla seleccionada (con opciones para agregar, editar y eliminar variables de la plantilla). Al hacer click en 'Sincronizar con Plantilla' desde el menú contextual de un componente, toma la plantilla del TipoEquipo del equipo al que pertenece el componente, y actualiza las variables instancia del componente: añade las que faltan, elimina las que ya no estén en la plantilla (o las desactiva), y actualiza los valores (nombre, unidad, etc.). Diseña el store para manejar esta sincronización. También agrega un botón 'Sincronizar Todos' para aplicar los cambios de la plantilla a todos los equipos de ese tipo.
+
+### Etapa 5: Integración y Robustez
+
+> Integra todos los componentes: el árbol con menús contextuales, el panel de variables con sus acciones, y la gestión de plantillas. Asegura que al seleccionar un componente en el árbol, el panel de variables se actualice automáticamente. Al modificar una plantilla, muestra un toast y sugiere sincronizar los componentes afectados. Implementa un filtro por TipoEquipo en el panel de plantillas. Prueba el flujo completo: crear un nuevo equipo de tipo 'Chiller', ver que sus variables se crean automáticamente desde la plantilla, y poder editarlas desde el panel. Añade indicadores de carga y manejo de errores.
 
 ---
 
-## 6. Estrategia de Carga: Lazy Loading (Peticiones en Cascada)
+## Modificaciones en el Esquema de Base de Datos
 
-El árbol completo de la planta **nunca se carga** en la hidratación inicial. Las peticiones son modulares y se disparan solo cuando el usuario selecciona el nivel correspondiente.
+| Modelo | Tipo de Cambio | Descripción |
+| :--- | :--- | :--- |
+| `Variable` | Modificación | Agregar campo `plantillaId` (Foreign Key hacia `PlantillaVariable`, anulable). |
+| `PlantillaVariable` | Nuevo | Almacena las definiciones base de variables asociadas a un `TipoEquipo`. |
+| `PlantillaOpcionSeleccion` | Nuevo | Opciones predeterminadas para variables de tipo lista/selección en plantillas. |
 
-```
-[1] Página carga → GET /api/plantas          (solo IDs y nombres)
-[2] Usuario elige Planta → GET /api/plantas/:id/lineas
-[3] Usuario elige Línea  → GET /api/lineas/:id/equipos
-[4] Usuario elige Equipo → GET /api/equipos/:id/componentes-variables
-                           ↑ Este endpoint retorna el árbol completo de:
-                             componentes → variables → opciones_seleccion
-[5] Vue itera el JSON y VariableInput.vue renderiza cada control
-```
+### Estrategia de Migración
 
-**Beneficio:** Con 17 líneas y 10 equipos por línea, sin lazy loading el primer fetch cargaría potencialmente 170 equipos con todos sus componentes y variables. Con lazy loading, se cargan únicamente los datos del equipo seleccionado.
-
----
-
-## 7. Componentes Vue del Módulo
-
-### `MachineInspectionView.vue` (Vista)
-- Orquesta el proceso completo de selección de jerarquía e inspección.
-- Contiene los selectores de Planta, Línea y Equipo.
-- Llama a `useVariablesCriticas.ts` para los fetches lazy.
-- Renderiza `ComponenteCard.vue` por cada componente del equipo.
-
-### `ComponenteCard.vue` (Componente)
-- Recibe un prop `componente: ComponenteInspeccion`.
-- Muestra el nombre del componente e itera sus variables.
-- Renderiza `VariableInput.vue` por cada variable.
-
-### `VariableInput.vue` (Componente Polimórfico — Core del módulo)
-- Recibe un prop `variable: VariableEvaluacion`.
-- Usa `v-if` / `v-else-if` para renderizar el control apropiado:
-
-```vue
-<template>
-  <div class="variable-input-wrapper">
-    <label>{{ variable.nombre }}</label>
-
-    <template v-if="variable.tipo_evaluacion === 'seleccion'">
-      <select v-model="variable.valor_seleccion">
-        <option v-for="op in variable.opciones" :key="op.clave" :value="op.clave">
-          {{ op.clave }} — {{ op.etiqueta }}
-        </option>
-      </select>
-    </template>
-
-    <template v-else-if="variable.tipo_evaluacion === 'temperatura'">
-      <div class="input-with-badge">
-        <input type="number" v-model="variable.valor_numerico" />
-        <span class="badge">{{ variable.unidad }}</span>
-      </div>
-    </template>
-
-    <template v-else-if="variable.tipo_evaluacion === 'numerico_decimal'">
-      <input type="number" step="0.01" v-model="variable.valor_numerico" />
-    </template>
-
-    <template v-else>
-      <input type="number" step="1" v-model="variable.valor_numerico" />
-    </template>
-
-    <textarea v-model="variable.observaciones" placeholder="Observaciones..." />
-    <label>
-      <input type="checkbox" v-model="variable.componente_activo" />
-      Componente Activo
-    </label>
-  </div>
-</template>
-```
-
-### `InspeccionHeader.vue` (Componente)
-- Campos: Elaborado por, Revisado por, Aprobado por, Fecha de registro.
-- "Elaborado por" se pre-llena desde el JWT del usuario autenticado (solo lectura).
-- "Revisado por" y "Aprobado por" son selectores de usuarios del sistema.
-
-### `PlantAdminView.vue` (Vista — CRUD Administrativo)
-- Vista exclusiva del Supervisor.
-- Permite gestionar la jerarquía completa (Plantas → Ubicaciones Técnicas / Líneas → Equipos → Componentes → Variables).
-- Los cambios aquí se reflejan inmediatamente en los formularios de inspección.
-
----
-
-## 8. Composable: `useVariablesCriticas.ts`
-
-Incluye prevención de fugas de memoria mediante `AbortController` y limpieza en `onUnmounted`:
-
-```typescript
-import { ref, onUnmounted } from 'vue';
-import http from '@/utils/http';
-import type { ComponenteInspeccion, PayloadRegistroInspeccion } from '@/types/VariablesCriticas';
-
-export function useVariablesCriticas() {
-  const equipos = ref<{ id: number; nombre: string }[]>([]);
-  const componentes = ref<ComponenteInspeccion[]>([]);
-  const cargando = ref(false);
-  let abortController: AbortController | null = null;
-
-  const cargarEquiposPorLinea = async (lineaId: number) => {
-    abortController?.abort();
-    abortController = new AbortController();
-    cargando.value = true;
-    try {
-      const { data } = await http.get(`/lineas/${lineaId}/equipos`, {
-        signal: abortController.signal,
-      });
-      equipos.value = data;
-    } finally {
-      cargando.value = false;
-    }
-  };
-
-  const cargarComponentesPorEquipo = async (equipoId: number) => {
-    abortController?.abort();
-    abortController = new AbortController();
-    cargando.value = true;
-    try {
-      const { data } = await http.get(`/equipos/${equipoId}/componentes-variables`, {
-        signal: abortController.signal,
-      });
-      componentes.value = data;
-    } finally {
-      cargando.value = false;
-    }
-  };
-
-  const guardarInspeccion = async (payload: PayloadRegistroInspeccion) => {
-    await http.post('/inspecciones', payload);
-  };
-
-  // Prevención de fugas de memoria: cancela peticiones pendientes al desmontar
-  onUnmounted(() => {
-    abortController?.abort();
-  });
-
-  return {
-    equipos,
-    componentes,
-    cargando,
-    cargarEquiposPorLinea,
-    cargarComponentesPorEquipo,
-    guardarInspeccion,
-  };
-}
-```
-
----
-
-## 9. Cabecera de la Inspección (Metadatos Obligatorios)
-
-| Campo | Tipo | Regla |
-|---|---|---|
-| `elaborado_por` | `number` (ID) | Auto-asignado desde JWT. No editable por el técnico. |
-| `revisado_por` | `number \| null` | Selector de usuarios. Opcional. |
-| `aprobado_por` | `number \| null` | Selector de usuarios. Opcional. |
-| `fecha_registro` | `string` (ISO 8601) | Auto-asignada por el backend. |
-| `equipo_id` | `number` | Requerido. Resultado de la selección lazy. |
-
----
-
-## 10. Endpoints de la API (Contrato Backend)
-
-| Método | Endpoint | Descripción |
-|---|---|---|
-| `GET` | `/api/plantas` | Lista todas las plantas |
-| `GET` | `/api/plantas/:id/lineas` | Líneas de una planta |
-| `GET` | `/api/lineas/:id/equipos` | Equipos de una línea |
-| `GET` | `/api/equipos/:id/componentes-variables` | Árbol completo del equipo para inspección |
-| `POST` | `/api/inspecciones` | Registra una inspección completa |
-| `GET` | `/api/inspecciones` | Historial (con filtros: equipo, fecha, planta) |
-| `GET` | `/api/inspecciones/:id` | Detalle de una inspección |
-
----
-
-## 11. Comparativa de Enfoques
-
-| Criterio | Vistas Estáticas | Data-Driven UI |
-|---|---|---|
-| Nuevo equipo en planta | Requiere nuevo archivo `.vue` + despliegue | Administrador lo crea en el CRUD |
-| Variable renombrada | Requiere editar código + despliegue | Administrador edita en el CRUD |
-| Escalar a 5 plantas | Multiplicación de vistas | Sin cambio de código |
-| Mantenimiento futuro | Cientos de archivos | Un solo componente polimórfico |
-| Auditoría y trazabilidad | Manual / imposible | Nativa en la DB transaccional |
-
----
-
-## 12. Próximos Pasos (Orden de Implementación)
-
-- [ ] Crear el esquema Prisma con las tablas maestras y transaccionales.
-- [ ] Implementar los endpoints del backend (empezando por `GET /equipos/:id/componentes-variables`).
-- [ ] Implementar `VariableInput.vue` con los 4 tipos de evaluación.
-- [ ] Implementar `MachineInspectionView.vue` con los selectores lazy.
-- [ ] Implementar `PlantAdminView.vue` (CRUD administrativo).
-- [ ] Conectar el módulo al sistema de autenticación JWT para extraer `elaborado_por`.
-- [ ] Añadir la vista al router con guard de rol.
-- [ ] Escribir pruebas unitarias para `useVariablesCriticas.ts` y `VariableInput.vue`.
+1. Crear tablas correspondientes a las entidades de plantilla.
+2. Agrupar variables existentes según la relación del componente con su `TipoEquipo`.
+3. Extraer patrones comunes para poblar la tabla `PlantillaVariable`.
+4. Ejecutar script de actualización masiva asignando la FK `plantillaId` a las instancias de variables previamente existentes.
