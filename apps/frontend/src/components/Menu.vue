@@ -21,21 +21,25 @@ interface ModuloItem {
     roles?: string[]
 }
 
+const ROLES_ADMIN = ['Administrador del Sistema']
+const ROLES_ADMIN_SUPERVISOR = ['Administrador del Sistema', 'Supervisor / Gerente de Mantenimiento']
+const ROLES_TODOS = ['Administrador del Sistema', 'Supervisor / Gerente de Mantenimiento', 'Técnico de Mantenimiento']
+
 const modulos: ModuloItem[] = [
     { title: 'Principal', icon: 'mdi-view-dashboard', to: '/dashboard' },
-    { title: 'Equipos', icon: 'mdi-engine', to: '/equipos' },
-    { title: 'Montacargas', icon: 'mdi-forklift', to: '/montacargas' },
-    { title: 'Compresor', icon: 'mdi-car-turbocharger', to: '/compresor' },
-    { title: 'Generador', icon: 'mdi-generator-mobile', to: '/generador' },
-    { title: 'Chiller', icon: 'mdi-snowflake', to: '/chiller' },
-    { title: 'Componentes', icon: 'mdi-view-grid', to: '/componentes' },
-    { title: 'Variables', icon: 'mdi-variable-box', to: '/variables' },
-    { title: 'Inspecciones', icon: 'mdi-clipboard-check', to: '/inspecciones' },
-    { title: 'Plantas', icon: 'mdi-factory', to: '/plantas', roles: ['Administrador', 'Admin', 'Supervisor'] },
-    { title: 'Ubicaciones Técnicas', icon: 'mdi-map-marker-radius', to: '/ubicaciones', roles: ['Administrador', 'Admin', 'Supervisor'] },
-    { title: 'Líneas Operativas', icon: 'mdi-chart-timeline', to: '/lineas', roles: ['Administrador', 'Admin', 'Supervisor'] },
-    { title: 'Usuarios', icon: 'mdi-account-group', to: '/usuarios', roles: ['Administrador', 'Admin'] },
-    { title: 'Roles', icon: 'mdi-account-key', to: '/roles', roles: ['Administrador', 'Admin'] },
+    { title: 'Equipos', icon: 'mdi-engine', to: '/equipos', roles: ROLES_ADMIN_SUPERVISOR },
+    { title: 'Montacargas', icon: 'mdi-forklift', to: '/montacargas', roles: ROLES_TODOS },
+    { title: 'Compresor', icon: 'mdi-car-turbocharger', to: '/compresor', roles: ROLES_TODOS },
+    { title: 'Generador', icon: 'mdi-generator-mobile', to: '/generador', roles: ROLES_TODOS },
+    { title: 'Chiller', icon: 'mdi-snowflake', to: '/chiller', roles: ROLES_TODOS },
+    { title: 'Componentes', icon: 'mdi-view-grid', to: '/componentes', roles: ROLES_ADMIN_SUPERVISOR },
+    { title: 'Variables', icon: 'mdi-variable-box', to: '/variables', roles: ROLES_ADMIN_SUPERVISOR },
+    { title: 'Inspecciones', icon: 'mdi-clipboard-check', to: '/inspecciones', roles: ROLES_TODOS },
+    { title: 'Plantas', icon: 'mdi-factory', to: '/plantas', roles: ROLES_ADMIN_SUPERVISOR },
+    { title: 'Ubicaciones Técnicas', icon: 'mdi-map-marker-radius', to: '/ubicaciones', roles: ROLES_ADMIN_SUPERVISOR },
+    { title: 'Líneas Operativas', icon: 'mdi-chart-timeline', to: '/lineas', roles: ROLES_ADMIN_SUPERVISOR },
+    { title: 'Usuarios', icon: 'mdi-account-group', to: '/usuarios', roles: ROLES_ADMIN_SUPERVISOR },
+    { title: 'Roles', icon: 'mdi-account-key', to: '/roles', roles: ROLES_ADMIN },
 ]
 
 const modulosVisibles = computed(() => {

@@ -18,37 +18,61 @@ const routes: RouteRecordRaw[] = [
     path: '/plantas',
     name: 'plantas',
     component: () => import('../modules/plantas/views/PlantasView.vue'),
-    meta: { requiresAuth: true, hideLayout: false, roles: ['Administrador', 'Admin', 'Supervisor'] },
+    meta: {
+      requiresAuth: true,
+      hideLayout: false,
+      roles: ['Administrador del Sistema', 'Supervisor / Gerente de Mantenimiento']
+    },
   },
   {
     path: '/ubicaciones',
     name: 'ubicaciones',
     component: () => import('../modules/ubicaciones/views/UbicacionesView.vue'),
-    meta: { requiresAuth: true, hideLayout: false, roles: ['Administrador', 'Admin', 'Supervisor'] },
+    meta: {
+      requiresAuth: true,
+      hideLayout: false,
+      roles: ['Administrador del Sistema', 'Supervisor / Gerente de Mantenimiento']
+    },
   },
   {
     path: '/lineas',
     name: 'lineas',
     component: () => import('../modules/lineas/views/LineasView.vue'),
-    meta: { requiresAuth: true, hideLayout: false, roles: ['Administrador', 'Admin', 'Supervisor'] },
+    meta: {
+      requiresAuth: true,
+      hideLayout: false,
+      roles: ['Administrador del Sistema', 'Supervisor / Gerente de Mantenimiento']
+    },
   },
   {
     path: '/roles',
     name: 'roles',
     component: () => import('../modules/auth/views/RolesView.vue'),
-    meta: { requiresAuth: true, hideLayout: false, roles: ['Administrador', 'Admin', 'Supervisor'] },
+    meta: {
+      requiresAuth: true,
+      hideLayout: false,
+      roles: ['Administrador del Sistema']
+    },
   },
   {
     path: '/usuarios',
     name: 'usuarios',
     component: () => import('../modules/usuarios/views/UsuariosView.vue'),
-    meta: { requiresAuth: true, hideLayout: false, roles: ['Administrador', 'Admin', 'Supervisor'] },
+    meta: {
+      requiresAuth: true,
+      hideLayout: false,
+      roles: ['Administrador del Sistema', 'Supervisor / Gerente de Mantenimiento']
+    },
   },
   {
     path: '/equipos',
     name: 'equipos',
     component: () => import('../modules/equipo/views/EquipoView.vue'),
-    meta: { requiresAuth: true, hideLayout: false },
+    meta: {
+      requiresAuth: true,
+      hideLayout: false,
+      roles: ['Administrador del Sistema', 'Supervisor / Gerente de Mantenimiento']
+    },
   },
   {
     path: '/montacargas',
@@ -78,7 +102,11 @@ const routes: RouteRecordRaw[] = [
     path: '/componentes',
     name: 'componentes',
     component: () => import('../modules/componentes/views/ComponentesView.vue'),
-    meta: { requiresAuth: true, hideLayout: false, tipoFiltro: 'Chiller', titulo: 'Chillers' },
+    meta: {
+      requiresAuth: true,
+      hideLayout: false,
+      roles: ['Administrador del Sistema', 'Supervisor / Gerente de Mantenimiento']
+    },
   },
   {
     path: '/:pathMatch(.*)*',
