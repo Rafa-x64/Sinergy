@@ -49,6 +49,13 @@ enum OrigenDatos {
   OFFLINE_SYNC
 }
 
+enum NotificationType {
+  ERROR
+  WARNING
+  ALERT
+  SUCCESS
+}
+
 // -----------------------------------------------------------------------------
 // CAPA 1: SEGURIDAD, AUTENTICACIÓN Y ROLES (RBAC)
 // -----------------------------------------------------------------------------
@@ -392,4 +399,19 @@ model AuditoriaLog {
   @@index([tablaAfectada, registroId])
   @@index([creadoEn])
   @@map("auditoria_logs")
+}
+
+// -----------------------------------------------------------------------------
+// CAPA 5: NOTIFICACIONES POR USUARIO
+// -----------------------------------------------------------------------------
+model Notificacion {
+  id          String           @id @default(uuid())
+  usuarioId   Int
+  tipo        NotificationType
+  mensaje     String
+  leido       Boolean          @default(false) @map("is_read")
+  creadoEn    DateTime         @default(now()) @map("created_at")
+
+  @@index([usuarioId, leido])
+  @@map("notifications")
 }
