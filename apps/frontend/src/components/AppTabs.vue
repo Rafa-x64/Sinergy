@@ -30,6 +30,18 @@ watch(
     }
 )
 
+// Si la pestaña activa desaparece del array (ej. se oculta 'editar'),
+// regresar automáticamente a la primera pestaña disponible
+watch(
+    () => props.tabs,
+    (nuevosTabs) => {
+        const sigueExistiendo = nuevosTabs.some((t) => t.id === pestañaActiva.value)
+        if (!sigueExistiendo && nuevosTabs.length > 0) {
+            pestañaActiva.value = nuevosTabs[0].id
+        }
+    }
+)
+
 // Emisión de evento al cambiar de pestaña dentro de Vuetify
 watch(pestañaActiva, (nuevoValor) => {
     emit('update:modelValue', nuevoValor)

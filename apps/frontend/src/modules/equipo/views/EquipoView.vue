@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useToast } from 'vue-toastification'
 import AppTabs from '../../../components/AppTabs.vue'
@@ -285,6 +285,7 @@ watch(pestañaTipo, (nuevaPestana) => {
         datosFormularioTipo.value = { ...tipoVacio }
     }
 })
+
 </script>
 
 <template>

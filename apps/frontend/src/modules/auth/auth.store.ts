@@ -54,11 +54,10 @@ export const useAuthStore = defineStore('auth', () => {
   function tieneRol(rolesRequeridos?: string[]): boolean {
     if (!rolesRequeridos || rolesRequeridos.length === 0) return true
     if (roles.value.length === 0) return false
-    const userRolesUpper = roles.value.map((r) => r.toUpperCase())
-    return rolesRequeridos.some((req) => {
-      const reqUpper = req.toUpperCase()
-      return userRolesUpper.some((userRole) => userRole.includes(reqUpper) || reqUpper.includes(userRole))
-    })
+    const userRolesNorm = roles.value.map((r) => r.trim().toUpperCase())
+    return rolesRequeridos.some((req) =>
+      userRolesNorm.some((userRole) => userRole === req.trim().toUpperCase())
+    )
   }
 
   async function login(credenciales: LoginDTO): Promise<RespuestaApi> {
