@@ -1,5 +1,7 @@
+```typescript
 import 'dotenv/config'
 import express from 'express'
+// 1. Importamos el módulo HTTP nativo de Node.js
 import http from 'http'
 import cors from 'cors'
 import helmet from 'helmet'
@@ -8,6 +10,7 @@ import prisma from './prisma'
 import { errorHandler } from './middlewares/errorHandler'
 import { notFoundHandler } from './middlewares/notFoundHandler'
 
+// Importaciones de rutas
 import authRoutes from '../modules/auth/auth.routes'
 import rolesRoutes from '../modules/roles/roles.routes'
 import equipoRoutes from '../modules/equipo/equipo.routes'
@@ -19,14 +22,19 @@ import variableCriticaRoutes from '../modules/variables-criticas/variable-critic
 import inspeccionRoutes from '../modules/inspecciones/inspeccion.routes'
 import mantenimientoRoutes from '../modules/mantenimiento/mantenimiento.routes'
 
-import { inicializarWebSockets } from '../modules/notificaciones/notification.socket'
-import { registrarListenersNotificaciones } from '../modules/notificaciones/notification.events'
+// 2. Importamos los inicializadores de nuestro módulo de notificaciones
+import { inicializarWebSockets } from '../modules/notifications/notification.socket'
+import { registrarListenersNotificaciones } from '../modules/notifications/notification.events'
 
 const app = express()
 
+// 3. Creamos el servidor HTTP manualmente envolviendo la app de Express
 const httpServer = http.createServer(app)
 
+// 4. Inicializamos la capa de eventos y sockets
+// Primero encendemos la escucha de eventos internos
 registrarListenersNotificaciones()
+// Luego acoplamos Socket.io al servidor HTTP
 inicializarWebSockets(httpServer)
 
 // ─── Middlewares de seguridad y parseo ────────────────────────────────────────
@@ -53,7 +61,7 @@ app.use(
 
       callback(new Error('No permitido por la política CORS'))
     },
-    credentials: true,
+    credentials: true, // Requerido para cookies HttpOnly (refresh token)
   })
 )
 app.use(express.json())
@@ -95,37 +103,10 @@ app.use('/api/variables-criticas', variableCriticaRoutes)
 app.use('/api/inspecciones', inspeccionRoutes)
 app.use('/api/mantenimiento', mantenimientoRoutes)
 
-import { eventBus } from './eventBus'
-import {validarJWT} from './middlewares/autenticar'
-
-app.post('/api/test-notificacion', validarJWT, (req, res) => {
-  try {
-    if (!req.usuario) {
-      res.status(401).json({ error: 'No autorizado: Usuario no encontrado en la petición' })
-      return
-    }
-
-    const idUsuario = parseInt(String(req.usuario.sub), 10)
-
-    if (isNaN(idUsuario)) {
-      res.status(400).json({ error: 'El ID del usuario en el token no es un número válido' })
-      return
-    }
-
-    eventBus.emit('NOTIFICACION_SISTEMA', {
-      userId: idUsuario,
-      type: 'WARNING',
-      message: 'Prueba de integración: Falla en presión de caldera'
-    })
-
-    res.status(200).json({ status: 'ok', message: 'Evento emitido al bus correctamente' })
-  } catch (error) {
-    res.status(500).json({ error: 'Error interno en la prueba de notificación' })
-  }
-})
-
 // ─── Handlers globales (deben ir al final) ────────────────────────────────────
 app.use(notFoundHandler)
 app.use(errorHandler)
 
+// 5. Exportamos el httpServer en lugar de app
 export default httpServer
+```

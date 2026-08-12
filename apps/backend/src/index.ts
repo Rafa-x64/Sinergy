@@ -1,10 +1,10 @@
 import 'dotenv/config';
-import app from './core/server';
+import httpServer from './core/server';
 import prisma from './core/prisma';
 
-const port = process.env.PORT ?? 3001;
+const port = process.env.PORT ?? 3000;
 
-const server = app.listen(port, () => {
+const server = httpServer.listen(port, () => {
   console.log(`\n\x1b[36m🚀 [Sinergy Backend]\x1b[0m \x1b[32mEscuchando en http://localhost:${port}\x1b[0m`);
 });
 
