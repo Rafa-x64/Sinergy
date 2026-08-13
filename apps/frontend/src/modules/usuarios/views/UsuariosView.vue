@@ -26,7 +26,8 @@ const usuarioVacio: Partial<RegistrarUsuarioDTO> = {
     password: '',
     nombreUsuario: '',
     activo: true,
-    rolId: undefined
+    rolId: undefined,
+    supervisorId: null
 }
 const datosFormulario = ref<Partial<RegistrarUsuarioDTO>>({ ...usuarioVacio })
 
@@ -52,12 +53,19 @@ const headersTabla = [
     { title: 'Correo', key: 'email', align: 'center' as const },
     { title: 'Nombre de Usuario', key: 'nombreUsuario', align: 'center' as const },
     { title: 'Rol', key: 'rol', align: 'center' as const },
+    { title: 'Supervisor', key: 'supervisor', align: 'center' as const },
     { title: 'Estado', key: 'activo', align: 'center' as const },
     { title: 'Ultimo Acceso', key: 'ultimoAcceso', align: 'center' as const },
     { title: 'Fecha Creación', key: 'creadoEn', align: 'center' as const },
     { title: 'Última Actualización', key: 'actualizadoEn', align: 'center' as const },
     { title: 'Acciones', key: 'acciones', sortable: false, align: 'center' as const }
 ]
+
+const supervisoresDisponibles = computed(() =>
+    usuarios.value
+        .filter((u) => u.activo && u.rolesUsuario.some((r) => r.rol.esSupervisor))
+        .map((u) => ({ id: u.id, nombre: u.nombre, apellido: u.apellido }))
+)
 
 const formatearFecha = (fecha: Date | string | null | undefined): string => {
     if (!fecha) return '—'
@@ -89,7 +97,8 @@ const prepararEdicion = (usuario: Usuario): void => {
         email: usuario.email,
         nombreUsuario: usuario.nombreUsuario,
         activo: usuario.activo,
-        rolId: usuario.rolesUsuario?.[0]?.rolId
+        rolId: usuario.rolesUsuario?.[0]?.rolId,
+        supervisorId: usuario.supervisorId ?? null
     }
     pestañaActiva.value = 'editar'
 }
@@ -171,6 +180,13 @@ watch(pestañaActiva, (nuevaPestana) => {
                         </span>
                     </template>
 
+                    <template #item.supervisor="{ item }">
+                        <span v-if="item.supervisor">
+                            {{ item.supervisor.nombre }} {{ item.supervisor.apellido }}
+                        </span>
+                        <span v-else class="text-grey">—</span>
+                    </template>
+
                     <template #item.activo="{ item }">
                         <v-chip :color="item.activo ? 'success' : 'error'" size="small">
                             {{ item.activo ? 'Activo' : 'Inactivo' }}
@@ -204,7 +220,7 @@ watch(pestañaActiva, (nuevaPestana) => {
             <template #tab-registrar>
                 <v-card class="pa-4" elevation="0">
                     <v-card-title class="px-0 mb-4 text-h5 font-weight-bold">Registrar Nuevo Usuario</v-card-title>
-                    <FormularioUsuario :roles="roles" :datos-iniciales="usuarioVacio" :cargando="cargando"
+                    <FormularioUsuario :roles="roles" :supervisores="supervisoresDisponibles" :datos-iniciales="usuarioVacio" :cargando="cargando"
                         texto-boton="Guardar Usuario" @submit="manejarGuardado" @cancelar="cancelarEdicion" />
                 </v-card>
             </template>
@@ -213,7 +229,7 @@ watch(pestañaActiva, (nuevaPestana) => {
                 <v-card class="pa-4" elevation="0" v-if="idUsuarioEditar !== null">
                     <v-card-title class="px-0 mb-4 text-h5 font-weight-bold">Editar Usuario</v-card-title>
 
-                    <FormularioUsuario :roles="roles" :datos-iniciales="datosFormulario" :cargando="cargando"
+                    <FormularioUsuario :roles="roles" :supervisores="supervisoresDisponibles" :datos-iniciales="datosFormulario" :cargando="cargando"
                         :es-edicion="true" texto-boton="Actualizar Usuario" @submit="manejarGuardado"
                         @cancelar="cancelarEdicion" />
                 </v-card>

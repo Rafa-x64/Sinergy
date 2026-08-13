@@ -8,6 +8,8 @@ export interface Rol {
     id: number,
     nombre: string,
     descripcion?: string
+    esSupervisor: boolean
+    requiereSupervisor: boolean
 }
 
 export const useRolesStore = defineStore('roles', () => {
