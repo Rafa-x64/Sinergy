@@ -4,6 +4,7 @@ import { RegistrarInspeccionDTO, EditarEstadoInspeccionDTO } from './inspeccion.
 import { inspeccionService } from './inspeccion.service'
 import { parsearId } from '../../core/utils/parsearId'
 import { Prisma, TipoInspeccion, EstadoInspeccion, OrigenDatos } from '@prisma/client'
+import { eventBus } from '../../core/eventBus'
 
 const TIPOS_INSPECCION_VALIDOS = Object.values(TipoInspeccion)
 const ESTADOS_INSPECCION_VALIDOS = Object.values(EstadoInspeccion)
@@ -104,6 +105,21 @@ export const inspeccionController = {
       }
 
       const inspeccionRegistrada = await inspeccionService.crearInspeccion(payload, elaboradoPorId)
+
+      // Emitir eventos al bus de notificaciones y auditoría
+      eventBus.emit('INSPECCION_CREADA', {
+        inspeccionId: String(inspeccionRegistrada.id),
+        tecnicoId: elaboradoPorId,
+        codigoInspeccion: inspeccionRegistrada.codigoInspeccion
+      })
+
+      eventBus.emit('ACCION_SISTEMA', {
+        accion: 'CREAR',
+        entidad: 'INSPECCION',
+        entidadId: String(inspeccionRegistrada.id),
+        usuarioId: elaboradoPorId,
+        detalles: `El técnico registró la inspección ${inspeccionRegistrada.codigoInspeccion}`
+      })
 
       return res.status(201).json({
         status: 'ok',
@@ -285,6 +301,24 @@ export const inspeccionController = {
         estadoInspeccion,
         revisadoPorId,
         aprobadoPorId
+      })
+
+      const idTecnico = inspeccionActualizada.elaboradoPorId || (inspeccionActualizada.elaboradoPor as any)?.id
+      if (idTecnico && (estadoInspeccion === 'APROBADO' || estadoInspeccion === 'RECHAZADO')) {
+        eventBus.emit('INSPECCION_EVALUADA', {
+          inspeccionId: String(inspeccionActualizada.id),
+          tecnicoId: idTecnico,
+          estado: estadoInspeccion as 'APROBADO' | 'RECHAZADO',
+          codigoInspeccion: inspeccionActualizada.codigoInspeccion
+        })
+      }
+
+      eventBus.emit('ACCION_SISTEMA', {
+        accion: 'CAMBIO_ESTADO',
+        entidad: 'INSPECCION',
+        entidadId: String(inspeccionActualizada.id),
+        usuarioId: (req as any).usuario?.id,
+        detalles: `Inspección ${inspeccionActualizada.codigoInspeccion} cambió estado a ${estadoInspeccion}`
       })
 
       return res.status(200).json({

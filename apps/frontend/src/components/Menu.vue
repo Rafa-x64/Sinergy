@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMediaQuery } from '@vueuse/core'
 import SinergyChip from './SinergyChip.vue'
 import { useAuthStore } from '../modules/auth/auth.store'
+import { useNotificationStore } from '../modules/notificaciones/notificaciones.store'
+import NotificationBell from '../modules/notificaciones/components/NotificationBell.vue'
 
 const authStore = useAuthStore()
+const notificationStore = useNotificationStore()
 const router = useRouter()
 
 const { ocultarLayout } = defineProps<{
@@ -13,6 +16,19 @@ const { ocultarLayout } = defineProps<{
 }>()
 
 const isDesktop = useMediaQuery('(min-width: 960px)')
+
+onMounted(() => {
+    const token = authStore.accessToken
+
+    if (token) {
+        notificationStore.cargarNotificaciones(token)
+        notificationStore.conectarWebSocket(token)
+    }
+})
+
+onUnmounted(() => {
+    notificationStore.desconectarWebSocket()
+})
 
 interface ModuloItem {
     title: string
@@ -35,6 +51,7 @@ const modulos: ModuloItem[] = [
     { title: 'Componentes', icon: 'mdi-view-grid', to: '/componentes', roles: ROLES_ADMIN_SUPERVISOR },
     { title: 'Variables', icon: 'mdi-variable-box', to: '/variables', roles: ROLES_ADMIN_SUPERVISOR },
     { title: 'Inspecciones', icon: 'mdi-clipboard-check', to: '/inspecciones', roles: ROLES_TODOS },
+    { title: 'Auditoría Global', icon: 'mdi-shield-account', to: '/notificaciones-globales', roles: ROLES_ADMIN },
     { title: 'Plantas', icon: 'mdi-factory', to: '/plantas', roles: ROLES_ADMIN_SUPERVISOR },
     { title: 'Ubicaciones Técnicas', icon: 'mdi-map-marker-radius', to: '/ubicaciones', roles: ROLES_ADMIN_SUPERVISOR },
     { title: 'Líneas Operativas', icon: 'mdi-chart-timeline', to: '/lineas', roles: ROLES_ADMIN_SUPERVISOR },
@@ -48,19 +65,12 @@ const modulosVisibles = computed(() => {
 
 const cerrarSesion = async (): Promise<void> => {
     try {
-        const respuesta = await authStore.apiFetch('/auth/logout', {
-            method: "POST"
-        })
+        notificationStore.desconectarWebSocket()
+        const respuesta = await authStore.apiFetch('/auth/logout', { method: "POST" })
 
-        if (!respuesta.ok) {
-            throw new Error("Error al comunicarse con el servidor")
-        }
-
-        const data = await respuesta.json()
-        console.log("Servidor:", data.message)
+        if (!respuesta.ok) throw new Error("Error al comunicarse con el servidor")
 
         authStore.cerrarSesion()
-
         await router.push({ name: 'login' })
 
     } catch (error: unknown) {
@@ -70,7 +80,7 @@ const cerrarSesion = async (): Promise<void> => {
 </script>
 
 <template>
-    <!-- App Bar móvil -->
+    <!-- App Bar MÓVIL -->
     <v-app-bar app v-if="!ocultarLayout && !isDesktop">
         <v-menu>
             <template v-slot:activator="{ props }">
@@ -86,19 +96,18 @@ const cerrarSesion = async (): Promise<void> => {
                 <v-list-item @click="cerrarSesion()" title="Cerrar Sesión" prepend-icon="mdi-logout-variant" />
             </v-list>
         </v-menu>
+
         <v-spacer></v-spacer>
-        <v-btn icon>
-            <v-badge color="error" content="3">
-                <v-icon>mdi-bell</v-icon>
-            </v-badge>
-        </v-btn>
+
+        <NotificationBell v-if="authStore.accessToken" :user-token="authStore.accessToken" />
+
         <v-btn icon>
             <v-icon>mdi-account</v-icon>
         </v-btn>
     </v-app-bar>
 
-    <!-- Drawer desktop -->
-    <v-navigation-drawer permanent :width="250" v-if="!ocultarLayout && isDesktop">
+    <!-- Drawer DESKTOP (Laptop) -->
+    <v-navigation-drawer permanent :width="300" v-if="!ocultarLayout && isDesktop">
         <v-list-item class="py-2">
             <SinergyChip />
         </v-list-item>
@@ -106,11 +115,16 @@ const cerrarSesion = async (): Promise<void> => {
         <v-list-item v-for="modulo in modulosVisibles" :key="modulo.icon" link :to="modulo.to" :title="modulo.title"
             :prepend-icon="modulo.icon" />
         <v-list-item @click="cerrarSesion()" title="Cerrar Sesión" prepend-icon="mdi-logout-variant" />
+
         <template v-slot:append>
             <v-divider></v-divider>
             <v-list density="compact" nav>
                 <v-list-item prepend-icon="mdi-account-circle" :title="authStore.usuario?.email || 'Usuario'"
-                    :subtitle="authStore.roles.length > 0 ? authStore.roles.join(', ') : 'Sin Rol'" />
+                    :subtitle="authStore.roles.length > 0 ? authStore.roles.join(', ') : 'Sin Rol'">
+                    <template v-slot:append>
+                        <NotificationBell v-if="authStore.accessToken" :user-token="authStore.accessToken" />
+                    </template>
+                </v-list-item>
             </v-list>
             <v-list-item>
                 <v-footer class="text-secondary d-flex flex-row justify-content-around">
