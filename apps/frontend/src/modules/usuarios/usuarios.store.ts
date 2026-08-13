@@ -21,6 +21,12 @@ export interface Usuario {
     nombreUsuario: string
     activo: boolean
     rolesUsuario: RolUsuario[]
+    supervisorId: number | null
+    supervisor: {
+        id: number
+        nombre: string
+        apellido: string
+    } | null
     ultimoAcceso: Date | string
     creadoEn: Date | string
     actualizadoEn: Date | string
@@ -34,6 +40,7 @@ export interface RegistrarUsuarioDTO {
     nombreUsuario: string
     activo: boolean
     rolId: number
+    supervisorId?: number | null
 }
 
 export interface ActualizarUsuarioDTO {
@@ -43,6 +50,7 @@ export interface ActualizarUsuarioDTO {
     nombreUsuario?: string
     activo?: boolean
     rolId?: number
+    supervisorId?: number | null
 }
 
 export const useUsuarioStore = defineStore('usuarios', () => {

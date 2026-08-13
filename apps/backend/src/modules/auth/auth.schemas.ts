@@ -16,6 +16,7 @@ export interface CrearUsuarioDTO {
   password: string
   activo?: boolean
   rolId: number
+  supervisorId?: number | null
 }
 
 export interface ActualizarUsuarioDTO {
@@ -25,6 +26,8 @@ export interface ActualizarUsuarioDTO {
   nombreUsuario?: string
   password?: string
   activo?: boolean
+  rolId?: number
+  supervisorId?: number | null
 }
 
 /** Payload para asignar/reemplazar roles de un usuario. */

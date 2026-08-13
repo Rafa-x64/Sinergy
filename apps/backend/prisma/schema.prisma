@@ -101,6 +101,9 @@ model Rol {
   nombre      String  @unique @db.VarChar(50)
   descripcion String? @db.Text
 
+  esSupervisor       Boolean @default(false) @map("es_supervisor")
+  requiereSupervisor Boolean @default(false) @map("requiere_supervisor")
+
   rolesUsuario UsuarioRol[]
 
   @@map("roles")

@@ -57,7 +57,7 @@ export const authController = {
 
   async registrar(req: Request, res: Response, next: NextFunction) {
     try {
-      const { nombre, apellido, email, nombreUsuario, password, activo, rolId } = req.body
+      const { nombre, apellido, email, nombreUsuario, password, activo, rolId, supervisorId } = req.body
 
       if (!nombre || typeof nombre !== 'string' || !nombre.trim()) {
         return res.status(400).json({ status: 'error', message: 'El nombre es requerido' })
@@ -101,6 +101,10 @@ export const authController = {
         return res.status(409).json({ status: 'error', message: `Ya existe un usuario registrado con el correo ${emailLimpio}` })
       }
 
+      if (supervisorId !== undefined && supervisorId !== null && (typeof supervisorId !== 'number' || !Number.isInteger(supervisorId) || supervisorId <= 0)) {
+        return res.status(400).json({ status: 'error', message: 'El supervisorId debe ser un número entero positivo o null' })
+      }
+
       const usuario = await authService.crear({
         nombre: nombre.trim(),
         apellido: apellido.trim(),
@@ -109,6 +113,7 @@ export const authController = {
         password,
         activo: typeof activo === 'boolean' ? activo : true,
         rolId,
+        supervisorId: supervisorId ?? null,
       })
 
       return res.status(201).json({ status: 'ok', message: 'Usuario creado correctamente', data: usuario })
@@ -127,7 +132,7 @@ export const authController = {
         return res.status(400).json({ status: 'error', message: 'El ID proporcionado no es válido' })
       }
 
-      const { nombre, apellido, email, nombreUsuario, password, activo } = req.body
+      const { nombre, apellido, email, nombreUsuario, password, activo, rolId, supervisorId } = req.body
 
       if (Object.keys(req.body).length === 0) {
         return res.status(400).json({ status: 'error', message: 'Debe proporcionar al menos un campo para actualizar' })
@@ -172,6 +177,20 @@ export const authController = {
 
       if (activo !== undefined) {
         datosActualizados.activo = Boolean(activo)
+      }
+
+      if (rolId !== undefined) {
+        if (typeof rolId !== 'number' || !Number.isInteger(rolId) || rolId <= 0) {
+          return res.status(400).json({ status: 'error', message: 'El campo rolId debe ser un número entero positivo' })
+        }
+        datosActualizados.rolId = rolId
+      }
+
+      if (supervisorId !== undefined) {
+        if (supervisorId !== null && (typeof supervisorId !== 'number' || !Number.isInteger(supervisorId) || supervisorId <= 0)) {
+          return res.status(400).json({ status: 'error', message: 'El supervisorId debe ser un número entero positivo o null' })
+        }
+        datosActualizados.supervisorId = supervisorId
       }
 
       const actualizado = await authService.actualizar(id, datosActualizados)

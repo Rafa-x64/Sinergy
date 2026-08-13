@@ -59,6 +59,9 @@ export class AuthService {
         rolesUsuario: {
           include: { rol: true },
         },
+        supervisor: {
+          select: { id: true, nombre: true, apellido: true }
+        }
       },
     })
   }
@@ -72,6 +75,9 @@ export class AuthService {
         rolesUsuario: {
           include: { rol: true },
         },
+        supervisor: {
+          select: { id: true, nombre: true, apellido: true }
+        }
       },
     })
   }
@@ -94,15 +100,16 @@ export class AuthService {
     const ahora = new Date()
     const passwordHash = await encriptar(datos.password)
 
-    // Validar que el único rol solicitado exista realmente en la base de datos
-    const rolExiste = await prisma.rol.findUnique({
+    const rol = await prisma.rol.findUnique({
       where: { id: datos.rolId },
-      select: { id: true },
+      select: { id: true, nombre: true, esSupervisor: true, requiereSupervisor: true },
     })
 
-    if (!rolExiste) {
+    if (!rol) {
       throw new AppError(`El rol con ID ${datos.rolId} no existe en el sistema`, 400)
     }
+
+    const supervisorId = await this.resolverSupervisorId(rol, datos.supervisorId)
 
     return prisma.usuario.create({
       data: {
@@ -112,44 +119,109 @@ export class AuthService {
         nombreUsuario: datos.nombreUsuario,
         passwordHash,
         activo: datos.activo ?? true,
+        supervisorId,
         ultimoAcceso: ahora,
         creadoEn: ahora,
         actualizadoEn: ahora,
-        // Inserción en la tabla intermedia actual.
-        // Nota: Si actualizas tu schema a 1:N, esto cambiaría a simplemente `rolId: datos.rolId`
-        rolesUsuario: {
-          create: { rolId: datos.rolId },
-        },
+        rolesUsuario: { create: { rolId: datos.rolId } },
       },
       omit: { passwordHash: true },
       include: {
-        rolesUsuario: {
-          include: { rol: true },
-        },
+        rolesUsuario: { include: { rol: true } },
+        supervisor: { select: { id: true, nombre: true, apellido: true } },
       },
     })
   }
 
   async actualizar(id: number, datos: ActualizarUsuarioDTO) {
     let passwordHash: string | undefined = undefined
-
     if (datos.password !== undefined) {
       passwordHash = await encriptar(datos.password)
     }
 
-    return prisma.usuario.update({
-      where: { id },
-      data: {
-        nombre: datos.nombre,
-        apellido: datos.apellido,
-        email: datos.email,
-        nombreUsuario: datos.nombreUsuario,
-        activo: datos.activo,
-        ...(passwordHash !== undefined && { passwordHash }),
-        actualizadoEn: new Date(),
-      },
-      omit: { passwordHash: true },
+    let rolParaValidar: { id: number; requiereSupervisor: boolean } | null = null
+
+    if (datos.rolId !== undefined) {
+      const rol = await prisma.rol.findUnique({
+        where: { id: datos.rolId },
+        select: { id: true, requiereSupervisor: true },
+      })
+      if (!rol) throw new AppError(`El rol con ID ${datos.rolId} no existe`, 400)
+      rolParaValidar = rol
+    } else if (datos.supervisorId !== undefined) {
+      const actual = await prisma.usuario.findUnique({
+        where: { id },
+        include: { rolesUsuario: { include: { rol: true } } },
+      })
+      if (!actual) throw new AppError(`El usuario con ID ${id} no existe`, 404)
+      const rolActual = actual.rolesUsuario[0]?.rol
+      rolParaValidar = rolActual
+        ? { id: rolActual.id, requiereSupervisor: rolActual.requiereSupervisor }
+        : null
+    }
+
+    const supervisorId = rolParaValidar
+      ? await this.resolverSupervisorId(rolParaValidar, datos.supervisorId)
+      : datos.supervisorId
+
+    return prisma.$transaction(async (tx) => {
+      await tx.usuario.update({
+        where: { id },
+        data: {
+          nombre: datos.nombre,
+          apellido: datos.apellido,
+          email: datos.email,
+          nombreUsuario: datos.nombreUsuario,
+          activo: datos.activo,
+          ...(supervisorId !== undefined && { supervisorId }),
+          ...(passwordHash !== undefined && { passwordHash }),
+          actualizadoEn: new Date(),
+        },
+      })
+
+      if (datos.rolId !== undefined) {
+        await tx.usuarioRol.deleteMany({ where: { usuarioId: id } })
+        await tx.usuarioRol.create({ data: { usuarioId: id, rolId: datos.rolId } })
+      }
+
+      return tx.usuario.findUnique({
+        where: { id },
+        omit: { passwordHash: true },
+        include: {
+          rolesUsuario: { include: { rol: true } },
+          supervisor: { select: { id: true, nombre: true, apellido: true } },
+        },
+      })
     })
+  }
+
+  private async resolverSupervisorId(
+    rol: { id: number; requiereSupervisor: boolean },
+    supervisorId: number | null | undefined
+  ): Promise<number | null> {
+    if (!rol.requiereSupervisor) {
+      return null
+    }
+
+    if (supervisorId === null || supervisorId === undefined) {
+      throw new AppError('Este rol requiere que se asigne un supervisor', 400)
+    }
+
+    const supervisor = await prisma.usuario.findUnique({
+      where: { id: supervisorId },
+      include: { rolesUsuario: { include: { rol: true } } },
+    })
+
+    if (!supervisor) {
+      throw new AppError(`El supervisor con ID ${supervisorId} no existe`, 400)
+    }
+
+    const tieneRolSupervisor = supervisor.rolesUsuario.some((ur) => ur.rol.esSupervisor)
+    if (!tieneRolSupervisor) {
+      throw new AppError(`El usuario ${supervisorId} no tiene rol de Supervisor`, 400)
+    }
+
+    return supervisorId
   }
 
   /**
@@ -174,10 +246,10 @@ export class AuthService {
       prisma.usuarioRol.deleteMany({ where: { usuarioId } }),
       ...(rolIds.length > 0
         ? [
-            prisma.usuarioRol.createMany({
-              data: rolIds.map((rolId) => ({ usuarioId, rolId })),
-            }),
-          ]
+          prisma.usuarioRol.createMany({
+            data: rolIds.map((rolId) => ({ usuarioId, rolId })),
+          }),
+        ]
         : []),
     ])
 
