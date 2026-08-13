@@ -109,6 +109,26 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/inspecciones',
+    name: 'inspecciones',
+    component: () => import('../modules/inspecciones/views/InspeccionesView.vue'),
+    meta: {
+      requiresAuth: true,
+      hideLayout: false,
+      roles: ['Administrador del Sistema', 'Supervisor / Gerente de Mantenimiento', 'Técnico de Mantenimiento']
+    },
+  },
+  {
+    path: '/notificaciones-globales',
+    name: 'notificaciones-globales',
+    component: () => import('../modules/notificaciones/views/NotificacionesGlobalesView.vue'),
+    meta: {
+      requiresAuth: true,
+      hideLayout: false,
+      roles: ['Administrador del Sistema']
+    },
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('@/views/NotFoundView.vue'),

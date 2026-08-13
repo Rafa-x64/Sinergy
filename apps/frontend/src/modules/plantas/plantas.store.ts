@@ -15,6 +15,8 @@ export interface Planta {
     codigo: string
     nombre: string
     activa: boolean
+    creadoEn?: string
+    actualizadoEn?: string
 }
 
 export const usePlantasStore = defineStore('plantas', () => {

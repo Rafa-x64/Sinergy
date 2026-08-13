@@ -82,6 +82,8 @@ app.get('/api/health', async (_req, res, next) => {
   }
 })
 
+import notificacionesRoutes from '../modules/notificaciones/notificaciones.routes'
+
 // ─── Módulos de funcionalidades ───────────────────────────────────────────────
 app.use('/api/auth', authRoutes)
 app.use('/api/usuarios', authRoutes)
@@ -94,6 +96,7 @@ app.use('/api/componentes', componenteRoutes)
 app.use('/api/variables-criticas', variableCriticaRoutes)
 app.use('/api/inspecciones', inspeccionRoutes)
 app.use('/api/mantenimiento', mantenimientoRoutes)
+app.use('/api/notificaciones', notificacionesRoutes)
 
 import { eventBus } from './eventBus'
 import {validarJWT} from './middlewares/autenticar'

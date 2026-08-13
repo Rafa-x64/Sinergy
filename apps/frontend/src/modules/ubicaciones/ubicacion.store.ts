@@ -10,7 +10,9 @@ export interface Ubicacion {
     nombre: string,
     descripcion: string,
     activa: boolean,
-    plantaId: number
+    plantaId: number,
+    creadoEn?: string,
+    actualizadoEn?: string
 }
 
 export interface RegistrarUbicacionDTO {
