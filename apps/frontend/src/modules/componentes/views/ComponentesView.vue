@@ -7,6 +7,7 @@ import { useToast } from 'vue-toastification'
 import AppTabs from '../../../components/AppTabs.vue'
 import type { TabItem } from '../../../core/types/tabs.ts'
 import ComponenteForm from '../components/ComponenteForm.vue'
+import HeaderViews from '../../../components/HeaderViews.vue'
 
 const toast = useToast()
 const componenteStore = useComponenteStore()
@@ -142,14 +143,13 @@ watch(pestañaActiva, (nuevaPestana) => {
 
 <template>
     <v-container fluid class="componente-view">
+        <HeaderViews titulo="Componentes" mensaje="Componentes" icono="mdi-view-grid"></HeaderViews>
+
         <AppTabs v-model="pestañaActiva" :tabs="pestañas">
 
             <template #tab-lista>
-                <v-data-table
-                    :items="componentes"
-                    :headers="headersTabla"
-                    no-data-text="No hay componentes registrados"
-                >
+                <v-data-table :items="componentes" :headers="headersTabla"
+                    no-data-text="No hay componentes registrados">
                     <template #item.equipo="{ item }">
                         <span>{{ item.equipo?.nombre ?? '—' }}</span>
                     </template>
@@ -174,32 +174,16 @@ watch(pestañaActiva, (nuevaPestana) => {
 
                     <template #item.acciones="{ item }">
                         <div class="d-flex ga-2 align-center justify-center">
-                            <v-btn
-                                color="primary"
-                                variant="text"
-                                size="small"
-                                @click="prepararEdicion(item)"
-                                prepend-icon="mdi-file-edit"
-                            >
+                            <v-btn color="primary" variant="text" size="small" @click="prepararEdicion(item)"
+                                prepend-icon="mdi-file-edit">
                                 Editar
                             </v-btn>
-                            <v-btn
-                                color="error"
-                                variant="text"
-                                size="small"
-                                @click="prepararEliminacion(item.id)"
-                                :disabled="!item.activo"
-                                prepend-icon="mdi-minus-circle"
-                            >
+                            <v-btn color="error" variant="text" size="small" @click="prepararEliminacion(item.id)"
+                                :disabled="!item.activo" prepend-icon="mdi-minus-circle">
                                 Eliminar
                             </v-btn>
-                            <v-btn
-                                color="warning"
-                                variant="text"
-                                size="small"
-                                :disabled="!item.activo"
-                                prepend-icon="mdi-puzzle"
-                            >
+                            <v-btn color="warning" variant="text" size="small" :disabled="!item.activo"
+                                prepend-icon="mdi-puzzle">
                                 Agregar Variable Crítica
                             </v-btn>
                         </div>
@@ -208,26 +192,14 @@ watch(pestañaActiva, (nuevaPestana) => {
             </template>
 
             <template #tab-registrar>
-                <ComponenteForm
-                    :datos-iniciales="componenteVacio"
-                    :cargando="cargando"
-                    texto-boton="Guardar"
-                    :equipos="equipos"
-                    @submit="manejarGuardado"
-                    @cancelar="pestañaActiva = 'lista'"
-                />
+                <ComponenteForm :datos-iniciales="componenteVacio" :cargando="cargando" texto-boton="Guardar"
+                    :equipos="equipos" @submit="manejarGuardado" @cancelar="pestañaActiva = 'lista'" />
             </template>
 
             <template #tab-editar>
-                <ComponenteForm
-                    v-if="idComponenteAEditar !== null"
-                    :datos-iniciales="datosFormulario"
-                    :cargando="cargando"
-                    texto-boton="Actualizar"
-                    :equipos="equipos"
-                    @submit="manejarGuardado"
-                    @cancelar="pestañaActiva = 'lista'"
-                />
+                <ComponenteForm v-if="idComponenteAEditar !== null" :datos-iniciales="datosFormulario"
+                    :cargando="cargando" texto-boton="Actualizar" :equipos="equipos" @submit="manejarGuardado"
+                    @cancelar="pestañaActiva = 'lista'" />
             </template>
 
         </AppTabs>
@@ -239,20 +211,11 @@ watch(pestañaActiva, (nuevaPestana) => {
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer />
-                    <v-btn
-                        color="grey-darken-1"
-                        variant="text"
-                        :disabled="cargandoEliminacion"
-                        @click="mostrarDialogoEliminar = false"
-                    >
+                    <v-btn color="grey-darken-1" variant="text" :disabled="cargandoEliminacion"
+                        @click="mostrarDialogoEliminar = false">
                         Cancelar
                     </v-btn>
-                    <v-btn
-                        color="error"
-                        variant="flat"
-                        :loading="cargandoEliminacion"
-                        @click="confirmarEliminacion"
-                    >
+                    <v-btn color="error" variant="flat" :loading="cargandoEliminacion" @click="confirmarEliminacion">
                         Eliminar
                     </v-btn>
                 </v-card-actions>

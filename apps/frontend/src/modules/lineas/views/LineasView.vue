@@ -7,6 +7,7 @@ import FormularioLinea from '../components/FormularioLinea.vue'
 import { useLineaStore, type RegistrarLineaDTO, type Linea } from '../lineas.store'
 import type { TabItem } from '../../../core/types/tabs'
 import { useUbicacionStore } from '../../ubicaciones/ubicacion.store'
+import HeaderViews from '../../../components/HeaderViews.vue'
 
 const ubicacionStore = useUbicacionStore()
 const { ubicaciones } = storeToRefs(ubicacionStore)
@@ -151,6 +152,7 @@ watch(pestañaActiva, (nuevaPestana) => {
 
 <template>
     <v-container fluid class="lineas-dashboard">
+        <HeaderViews titulo="Lineas" mensaje="Lineas Operativas" icono="mdi-chart-timeline"></HeaderViews>
         <AppTabs v-model="pestañaActiva" :tabs="pestañasLineas">
             <template #tab-lista>
                 <v-data-table :items="lineas" :headers="headersTabla">

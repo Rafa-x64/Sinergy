@@ -7,6 +7,8 @@ import UbicacionForm from '../components/FormularioUbicacion.vue'
 import { useUbicacionStore, type RegistrarUbicacionDTO, type Ubicacion } from '../ubicacion.store'
 import type { TabItem } from '../../../core/types/tabs'
 import { usePlantasStore } from '../../plantas/plantas.store'
+import HeaderViews from '../../../components/HeaderViews.vue'
+
 const plantaStore = usePlantasStore()
 const { plantas } = storeToRefs(plantaStore)
 
@@ -156,6 +158,8 @@ watch(pestañaActiva, (nuevaPestana) => {
 
 <template>
     <v-container fluid class="ubicaciones-dashboard">
+        <HeaderViews titulo="Ubicaciones" mensaje="Ubicaciones Tecnicas" icono="mdi-map-marker-radius"></HeaderViews>
+
         <AppTabs v-model="pestañaActiva" :tabs="pestañasUbicaciones">
 
             <template #tab-lista>
@@ -176,7 +180,8 @@ watch(pestañaActiva, (nuevaPestana) => {
                     </template>
                     <template #item.acciones="{ item }">
                         <div class="d-flex ga-2 align-center justify-center">
-                            <v-btn color="primary" variant="text" size="small" @click="prepararEdicion(item)" prepend-icon="mdi-file-edit">Editar</v-btn>
+                            <v-btn color="primary" variant="text" size="small" @click="prepararEdicion(item)"
+                                prepend-icon="mdi-file-edit">Editar</v-btn>
                             <v-btn color="error" variant="text" size="small" @click="prepararEliminacion(item.id)"
                                 :disabled="!item.activa" prepend-icon="mdi-minus-circle">Eliminar</v-btn>
                         </div>
