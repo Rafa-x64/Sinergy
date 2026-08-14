@@ -12,6 +12,7 @@ import {
 } from '../equipo.store'
 import { useLineaStore } from '../../lineas/lineas.store'
 import type { TabItem } from '../../../core/types/tabs'
+import HeaderViews from '../../../components/HeaderViews.vue'
 
 const route = useRoute()
 const toast = useToast()
@@ -222,14 +223,7 @@ watch(pestañaActiva, (nuevaPestana) => {
 <template>
     <v-container fluid class="equipos-tipo-view">
         <!-- Encabezado dinámico de la vista -->
-        <v-row class="mb-2">
-            <v-col cols="12">
-                <h1 class="text-h4 font-weight-bold">{{ tituloVista }}</h1>
-                <p class="text-subtitle-1 text-medium-emphasis">
-                    Catálogo y gestión operacional de {{ tipoFiltro.toLowerCase() }}
-                </p>
-            </v-col>
-        </v-row>
+        <HeaderViews :titulo="tituloVista" :mensaje="tipoFiltro"></HeaderViews>
 
         <AppTabs v-model="pestañaActiva" :tabs="pestañasVista">
             <!-- Pestaña 1: Lista de equipos filtrados -->

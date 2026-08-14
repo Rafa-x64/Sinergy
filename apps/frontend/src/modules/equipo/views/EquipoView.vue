@@ -14,6 +14,7 @@ import {
 } from '../equipo.store'
 import { useLineaStore } from '../../lineas/lineas.store'
 import type { TabItem } from '../../../core/types/tabs'
+import HeaderViews from '../../../components/HeaderViews.vue'
 
 const toast = useToast()
 const equipoStore = useEquipoStore()
@@ -290,7 +291,7 @@ watch(pestañaTipo, (nuevaPestana) => {
 
 <template>
     <v-container fluid class="equipo-view">
-
+        <HeaderViews titulo="Equipos" mensaje="Equipos y Tipos de Equipos" icono="mdi-engine"></HeaderViews>
         <!-- Pestañas principales: Equipos | Tipos de Equipo -->
         <AppTabs v-model="pestañaActiva" :tabs="pestañasPrincipales">
 

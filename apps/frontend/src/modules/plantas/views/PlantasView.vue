@@ -6,6 +6,7 @@ import AppTabs from '../../../components/AppTabs.vue'
 import PlantaForm from '../components/PlantaForm.vue'
 import { usePlantasStore, type RegistrarPlantaDTO, type Planta } from '../plantas.store'
 import type { TabItem } from '../../../core/types/tabs'
+import HeaderViews from '../../../components/HeaderViews.vue'
 
 const toast = useToast()
 const plantaStore = usePlantasStore()
@@ -130,6 +131,7 @@ watch(pestañaActiva, (nuevaPestana) => {
 
 <template>
     <v-container fluid class="plantas-dashboard">
+        <HeaderViews titulo="Plantas" mensaje="Plantas" icono="mdi-factory"></HeaderViews>
         <AppTabs v-model="pestañaActiva" :tabs="pestañasPlantas">
 
             <template #tab-lista>

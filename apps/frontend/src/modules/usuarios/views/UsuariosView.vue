@@ -7,6 +7,7 @@ import FormularioUsuario from '../components/FormularioUsuario.vue'
 import { useUsuarioStore, type RegistrarUsuarioDTO, type Usuario } from '../usuarios.store.ts'
 import type { TabItem } from '../../../core/types/tabs'
 import { useRolesStore } from '../../auth/roles.store.ts'
+import HeaderViews from '../../../components/HeaderViews.vue'
 
 const rolesStore = useRolesStore()
 const { roles } = storeToRefs(rolesStore)
@@ -167,6 +168,8 @@ watch(pestañaActiva, (nuevaPestana) => {
 
 <template>
     <v-container fluid class="usuarios-dashboard">
+
+        <HeaderViews titulo="Usuarios" mensaje="Usuarios" icono="mdi-account-group"></HeaderViews>
         <AppTabs v-model="pestañaActiva" :tabs="pestañasUsuarios">
             <template #tab-lista>
                 <v-data-table :items="usuarios" :headers="headersTabla">
@@ -207,7 +210,8 @@ watch(pestañaActiva, (nuevaPestana) => {
 
                     <template #item.acciones="{ item }">
                         <div class="d-flex ga-2 align-center justify-center">
-                            <v-btn color="primary" variant="text" size="small" @click="prepararEdicion(item)" prepend-icon="mdi-file-edit">Editar</v-btn>
+                            <v-btn color="primary" variant="text" size="small" @click="prepararEdicion(item)"
+                                prepend-icon="mdi-file-edit">Editar</v-btn>
                             <v-btn color="error" variant="text" size="small" @click="prepararEliminacion(item.id)"
                                 :disabled="!item.activo" prepend-icon="mdi-minus-circle">
                                 Eliminar
@@ -220,8 +224,9 @@ watch(pestañaActiva, (nuevaPestana) => {
             <template #tab-registrar>
                 <v-card class="pa-4" elevation="0">
                     <v-card-title class="px-0 mb-4 text-h5 font-weight-bold">Registrar Nuevo Usuario</v-card-title>
-                    <FormularioUsuario :roles="roles" :supervisores="supervisoresDisponibles" :datos-iniciales="usuarioVacio" :cargando="cargando"
-                        texto-boton="Guardar Usuario" @submit="manejarGuardado" @cancelar="cancelarEdicion" />
+                    <FormularioUsuario :roles="roles" :supervisores="supervisoresDisponibles"
+                        :datos-iniciales="usuarioVacio" :cargando="cargando" texto-boton="Guardar Usuario"
+                        @submit="manejarGuardado" @cancelar="cancelarEdicion" />
                 </v-card>
             </template>
 
@@ -229,9 +234,9 @@ watch(pestañaActiva, (nuevaPestana) => {
                 <v-card class="pa-4" elevation="0" v-if="idUsuarioEditar !== null">
                     <v-card-title class="px-0 mb-4 text-h5 font-weight-bold">Editar Usuario</v-card-title>
 
-                    <FormularioUsuario :roles="roles" :supervisores="supervisoresDisponibles" :datos-iniciales="datosFormulario" :cargando="cargando"
-                        :es-edicion="true" texto-boton="Actualizar Usuario" @submit="manejarGuardado"
-                        @cancelar="cancelarEdicion" />
+                    <FormularioUsuario :roles="roles" :supervisores="supervisoresDisponibles"
+                        :datos-iniciales="datosFormulario" :cargando="cargando" :es-edicion="true"
+                        texto-boton="Actualizar Usuario" @submit="manejarGuardado" @cancelar="cancelarEdicion" />
                 </v-card>
             </template>
         </AppTabs>

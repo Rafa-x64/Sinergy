@@ -5,6 +5,7 @@ import { useToast } from 'vue-toastification'
 import AppTabs from '../../../components/AppTabs.vue'
 import type { TabItem } from '@/core/types/tabs'
 import { ref } from 'vue'
+import HeaderViews from '../../../components/HeaderViews.vue'
 
 const rolesStore = useRolesStore()
 const { roles } = storeToRefs(rolesStore)
@@ -31,11 +32,13 @@ listarRoles();
 </script>
 <template>
     <v-container fluid class="roles-dashboard">
+        <HeaderViews titulo="Roles" mensaje="Roles" icono="mdi-account-key"></HeaderViews>
+
         <AppTabs v-model="pestañaActiva" :tabs="pestañasRoles">
 
             <template #tab-lista>
                 <v-data-table :items="roles" :headers="headersTabla">
-                    
+
                 </v-data-table>
             </template>
 
