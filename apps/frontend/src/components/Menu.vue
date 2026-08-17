@@ -95,7 +95,7 @@ const cerrarSesion = async (): Promise<void> => {
                 <v-list-item v-for="modulo in modulosVisibles" :key="modulo.title" :color="modulo.color" :to="modulo.to"
                     :prepend-icon="modulo.icon" :title="modulo.title" />
                 <v-list-item @click="cerrarSesion()" title="Cerrar Sesión" prepend-icon="mdi-logout-variant"
-                    color="danger" />
+                    class="logout" />
             </v-list>
         </v-menu>
 
