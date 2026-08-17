@@ -391,5 +391,182 @@ export const variableCriticaController = {
       }
       next(error)
     }
+  },
+
+  //---------------------------------------------JERARQUIA ARBOL-------------------------------------------------
+  async obtenerJerarquia(
+    _req: Request,
+    res: Response<ResponseDTO>,
+    next: NextFunction
+  ) {
+    try {
+      const arbol = await variableCriticaService.obtenerArbolJerarquico()
+
+      return res.status(200).json({
+        status: 'ok',
+        message: 'Árbol jerárquico obtenido correctamente',
+        data: arbol
+      })
+    } catch (error: unknown) {
+      next(error)
+    }
+  },
+
+  //---------------------------------------------PLANTILLAS DE VARIABLES-----------------------------------------
+  async listarPlantillas(
+    req: Request,
+    res: Response<ResponseDTO>,
+    next: NextFunction
+  ) {
+    try {
+      const tipoEquipoId = req.query.tipoEquipoId ? parsearId(req.query.tipoEquipoId as string) ?? undefined : undefined
+      const plantillas = await variableCriticaService.listarPlantillas(tipoEquipoId)
+
+      return res.status(200).json({
+        status: 'ok',
+        message: 'Plantillas de variables obtenidas correctamente',
+        data: plantillas
+      })
+    } catch (error: unknown) {
+      next(error)
+    }
+  },
+
+  async registrarPlantilla(
+    req: Request,
+    res: Response<ResponseDTO>,
+    next: NextFunction
+  ) {
+    try {
+      const { tipoEquipoId, nombre, descripcion, tipoEvaluacion, unidad, valorMinimo, valorMaximo, ordenPosicion, opciones } = req.body
+
+      if (typeof tipoEquipoId !== 'number') {
+        return res.status(400).json({ status: 'error', message: 'El ID del tipo de equipo es requerido y debe ser un número' })
+      }
+
+      if (!nombre || typeof nombre !== 'string' || !nombre.trim()) {
+        return res.status(400).json({ status: 'error', message: 'El nombre de la variable de plantilla es requerido' })
+      }
+
+      if (!tipoEvaluacion || !TIPOS_EVALUACION_VALIDOS.includes(tipoEvaluacion)) {
+        return res.status(400).json({
+          status: 'error',
+          message: `El tipo de evaluación es inválido. Valores permitidos: ${TIPOS_EVALUACION_VALIDOS.join(', ')}`
+        })
+      }
+
+      const plantilla = await variableCriticaService.crearPlantilla({
+        tipoEquipoId,
+        nombre: nombre.trim(),
+        descripcion: descripcion?.trim() || null,
+        tipoEvaluacion,
+        unidad: unidad?.trim() || null,
+        valorMinimo: valorMinimo !== undefined && valorMinimo !== null ? Number(valorMinimo) : null,
+        valorMaximo: valorMaximo !== undefined && valorMaximo !== null ? Number(valorMaximo) : null,
+        ordenPosicion: ordenPosicion ? Number(ordenPosicion) : 0,
+        opciones
+      })
+
+      return res.status(201).json({
+        status: 'ok',
+        message: 'Variable de plantilla creada exitosamente',
+        data: plantilla
+      })
+    } catch (error: unknown) {
+      next(error)
+    }
+  },
+
+  async actualizarPlantilla(
+    req: Request,
+    res: Response<ResponseDTO>,
+    next: NextFunction
+  ) {
+    try {
+      const id = parsearId(req.params.id)
+      if (id === null) {
+        return res.status(400).json({ status: 'error', message: 'ID de plantilla inválido' })
+      }
+
+      const plantillaActualizada = await variableCriticaService.editarPlantilla(id, req.body)
+
+      return res.status(200).json({
+        status: 'ok',
+        message: 'Variable de plantilla actualizada correctamente',
+        data: plantillaActualizada
+      })
+    } catch (error: unknown) {
+      next(error)
+    }
+  },
+
+  async eliminarPlantilla(
+    req: Request,
+    res: Response<ResponseDTO>,
+    next: NextFunction
+  ) {
+    try {
+      const id = parsearId(req.params.id)
+      if (id === null) {
+        return res.status(400).json({ status: 'error', message: 'ID de plantilla inválido' })
+      }
+
+      const plantillaEliminada = await variableCriticaService.eliminarPlantilla(id)
+
+      return res.status(200).json({
+        status: 'ok',
+        message: 'Variable de plantilla eliminada correctamente',
+        data: plantillaEliminada
+      })
+    } catch (error: unknown) {
+      next(error)
+    }
+  },
+
+  //---------------------------------------------SINCRONIZACIÓN--------------------------------------------------
+  async sincronizarComponente(
+    req: Request,
+    res: Response<ResponseDTO>,
+    next: NextFunction
+  ) {
+    try {
+      const componenteId = parsearId(req.params.componenteId)
+      if (componenteId === null) {
+        return res.status(400).json({ status: 'error', message: 'ID de componente inválido' })
+      }
+
+      const resultado = await variableCriticaService.sincronizarComponenteConPlantilla(componenteId)
+
+      return res.status(200).json({
+        status: 'ok',
+        message: `Sincronización completada: ${resultado.creadas} creadas, ${resultado.actualizadas} actualizadas, ${resultado.desactivadas} desactivadas`,
+        data: resultado
+      })
+    } catch (error: unknown) {
+      next(error)
+    }
+  },
+
+  async sincronizarTipoEquipo(
+    req: Request,
+    res: Response<ResponseDTO>,
+    next: NextFunction
+  ) {
+    try {
+      const tipoEquipoId = parsearId(req.params.tipoEquipoId)
+      if (tipoEquipoId === null) {
+        return res.status(400).json({ status: 'error', message: 'ID de tipo de equipo inválido' })
+      }
+
+      const resultado = await variableCriticaService.sincronizarTipoEquipoCompleto(tipoEquipoId)
+
+      return res.status(200).json({
+        status: 'ok',
+        message: `Sincronización masiva completada: ${resultado.totalComponentesSincronizados} componentes sincronizados en ${resultado.totalEquipos} equipos`,
+        data: resultado
+      })
+    } catch (error: unknown) {
+      next(error)
+    }
   }
 }

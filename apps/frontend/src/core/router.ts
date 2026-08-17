@@ -109,6 +109,16 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/variables',
+    name: 'variables',
+    component: () => import('../modules/variables/views/VariablesCriticasView.vue'),
+    meta: {
+      requiresAuth: true,
+      hideLayout: false,
+      roles: ['Administrador del Sistema', 'Supervisor / Gerente de Mantenimiento']
+    },
+  },
+  {
     path: '/inspecciones',
     name: 'inspecciones',
     component: () => import('../modules/inspecciones/views/InspeccionesView.vue'),

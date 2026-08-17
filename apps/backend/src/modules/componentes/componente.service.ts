@@ -15,9 +15,56 @@ const INCLUDE_COMPONENTE_RELACIONES: Prisma.ComponenteInclude = {
 class ComponenteService {
 
   async crearComponente(datos: RegistrarComponenteDTO) {
-    return prisma.componente.create({
-      data: datos,
-      include: INCLUDE_COMPONENTE_RELACIONES
+    return prisma.$transaction(async (tx) => {
+      const componente = await tx.componente.create({
+        data: datos,
+        include: INCLUDE_COMPONENTE_RELACIONES
+      })
+
+      // Consultar el equipo para obtener su tipo de equipo
+      const equipo = await tx.equipo.findUnique({
+        where: { id: datos.equipoId },
+        select: { tipoEquipoId: true }
+      })
+
+      if (equipo?.tipoEquipoId) {
+        // Obtener las variables de plantilla activas para este tipo de equipo
+        const plantillas = await tx.plantillaVariable.findMany({
+          where: { tipoEquipoId: equipo.tipoEquipoId, activa: true },
+          include: { opcionesSeleccion: true },
+          orderBy: { ordenPosicion: 'asc' }
+        })
+
+        // Instanciar automáticamente cada variable
+        for (const p of plantillas) {
+          const nuevaVar = await tx.variable.create({
+            data: {
+              componenteId: componente.id,
+              plantillaId: p.id,
+              nombre: p.nombre,
+              tipoEvaluacion: p.tipoEvaluacion,
+              unidad: p.unidad,
+              valorMinimo: p.valorMinimo,
+              valorMaximo: p.valorMaximo,
+              ordenPosicion: p.ordenPosicion,
+              activa: true
+            }
+          })
+
+          if (p.tipoEvaluacion === 'SELECCION' && p.opcionesSeleccion.length > 0) {
+            await tx.opcionSeleccion.createMany({
+              data: p.opcionesSeleccion.map((o) => ({
+                variableId: nuevaVar.id,
+                clave: o.clave,
+                etiqueta: o.etiqueta,
+                ordenPosicion: o.ordenPosicion
+              }))
+            })
+          }
+        }
+      }
+
+      return componente
     })
   }
 
