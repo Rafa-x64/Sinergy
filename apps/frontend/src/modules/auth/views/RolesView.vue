@@ -32,7 +32,7 @@ listarRoles();
 </script>
 <template>
     <v-container fluid class="roles-dashboard">
-        <HeaderViews titulo="Roles" mensaje="Roles" icono="mdi-account-key"></HeaderViews>
+        <HeaderViews titulo="Roles" mensaje="Roles" color="purple-light" icono="mdi-account-key"></HeaderViews>
 
         <AppTabs v-model="pestañaActiva" :tabs="pestañasRoles">
 

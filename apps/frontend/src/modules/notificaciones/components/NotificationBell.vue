@@ -64,7 +64,7 @@ function irAPanelGlobal(): void {
                 <v-badge :color="notificationStore.unreadCount > 0 ? 'error' : 'transparent'"
                     :content="notificationStore.unreadCount" :model-value="notificationStore.unreadCount > 0"
                     offset-x="4" offset-y="4">
-                    <v-icon size="24">mdi-bell-outline</v-icon>
+                    <v-icon size="24" color="warning">mdi-bell</v-icon>
                 </v-badge>
             </v-btn>
         </template>

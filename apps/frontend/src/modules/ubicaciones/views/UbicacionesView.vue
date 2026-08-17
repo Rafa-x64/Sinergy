@@ -35,11 +35,11 @@ const cargandoEliminacion = ref<boolean>(false)
 
 const pestañasUbicaciones = computed<TabItem[]>(() => {
     const items: TabItem[] = [
-        { id: 'lista', name: 'Lista de Ubicaciones' },
-        { id: 'registrar', name: 'Añadir Ubicación' }
+        { id: 'lista', name: 'Lista de Ubicaciones', color: '#f7474a' },
+        { id: 'registrar', name: 'Añadir Ubicación', color: '#f7474a' }
     ]
     if (idUbicacionEditar.value !== null) {
-        items.push({ id: 'editar', name: 'Editar Ubicación' })
+        items.push({ id: 'editar', name: 'Editar Ubicación', color: '#f7474a' })
     }
     return items
 })
@@ -158,7 +158,7 @@ watch(pestañaActiva, (nuevaPestana) => {
 
 <template>
     <v-container fluid class="ubicaciones-dashboard">
-        <HeaderViews titulo="Ubicaciones" mensaje="Ubicaciones Tecnicas" icono="mdi-map-marker-radius"></HeaderViews>
+        <HeaderViews titulo="Ubicaciones" mensaje="Ubicaciones Tecnicas" color="#f7474a" icono="mdi-map-marker-radius"></HeaderViews>
 
         <AppTabs v-model="pestañaActiva" :tabs="pestañasUbicaciones">
 
