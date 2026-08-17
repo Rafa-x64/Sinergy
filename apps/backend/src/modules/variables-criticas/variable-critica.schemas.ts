@@ -26,10 +26,35 @@ export interface EditarVariableDTO {
   valorMaximo?: number | null
   ordenPosicion?: number
   activa?: boolean
+  opciones?: RegistrarOpcionSeleccionDTO[]
 }
 
 export interface FiltrosVariable {
   componenteId?: number
   tipoEvaluacion?: TipoEvaluacion
   activa?: boolean
+}
+
+export interface RegistrarPlantillaVariableDTO {
+  tipoEquipoId: number
+  nombre: string
+  descripcion?: string | null
+  tipoEvaluacion: TipoEvaluacion
+  unidad?: string | null
+  valorMinimo?: number | null
+  valorMaximo?: number | null
+  ordenPosicion?: number
+  opciones?: RegistrarOpcionSeleccionDTO[]
+}
+
+export interface EditarPlantillaVariableDTO {
+  nombre?: string
+  descripcion?: string | null
+  tipoEvaluacion?: TipoEvaluacion
+  unidad?: string | null
+  valorMinimo?: number | null
+  valorMaximo?: number | null
+  ordenPosicion?: number
+  activa?: boolean
+  opciones?: RegistrarOpcionSeleccionDTO[]
 }
