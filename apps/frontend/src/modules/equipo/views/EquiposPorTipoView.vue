@@ -86,11 +86,11 @@ const cargandoEliminacion = ref(false)
 
 const pestañasVista = computed<TabItem[]>(() => {
     const items: TabItem[] = [
-        { id: 'lista', name: 'Lista' },
-        { id: 'registrar', name: 'Añadir' }
+        { id: 'lista', name: 'Lista', color: 'safety-orange-light' },
+        { id: 'registrar', name: 'Añadir', color: 'safety-orange-light' }
     ]
     if (idEquipoEditar.value !== null) {
-        items.push({ id: 'editar', name: 'Editar' })
+        items.push({ id: 'editar', name: 'Editar', color: 'safety-orange-light' })
     }
     return items
 })
@@ -228,11 +228,8 @@ watch(pestañaActiva, (nuevaPestana) => {
         <AppTabs v-model="pestañaActiva" :tabs="pestañasVista">
             <!-- Pestaña 1: Lista de equipos filtrados -->
             <template #tab-lista>
-                <v-data-table
-                    :items="equiposFiltrados"
-                    :headers="headersTabla"
-                    :no-data-text="`No hay ${tipoFiltro.toLowerCase()} registrados`"
-                >
+                <v-data-table :items="equiposFiltrados" :headers="headersTabla"
+                    :no-data-text="`No hay ${tipoFiltro.toLowerCase()} registrados`">
                     <template #item.linea="{ item }">
                         <span>{{ item.linea?.nombre ?? 'Sin línea asignada' }}</span>
                     </template>
@@ -253,23 +250,12 @@ watch(pestañaActiva, (nuevaPestana) => {
 
                     <template #item.acciones="{ item }">
                         <div class="d-flex ga-2 align-center justify-center">
-                            <v-btn
-                                color="primary"
-                                variant="text"
-                                size="small"
-                                @click="prepararEdicion(item)"
-                                prepend-icon="mdi-file-edit"
-                            >
+                            <v-btn color="primary" variant="text" size="small" @click="prepararEdicion(item)"
+                                prepend-icon="mdi-file-edit">
                                 Editar
                             </v-btn>
-                            <v-btn
-                                color="error"
-                                variant="text"
-                                size="small"
-                                @click="prepararEliminacion(item.id)"
-                                :disabled="item.estadoOperativo === 'INOPERATIVO'"
-                                prepend-icon="mdi-minus-circle"
-                            >
+                            <v-btn color="error" variant="text" size="small" @click="prepararEliminacion(item.id)"
+                                :disabled="item.estadoOperativo === 'INOPERATIVO'" prepend-icon="mdi-minus-circle">
                                 Desactivar
                             </v-btn>
                         </div>
@@ -283,16 +269,9 @@ watch(pestañaActiva, (nuevaPestana) => {
                     <v-card-title class="px-0 mb-4 text-h5 font-weight-bold">
                         Registrar {{ tipoFiltro }}
                     </v-card-title>
-                    <FormularioEquipo
-                        :datos-iniciales="equipoVacio"
-                        :cargando="cargando"
-                        :texto-boton="`Guardar ${tipoFiltro}`"
-                        :tipos-equipo="tiposEquipo"
-                        :lineas="lineas"
-                        :bloquear-tipo="true"
-                        @submit="manejarGuardado"
-                        @cancelar="cancelarEdicion"
-                    />
+                    <FormularioEquipo :datos-iniciales="equipoVacio" :cargando="cargando"
+                        :texto-boton="`Guardar ${tipoFiltro}`" :tipos-equipo="tiposEquipo" :lineas="lineas"
+                        :bloquear-tipo="true" @submit="manejarGuardado" @cancelar="cancelarEdicion" />
                 </v-card>
             </template>
 
@@ -303,16 +282,9 @@ watch(pestañaActiva, (nuevaPestana) => {
                         Editar {{ tipoFiltro }}
                     </v-card-title>
 
-                    <FormularioEquipo
-                        :datos-iniciales="datosFormulario"
-                        :cargando="cargando"
-                        :texto-boton="`Actualizar ${tipoFiltro}`"
-                        :tipos-equipo="tiposEquipo"
-                        :lineas="lineas"
-                        :bloquear-tipo="true"
-                        @submit="manejarGuardado"
-                        @cancelar="cancelarEdicion"
-                    />
+                    <FormularioEquipo :datos-iniciales="datosFormulario" :cargando="cargando"
+                        :texto-boton="`Actualizar ${tipoFiltro}`" :tipos-equipo="tiposEquipo" :lineas="lineas"
+                        :bloquear-tipo="true" @submit="manejarGuardado" @cancelar="cancelarEdicion" />
                 </v-card>
             </template>
         </AppTabs>
@@ -322,24 +294,17 @@ watch(pestañaActiva, (nuevaPestana) => {
             <v-card>
                 <v-card-title class="text-h6 font-weight-bold text-error">Confirmar Acción</v-card-title>
                 <v-card-text>
-                    El equipo será marcado como <strong>Inoperativo</strong>. Esta acción se puede revertir editando el estado del equipo.
+                    El equipo será marcado como <strong>Inoperativo</strong>. Esta acción se puede revertir editando el
+                    estado
+                    del equipo.
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer />
-                    <v-btn
-                        color="grey-darken-1"
-                        variant="text"
-                        :disabled="cargandoEliminacion"
-                        @click="mostrarDialogoEliminar = false"
-                    >
+                    <v-btn color="grey-darken-1" variant="text" :disabled="cargandoEliminacion"
+                        @click="mostrarDialogoEliminar = false">
                         Cancelar
                     </v-btn>
-                    <v-btn
-                        color="error"
-                        variant="flat"
-                        :loading="cargandoEliminacion"
-                        @click="ejecutarEliminacion"
-                    >
+                    <v-btn color="error" variant="flat" :loading="cargandoEliminacion" @click="ejecutarEliminacion">
                         Desactivar
                     </v-btn>
                 </v-card-actions>
@@ -352,6 +317,7 @@ watch(pestañaActiva, (nuevaPestana) => {
 .equipos-tipo-view {
     padding: 16px;
 }
+
 .equipos-tipo-view :deep(.v-data-table th),
 .equipos-tipo-view :deep(.v-data-table td) {
     white-space: nowrap !important;

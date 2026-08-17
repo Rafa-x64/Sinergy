@@ -38,11 +38,11 @@ const cargandoEliminacion = ref<boolean>(false)
 
 const pestañasUsuarios = computed<TabItem[]>(() => {
     const items: TabItem[] = [
-        { id: 'lista', name: 'Lista de Usuarios' },
-        { id: 'registrar', name: 'Añadir Usuario' }
+        { id: 'lista', name: 'Lista de Usuarios', color: 'purple'},
+        { id: 'registrar', name: 'Añadir Usuario', color: 'purple'}
     ]
     if (idUsuarioEditar.value !== null) {
-        items.push({ id: 'editar', name: 'Editar Usuario' })
+        items.push({ id: 'editar', name: 'Editar Usuario', color: 'purple'})
     }
     return items
 })
@@ -169,7 +169,7 @@ watch(pestañaActiva, (nuevaPestana) => {
 <template>
     <v-container fluid class="usuarios-dashboard">
 
-        <HeaderViews titulo="Usuarios" mensaje="Usuarios" icono="mdi-account-group"></HeaderViews>
+        <HeaderViews titulo="Usuarios" mensaje="Usuarios" color='purple' icono="mdi-account-group"></HeaderViews>
         <AppTabs v-model="pestañaActiva" :tabs="pestañasUsuarios">
             <template #tab-lista>
                 <v-data-table :items="usuarios" :headers="headersTabla">

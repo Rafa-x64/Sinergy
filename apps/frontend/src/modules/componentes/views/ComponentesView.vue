@@ -37,11 +37,11 @@ const cargandoEliminacion = ref(false)
 
 const pestañas = computed<TabItem[]>(() => {
     const items: TabItem[] = [
-        { id: 'lista', name: 'Lista de Componentes' },
-        { id: 'registrar', name: 'Registrar componente' }
+        { id: 'lista', name: 'Lista de Componentes', color:'success' },
+        { id: 'registrar', name: 'Registrar componente', color:'success' }
     ]
     if (idComponenteAEditar.value !== null) {
-        items.push({ id: 'editar', name: 'Editar componente' })
+        items.push({ id: 'editar', name: 'Editar componente', color:'success' })
     }
     return items
 })
@@ -143,7 +143,7 @@ watch(pestañaActiva, (nuevaPestana) => {
 
 <template>
     <v-container fluid class="componente-view">
-        <HeaderViews titulo="Componentes" mensaje="Componentes" icono="mdi-view-grid"></HeaderViews>
+        <HeaderViews titulo="Componentes" mensaje="Componentes" icono="mdi-view-grid" color="success"></HeaderViews>
 
         <AppTabs v-model="pestañaActiva" :tabs="pestañas">
 

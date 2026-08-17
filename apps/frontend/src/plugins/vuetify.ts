@@ -19,7 +19,7 @@ const sinergyLightTheme: ThemeDefinition = {
   dark: false,
   colors: {
     // ─── TEXTOS ───
-    'text-primary': '#1E293B',     // pizarra oscura
+    'text-principal': '#1E293B',     // pizarra oscura
     'text-secondary': '#475569',   // pizarra media
     'text-muted': '#94A3B8',       // pizarra clara
 
@@ -40,6 +40,10 @@ const sinergyLightTheme: ThemeDefinition = {
     'error-light': '#FFE4E6',
     'info': '#0284C7',             // cielo
     'info-light': '#E0F2FE',
+    'safety-orange': '#FF5F15',    // naranja industrial
+    'safety-orange-light': '#ffa600',
+    'purple': '#9146FF',
+    'purple-light': '#C9A3FF',
 
     // ─── FONDOS ─── (sin blanco puro)
     'background': '#F1F5F9',       // gris azulado muy claro
@@ -76,7 +80,7 @@ const sinergyDarkTheme: ThemeDefinition = {
   dark: true,
   colors: {
     // ─── TEXTOS ───
-    'text-primary': '#F1F5F9',     // blanco grisáceo
+    'text-principal': '#F1F5F9',     // blanco grisáceo
     'text-secondary': '#CBD5E1',
     'text-muted': '#94A3B8',
 
@@ -97,6 +101,10 @@ const sinergyDarkTheme: ThemeDefinition = {
     'error-light': '#4C0519',
     'info': '#38BDF8',             // cielo claro
     'info-light': '#0C4A6E',
+    'safety-orange': '#FF5F15',    // naranja industrial
+    'safety-orange-light': '#ffa600',
+    'purple': '#9146FF',
+    'purple-light': '#C9A3FF',
 
     // ─── FONDOS ─── (azul noche, sin negro)
     'background': '#0B0E14',       // casi negro pero azulado

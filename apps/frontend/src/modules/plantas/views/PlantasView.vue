@@ -31,11 +31,11 @@ const headersTabla = [
 
 const pestañasPlantas = computed<TabItem[]>(() => {
     const items: TabItem[] = [
-        { id: 'lista', name: 'Lista de Plantas' },
-        { id: 'registrar', name: 'Añadir Planta' }
+        { id: 'lista', name: 'Lista de Plantas', color:'text-principal' },
+        { id: 'registrar', name: 'Añadir Planta', color:'text-principal' }
     ]
     if (idPlantaEditar.value !== null) {
-        items.push({ id: 'editar', name: 'Editar Planta' })
+        items.push({ id: 'editar', name: 'Editar Planta', color:'text-principal' })
     }
     return items
 })

@@ -35,11 +35,11 @@ const cargandoEliminacion = ref<boolean>(false)
 
 const pestañasLineas = computed<TabItem[]>(() => {
     const items: TabItem[] = [
-        { id: 'lista', name: 'Lista de Lineas' },
-        { id: 'registrar', name: 'Añadir Linea' }
+        { id: 'lista', name: 'Lista de Lineas', color: 'warning'},
+        { id: 'registrar', name: 'Añadir Linea', color: 'warning'}
     ]
     if (idLineaEditar.value !== null) {
-        items.push({ id: 'editar', name: 'Editar Linea' })
+        items.push({ id: 'editar', name: 'Editar Linea', color: 'warning'})
     }
     return items
 })
@@ -152,7 +152,7 @@ watch(pestañaActiva, (nuevaPestana) => {
 
 <template>
     <v-container fluid class="lineas-dashboard">
-        <HeaderViews titulo="Lineas" mensaje="Lineas Operativas" icono="mdi-chart-timeline"></HeaderViews>
+        <HeaderViews titulo="Lineas" mensaje="Lineas Operativas" color="warning" icono="mdi-chart-timeline"></HeaderViews>
         <AppTabs v-model="pestañaActiva" :tabs="pestañasLineas">
             <template #tab-lista>
                 <v-data-table :items="lineas" :headers="headersTabla">
