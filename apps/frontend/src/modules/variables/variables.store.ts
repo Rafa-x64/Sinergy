@@ -450,7 +450,11 @@ export const useVariablesCriticasStore = defineStore('variablesCriticas', () => 
         ordenPosicion: dto.ordenPosicion ?? 0
       })
       if (data.status === 'ok') {
-        await cargarArbolJerarquico()
+        const promesas: Promise<unknown>[] = [cargarArbolJerarquico()]
+        if (tipoEquipoSeleccionadoId.value) {
+          promesas.push(cargarPlantillasPorTipo(tipoEquipoSeleccionadoId.value))
+        }
+        await Promise.all(promesas)
       }
       return data
     } catch (error: unknown) {
@@ -489,7 +493,11 @@ export const useVariablesCriticasStore = defineStore('variablesCriticas', () => 
         if (componenteSeleccionado.value?.componente.id === id) {
           limpiarSeleccion()
         }
-        await cargarArbolJerarquico()
+        const promesas: Promise<unknown>[] = [cargarArbolJerarquico()]
+        if (tipoEquipoSeleccionadoId.value) {
+          promesas.push(cargarPlantillasPorTipo(tipoEquipoSeleccionadoId.value))
+        }
+        await Promise.all(promesas)
       }
       return data
     } catch (error: unknown) {
@@ -505,11 +513,14 @@ export const useVariablesCriticasStore = defineStore('variablesCriticas', () => 
     try {
       const { data } = await api.post<RespuestaApi>('/variables-criticas/crear', dto)
       if (data.status === 'ok') {
-        // Primero recargamos el árbol para tener el _count canónico del servidor,
-        // luego cargamos las variables del componente que sobreescribe el _count
-        // en memoria con el valor exacto (sin depender del caché del servidor).
-        await cargarArbolJerarquico()
-        await cargarVariablesComponente(dto.componenteId)
+        const promesas: Promise<unknown>[] = [
+          cargarArbolJerarquico(),
+          cargarVariablesComponente(dto.componenteId)
+        ]
+        if (tipoEquipoSeleccionadoId.value) {
+          promesas.push(cargarPlantillasPorTipo(tipoEquipoSeleccionadoId.value))
+        }
+        await Promise.all(promesas)
       }
       return data
     } catch (error: unknown) {
@@ -526,9 +537,14 @@ export const useVariablesCriticasStore = defineStore('variablesCriticas', () => 
       const { data } = await api.patch<RespuestaApi>(`/variables-criticas/editar/${id}`, dto)
       if (data.status === 'ok') {
         const componenteId = dto.componenteId ?? componenteSeleccionado.value?.componente.id
+        const promesas: Promise<unknown>[] = []
         if (componenteId) {
-          await cargarVariablesComponente(componenteId)
+          promesas.push(cargarVariablesComponente(componenteId))
         }
+        if (tipoEquipoSeleccionadoId.value) {
+          promesas.push(cargarPlantillasPorTipo(tipoEquipoSeleccionadoId.value))
+        }
+        await Promise.all(promesas)
       }
       return data
     } catch (error: unknown) {
@@ -545,12 +561,14 @@ export const useVariablesCriticasStore = defineStore('variablesCriticas', () => 
       const { data } = await api.delete<RespuestaApi>(`/variables-criticas/eliminar/${id}`)
       if (data.status === 'ok') {
         const idComp = componenteId ?? componenteSeleccionado.value?.componente.id
-        // Primero recargamos el árbol para obtener el _count canónico,
-        // luego recargamos las variables del componente para parchar el badge.
-        await cargarArbolJerarquico()
+        const promesas: Promise<unknown>[] = [cargarArbolJerarquico()]
         if (idComp) {
-          await cargarVariablesComponente(idComp)
+          promesas.push(cargarVariablesComponente(idComp))
         }
+        if (tipoEquipoSeleccionadoId.value) {
+          promesas.push(cargarPlantillasPorTipo(tipoEquipoSeleccionadoId.value))
+        }
+        await Promise.all(promesas)
       }
       return data
     } catch (error: unknown) {
@@ -586,7 +604,14 @@ export const useVariablesCriticasStore = defineStore('variablesCriticas', () => 
     try {
       const { data } = await api.post<RespuestaApi>('/variables-criticas/plantillas/crear', dto)
       if (data.status === 'ok') {
-        await cargarPlantillasPorTipo(dto.tipoEquipoId)
+        const promesas: Promise<unknown>[] = [
+          cargarPlantillasPorTipo(dto.tipoEquipoId),
+          cargarArbolJerarquico()
+        ]
+        if (componenteSeleccionado.value) {
+          promesas.push(cargarVariablesComponente(componenteSeleccionado.value.componente.id))
+        }
+        await Promise.all(promesas)
       }
       return data
     } catch (error: unknown) {
@@ -602,9 +627,15 @@ export const useVariablesCriticasStore = defineStore('variablesCriticas', () => 
     try {
       const { data } = await api.patch<RespuestaApi>(`/variables-criticas/plantillas/editar/${id}`, dto)
       if (data.status === 'ok') {
+        const promesas: Promise<unknown>[] = []
         if (tipoEquipoSeleccionadoId.value) {
-          await cargarPlantillasPorTipo(tipoEquipoSeleccionadoId.value)
+          promesas.push(cargarPlantillasPorTipo(tipoEquipoSeleccionadoId.value))
         }
+        promesas.push(cargarArbolJerarquico())
+        if (componenteSeleccionado.value) {
+          promesas.push(cargarVariablesComponente(componenteSeleccionado.value.componente.id))
+        }
+        await Promise.all(promesas)
       }
       return data
     } catch (error: unknown) {
@@ -620,9 +651,14 @@ export const useVariablesCriticasStore = defineStore('variablesCriticas', () => 
     try {
       const { data } = await api.delete<RespuestaApi>(`/variables-criticas/plantillas/eliminar/${id}`)
       if (data.status === 'ok') {
+        const promesas: Promise<unknown>[] = [cargarArbolJerarquico()]
         if (tipoEquipoSeleccionadoId.value) {
-          await cargarPlantillasPorTipo(tipoEquipoSeleccionadoId.value)
+          promesas.push(cargarPlantillasPorTipo(tipoEquipoSeleccionadoId.value))
         }
+        if (componenteSeleccionado.value) {
+          promesas.push(cargarVariablesComponente(componenteSeleccionado.value.componente.id))
+        }
+        await Promise.all(promesas)
       }
       return data
     } catch (error: unknown) {
@@ -640,10 +676,14 @@ export const useVariablesCriticasStore = defineStore('variablesCriticas', () => 
     try {
       const { data } = await api.post<RespuestaApi>(`/variables-criticas/sincronizar/componente/${componenteId}`)
       if (data.status === 'ok') {
-        // Primero el árbol (fuente canónica), luego las variables del componente
-        // para que el badge se actualice con el conteo real desde el servidor.
-        await cargarArbolJerarquico()
-        await cargarVariablesComponente(componenteId)
+        const promesas: Promise<unknown>[] = [
+          cargarArbolJerarquico(),
+          cargarVariablesComponente(componenteId)
+        ]
+        if (tipoEquipoSeleccionadoId.value) {
+          promesas.push(cargarPlantillasPorTipo(tipoEquipoSeleccionadoId.value))
+        }
+        await Promise.all(promesas)
       }
       return data
     } catch (error: unknown) {
@@ -659,12 +699,14 @@ export const useVariablesCriticasStore = defineStore('variablesCriticas', () => 
     try {
       const { data } = await api.post<RespuestaApi>(`/variables-criticas/sincronizar/tipo-equipo/${tipoEquipoId}`)
       if (data.status === 'ok') {
-        // Primero el árbol completo para reflejar todos los cambios masivos,
-        // luego las variables del componente seleccionado si hay uno activo.
-        await cargarArbolJerarquico()
+        const promesas: Promise<unknown>[] = [
+          cargarArbolJerarquico(),
+          cargarPlantillasPorTipo(tipoEquipoId)
+        ]
         if (componenteSeleccionado.value) {
-          await cargarVariablesComponente(componenteSeleccionado.value.componente.id)
+          promesas.push(cargarVariablesComponente(componenteSeleccionado.value.componente.id))
         }
+        await Promise.all(promesas)
       }
       return data
     } catch (error: unknown) {

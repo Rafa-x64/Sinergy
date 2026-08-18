@@ -101,8 +101,9 @@ const obtenerColorTipo = (tipo: TipoEvaluacion): string => {
     case 'TEMPERATURA':
       return 'deep-orange'
     case 'NUMERICO_ENTERO':
-    case 'NUMERICO_DECIMAL':
       return 'info'
+    case 'NUMERICO_DECIMAL':
+      return '#5cb85c'
     case 'SELECCION':
       return 'primary'
     default:

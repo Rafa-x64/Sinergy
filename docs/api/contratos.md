@@ -1014,28 +1014,76 @@ Desactiva lógicamente una variable crítica.
 
 ## 11. Módulo de Inspecciones (`/api/inspecciones`)
 
-Registra y gestiona inspecciones técnicas. Los `id` de `Inspeccion` e `InspeccionDetalle` son `BigInt` y se serializan como **strings** en todas las respuestas JSON para compatibilidad con JavaScript.
+Registra y gestiona inspecciones técnicas por línea de producción o equipo individual. Los `id` de `Inspeccion` e `InspeccionDetalle` son `BigInt` y se serializan como **strings** en todas las respuestas JSON para compatibilidad con JavaScript.
 
 > [!IMPORTANT]
 > Los IDs de inspección (`id`) son strings en el JSON de respuesta aunque en la base de datos sean `BigInt`. El frontend debe tratar estos campos como strings.
 
-### `POST /api/inspecciones/crear`
-Registra una inspección completa con todos sus detalles de variables en una sola transacción atómica.
+### `GET /api/inspecciones/arbol-linea/:lineaId`
+Obtiene la jerarquía completa de equipos, componentes y variables activas asociadas a una línea para renderizar el formulario dinámico de captura.
 
-- **Acceso:** Protegido
+- **Acceso:** Protegido (`validarJWT`)
+- **URL Parameters:** `lineaId` (número entero)
+- **Response (200 OK):**
+  ```json
+  {
+    "status": "ok",
+    "message": "Árbol de inspección obtenido correctamente",
+    "data": {
+      "id": 5,
+      "codigo": "LIN-EXT-01",
+      "nombre": "Línea de Extrusión 01",
+      "ubicacionTecnica": { "id": 2, "codigo": "1000-EXT", "nombre": "Área de Extrusión" },
+      "equipos": [
+        {
+          "id": 12,
+          "codigo": "1000EXT00012",
+          "nombre": "Extrusora Principal",
+          "componentes": [
+            {
+              "id": 34,
+              "nombre": "Calefacción",
+              "variables": [
+                {
+                  "id": 101,
+                  "nombre": "Temperatura Zona 1",
+                  "tipoEvaluacion": "TEMPERATURA",
+                  "unidad": "°C",
+                  "valorMinimo": "160.00",
+                  "valorMaximo": "190.00",
+                  "opcionesSeleccion": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+  ```
+- **Errores posibles:** `400` ID inválido, `404` línea no encontrada.
+
+---
+
+### `POST /api/inspecciones/crear`
+Registra una inspección completa (por línea o por equipo) con todos sus detalles de variables en una sola transacción atómica.
+
+- **Acceso:** Protegido (`validarJWT`)
 - **Nota:** `elaboradoPorId` se inyecta automáticamente desde el token JWT (`req.usuario.id`).
 - **Request Body (`RegistrarInspeccionDTO`):**
   ```json
   {
     "codigoInspeccion": "INSP-2026-001",
     "tipoInspeccion": "VARIABLES_CRITICAS",
-    "equipoId": 3,
+    "lineaId": 5,
+    "equipoId": null,
+    "estadoInspeccion": "PENDIENTE",
     "origenDatos": "ONLINE",
     "observacionesGenerales": "Inspección rutinaria diaria",
     "detalles": [
       {
-        "variableId": 1,
-        "valorNumerico": 72.5,
+        "variableId": 101,
+        "valorNumerico": 172.5,
         "valorSeleccion": null,
         "observaciones": null,
         "estadoComponente": true
@@ -1048,18 +1096,18 @@ Registra una inspección completa con todos sus detalles de variables en una sol
   {
     "status": "ok",
     "message": "Inspección registrada correctamente",
-    "data": { "id": "1", "codigoInspeccion": "INSP-2026-001", "detalles": [ { "id": "1", "variableId": 1, "valorNumerico": "72.5" } ] }
+    "data": { "id": "1", "codigoInspeccion": "INSP-2026-001", "detalles": [ { "id": "1", "variableId": 101, "valorNumerico": "172.5" } ] }
   }
   ```
-- **Errores posibles:** `400` campo inválido o detalles vacíos, `401` no autenticado, `404` equipo o variable no existe, `409` código duplicado.
+- **Errores posibles:** `400` campo inválido o detalles vacíos, `401` no autenticado, `404` línea, equipo o variable no existe, `409` código duplicado.
 
 ---
 
 ### `GET /api/inspecciones/listar`
 Retorna inspecciones filtradas, ordenadas por `fechaRegistro DESC`.
 
-- **Acceso:** Protegido
-- **Query Parameters:** `equipoId`, `tipoInspeccion`, `estadoInspeccion`, `elaboradoPorId`.
+- **Acceso:** Protegido (`validarJWT`)
+- **Query Parameters:** `lineaId`, `equipoId`, `tipoInspeccion`, `estadoInspeccion`, `elaboradoPorId`, `fechaDesde`, `fechaHasta`.
 - **Response (200 OK):**
   ```json
   {
@@ -1074,7 +1122,7 @@ Retorna inspecciones filtradas, ordenadas por `fechaRegistro DESC`.
 ### `GET /api/inspecciones/buscar/:id`
 Busca una inspección específica por su BigInt ID (pasado como string en la URL).
 
-- **Acceso:** Protegido
+- **Acceso:** Protegido (`validarJWT`)
 - **URL Parameters:** `id` (string numérico que representa el BigInt)
 - **Response (200 OK):** Objeto completo de inspección con todos sus detalles.
 - **Errores posibles:** `400` ID no numérico, `404` no existe.
@@ -1084,14 +1132,15 @@ Busca una inspección específica por su BigInt ID (pasado como string en la URL
 ### `PATCH /api/inspecciones/editar-estado/:id`
 Actualiza el estado de flujo de una inspección (`BORRADOR` → `PENDIENTE` → `APROBADO` | `RECHAZADO`).
 
-- **Acceso:** Protegido
+- **Acceso:** Protegido (`validarJWT`)
 - **URL Parameters:** `id` (BigInt como string)
 - **Request Body (`EditarEstadoInspeccionDTO`):**
   ```json
   {
     "estadoInspeccion": "APROBADO",
     "revisadoPorId": 2,
-    "aprobadoPorId": 1
+    "aprobadoPorId": 1,
+    "observacionesGenerales": "Aprobado sin novedades"
   }
   ```
 - **Errores posibles:** `400` estado inválido, `404` inspección no existe.
@@ -1101,7 +1150,7 @@ Actualiza el estado de flujo de una inspección (`BORRADOR` → `PENDIENTE` → 
 ### `DELETE /api/inspecciones/eliminar/:id`
 Elimina físicamente una inspección (solo recomendado para inspecciones en estado `BORRADOR`).
 
-- **Acceso:** Protegido
+- **Acceso:** Protegido (`validarJWT`)
 - **URL Parameters:** `id` (BigInt como string)
 - **Response (200 OK):** Objeto de la inspección eliminada.
 - **Errores posibles:** `404` inspección no existe.
