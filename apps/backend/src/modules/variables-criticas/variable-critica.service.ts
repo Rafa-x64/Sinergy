@@ -238,27 +238,80 @@ class VariableCriticaService {
   async crearPlantilla(datos: RegistrarPlantillaVariableDTO) {
     const { opciones, ...camposPlantilla } = datos
 
-    return prisma.plantillaVariable.create({
-      data: {
-        ...camposPlantilla,
-        ...(opciones && opciones.length > 0
-          ? {
-              opcionesSeleccion: {
-                createMany: {
-                  data: opciones.map(o => ({
-                    clave: o.clave.trim().toUpperCase(),
-                    etiqueta: o.etiqueta.trim(),
-                    ordenPosicion: o.ordenPosicion ?? 0
-                  }))
+    return prisma.$transaction(async (tx) => {
+      const plantilla = await tx.plantillaVariable.create({
+        data: {
+          ...camposPlantilla,
+          ...(opciones && opciones.length > 0
+            ? {
+                opcionesSeleccion: {
+                  createMany: {
+                    data: opciones.map(o => ({
+                      clave: o.clave.trim().toUpperCase(),
+                      etiqueta: o.etiqueta.trim(),
+                      ordenPosicion: o.ordenPosicion ?? 0
+                    }))
+                  }
                 }
               }
+            : {})
+        },
+        include: {
+          tipoEquipo: { select: { id: true, nombre: true } },
+          opcionesSeleccion: { orderBy: { ordenPosicion: 'asc' } }
+        }
+      })
+
+      // Propagar automáticamente como variable instancia a todos los componentes activos de equipos de este tipo
+      const equipos = await tx.equipo.findMany({
+        where: { tipoEquipoId: datos.tipoEquipoId },
+        include: {
+          componentes: {
+            where: { activo: true },
+            select: { id: true }
+          }
+        }
+      })
+
+      for (const equipo of equipos) {
+        for (const comp of equipo.componentes) {
+          const nuevaVar = await tx.variable.create({
+            data: {
+              componenteId: comp.id,
+              plantillaId: plantilla.id,
+              nombre: plantilla.nombre,
+              tipoEvaluacion: plantilla.tipoEvaluacion,
+              unidad: plantilla.unidad,
+              valorMinimo: plantilla.valorMinimo,
+              valorMaximo: plantilla.valorMaximo,
+              ordenPosicion: plantilla.ordenPosicion,
+              activa: true
             }
-          : {})
-      },
-      include: {
-        tipoEquipo: { select: { id: true, nombre: true } },
-        opcionesSeleccion: { orderBy: { ordenPosicion: 'asc' } }
+          })
+
+          if (plantilla.tipoEvaluacion === 'SELECCION' && opciones && opciones.length > 0) {
+            await tx.opcionSeleccion.createMany({
+              data: opciones.map(o => ({
+                variableId: nuevaVar.id,
+                clave: o.clave.trim().toUpperCase(),
+                etiqueta: o.etiqueta.trim(),
+                ordenPosicion: o.ordenPosicion ?? 0
+              }))
+            })
+          }
+        }
       }
+
+      return tx.plantillaVariable.findUniqueOrThrow({
+        where: { id: plantilla.id },
+        include: {
+          tipoEquipo: { select: { id: true, nombre: true } },
+          opcionesSeleccion: { orderBy: { ordenPosicion: 'asc' } },
+          _count: {
+            select: { variablesInstancia: { where: { activa: true } } }
+          }
+        }
+      })
     })
   }
 
@@ -275,7 +328,7 @@ class VariableCriticaService {
         }
       })
 
-      // Si se enviaron opciones, reemplazarlas completamente
+      // Si se enviaron opciones, reemplazarlas completamente en la plantilla
       if (opciones !== undefined) {
         await tx.plantillaOpcionSeleccion.deleteMany({ where: { plantillaId: id } })
 
@@ -289,29 +342,74 @@ class VariableCriticaService {
             }))
           })
         }
-
-        // Retornar con opciones actualizadas
-        return tx.plantillaVariable.findUniqueOrThrow({
-          where: { id },
-          include: {
-            tipoEquipo: { select: { id: true, nombre: true } },
-            opcionesSeleccion: { orderBy: { ordenPosicion: 'asc' } }
-          }
-        })
       }
 
-      return plantilla
+      // Propagar automáticamente los cambios a todas las instancias activas de esta plantilla
+      await tx.variable.updateMany({
+        where: { plantillaId: id, activa: true },
+        data: {
+          nombre: camposPlantilla.nombre !== undefined ? camposPlantilla.nombre : undefined,
+          tipoEvaluacion: camposPlantilla.tipoEvaluacion !== undefined ? camposPlantilla.tipoEvaluacion : undefined,
+          unidad: camposPlantilla.unidad !== undefined ? camposPlantilla.unidad : undefined,
+          valorMinimo: camposPlantilla.valorMinimo !== undefined ? camposPlantilla.valorMinimo : undefined,
+          valorMaximo: camposPlantilla.valorMaximo !== undefined ? camposPlantilla.valorMaximo : undefined,
+          ordenPosicion: camposPlantilla.ordenPosicion !== undefined ? camposPlantilla.ordenPosicion : undefined
+        }
+      })
+
+      // Si se actualizaron opciones en una plantilla de tipo SELECCION, replicar a las instancias
+      if (opciones !== undefined) {
+        const variablesInstancia = await tx.variable.findMany({
+          where: { plantillaId: id, activa: true },
+          select: { id: true }
+        })
+
+        for (const vInst of variablesInstancia) {
+          await tx.opcionSeleccion.deleteMany({ where: { variableId: vInst.id } })
+          if (opciones.length > 0) {
+            await tx.opcionSeleccion.createMany({
+              data: opciones.map((o) => ({
+                variableId: vInst.id,
+                clave: o.clave.trim().toUpperCase(),
+                etiqueta: o.etiqueta.trim(),
+                ordenPosicion: o.ordenPosicion ?? 0
+              }))
+            })
+          }
+        }
+      }
+
+      return tx.plantillaVariable.findUniqueOrThrow({
+        where: { id },
+        include: {
+          tipoEquipo: { select: { id: true, nombre: true } },
+          opcionesSeleccion: { orderBy: { ordenPosicion: 'asc' } },
+          _count: {
+            select: { variablesInstancia: { where: { activa: true } } }
+          }
+        }
+      })
     })
   }
 
   async eliminarPlantilla(id: number) {
-    return prisma.plantillaVariable.update({
-      where: { id },
-      data: { activa: false },
-      include: {
-        tipoEquipo: { select: { id: true, nombre: true } },
-        opcionesSeleccion: { orderBy: { ordenPosicion: 'asc' } }
-      }
+    return prisma.$transaction(async (tx) => {
+      const plantilla = await tx.plantillaVariable.update({
+        where: { id },
+        data: { activa: false },
+        include: {
+          tipoEquipo: { select: { id: true, nombre: true } },
+          opcionesSeleccion: { orderBy: { ordenPosicion: 'asc' } }
+        }
+      })
+
+      // Desactivar en cascada todas las instancias vinculadas a esta plantilla
+      await tx.variable.updateMany({
+        where: { plantillaId: id },
+        data: { activa: false }
+      })
+
+      return plantilla
     })
   }
 

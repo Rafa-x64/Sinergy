@@ -92,8 +92,11 @@ El sistema Sinergy está dividido en 8 dominios funcionales. Cada dominio es aut
 ### 3.10 Módulo `inspecciones`
 - **Backend**: `inspeccion.routes.ts`, `inspeccion.controller.ts`, `inspeccion.service.ts`, `inspeccion.schemas.ts`.
 - **Ruta base**: `/api/inspecciones/`
-- **Frontend**: Pendiente de desarrollo.
-- **Flujo**: Registro y gestión de inspecciones técnicas de campo. La creación es transaccional (inspección + detalles en una sola operación). Los campos de tipo `BigInt` (`id`, `inspeccionId`, `detalleId`) se serializan como strings en todas las respuestas JSON.
-- **Relaciones Prisma**: `Equipo` → `Inspeccion` → `InspeccionDetalle` → `InspeccionAdjunto`.
+- **Frontend**: `inspecciones.store.ts`, `types/inspeccion.types.ts`, `components/`, `InspeccionesView.vue`, `CapturaInspeccionView.vue`.
+- **Flujo**: Registro y gestión de inspecciones técnicas de campo por línea completa (agrupando todos los equipos de la línea) o por equipo individual. La creación es transaccional atómica (inspección + N detalles en una sola operación). Los campos de tipo `BigInt` (`id`, `inspeccionId`, `detalleId`) se serializan como strings en todas las respuestas JSON.
+- **Relaciones Prisma**: `Linea` / `Equipo` → `Inspeccion` → `InspeccionDetalle` → `InspeccionAdjunto`.
 - **Flujo de estados**: `BORRADOR` → `PENDIENTE` → `APROBADO` | `RECHAZADO`.
-- **Endpoint clave**: `PATCH /editar-estado/:id` — permite avanzar el flujo de revisión y aprobación registrando `revisadoPorId` y `aprobadoPorId` del usuario responsable.
+- **Endpoints clave**: 
+  - `GET /arbol-linea/:lineaId` — sirve la jerarquía completa de la línea lista para la captura en frontend.
+  - `POST /crear` — registra inspección por línea o equipo con sus detalles.
+  - `PATCH /editar-estado/:id` — permite avanzar el flujo de revisión y aprobación registrando `revisadoPorId` y `aprobadoPorId` del usuario responsable.
