@@ -35,16 +35,6 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
-    path: '/lineas',
-    name: 'lineas',
-    component: () => import('../modules/lineas/views/LineasView.vue'),
-    meta: {
-      requiresAuth: true,
-      hideLayout: false,
-      roles: ['Administrador del Sistema', 'Supervisor / Gerente de Mantenimiento']
-    },
-  },
-  {
     path: '/roles',
     name: 'roles',
     component: () => import('../modules/auth/views/RolesView.vue'),

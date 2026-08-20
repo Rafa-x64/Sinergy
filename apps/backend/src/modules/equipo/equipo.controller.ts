@@ -1,13 +1,11 @@
 import { equipoService } from './equipo.service'
 import { Request, Response, NextFunction } from 'express'
 import { ResponseDTO } from '../../core/types/response.dto'
-import { Params, RegistrarTipoDTO } from './equipo.schemas'
+import { Params, RegistrarTipoDTO, EditarTipoDTO, RegistrarEquipoDTO, EditarEquipoDTO, QueryEquipo } from './equipo.schemas'
 import { parsearId } from '../../core/utils/parsearId'
 import { capitalizar } from '../../core/utils/capitalizar'
-import { EditarTipoDTO } from './equipo.schemas'
 import { capitalizarPalabras } from '../../core/utils/capitalizarPalabras'
-import { Prisma, EstadoOperativo} from '@prisma/client'
-import { RegistrarEquipoDTO, EditarEquipoDTO, FiltrosObtenerEquipos, QueryEquipo } from './equipo.schemas'
+import { Prisma, EstadoOperativo } from '@prisma/client'
 
 /*-------------------------------------------EQUIPOS--------------------------------------------- */
 export const equipoController = {
@@ -18,7 +16,7 @@ export const equipoController = {
     next: NextFunction
   ) {
     try {
-      const { codigo, nombre, tipoEquipoId, lineaId, serial, marca, modelo, estadoOperativo, observacion } = req.body
+      const { codigo, nombre, tipoEquipoId, ubicacionTecnicaId, serial, marca, modelo, estadoOperativo, observacion } = req.body
 
       if (!codigo || typeof codigo !== 'string' || !codigo.trim()) {
         return res.status(400).json({ status: 'error', message: 'El código del equipo es requerido' })
@@ -44,19 +42,16 @@ export const equipoController = {
         return res.status(404).json({ status: 'error', message: `El tipo de equipo con ID ${tipoEquipoId} no existe` })
       }
 
-      if (lineaId !== undefined && lineaId !== null) {
-        if (typeof lineaId !== 'number') {
-          return res.status(400).json({ status: 'error', message: 'El ID de la línea debe ser un número' })
-        }
-        const existeLin = await equipoService.existeLinea(lineaId)
-        if (!existeLin) {
-          return res.status(404).json({ status: 'error', message: `La línea con ID ${lineaId} no existe` })
-        }
+      if (typeof ubicacionTecnicaId !== 'number') {
+        return res.status(400).json({ status: 'error', message: 'El ID de la ubicación técnica es requerido y debe ser un número' })
+      }
+      const existeUbicacion = await equipoService.existeUbicacionTecnica(ubicacionTecnicaId)
+      if (!existeUbicacion) {
+        return res.status(404).json({ status: 'error', message: `La ubicación técnica con ID ${ubicacionTecnicaId} no existe` })
       }
 
       if (estadoOperativo !== undefined) {
         const valoresValidosEnum = Object.values(EstadoOperativo)
-
         if (!valoresValidosEnum.includes(estadoOperativo)) {
           return res.status(400).json({
             status: 'error',
@@ -69,7 +64,7 @@ export const equipoController = {
         codigo: codigoNormalizado,
         nombre: capitalizarPalabras(nombre.trim()),
         tipoEquipoId,
-        lineaId: lineaId ?? null,
+        ubicacionTecnicaId,
         serial: serial ? serial.trim() : null,
         marca: marca ? marca.trim() : null,
         modelo: modelo ? modelo.trim() : null,
@@ -95,6 +90,7 @@ export const equipoController = {
       next(error)
     }
   },
+
   // Actualizar Equipo
   async actualizarEquipo(
     req: Request<any, ResponseDTO, EditarEquipoDTO>,
@@ -126,7 +122,7 @@ export const equipoController = {
         modelo,
         estadoOperativo,
         observacion,
-        lineaId,
+        ubicacionTecnicaId,
         tipoEquipoId
       } = req.body
 
@@ -189,17 +185,15 @@ export const equipoController = {
         datosActualizados.observacion = observacion ? observacion.trim() : null
       }
 
-      if (lineaId !== undefined) {
-        if (lineaId !== null) {
-          if (typeof lineaId !== 'number') {
-            return res.status(400).json({ status: 'error', message: 'El ID de la línea debe ser un número o null' })
-          }
-          const existeLinea = await equipoService.existeLinea(lineaId)
-          if (!existeLinea) {
-            return res.status(404).json({ status: 'error', message: `La línea con ID ${lineaId} no existe` })
-          }
+      if (ubicacionTecnicaId !== undefined) {
+        if (typeof ubicacionTecnicaId !== 'number') {
+          return res.status(400).json({ status: 'error', message: 'El ID de la ubicación técnica debe ser un número' })
         }
-        datosActualizados.lineaId = lineaId
+        const existeUbicacion = await equipoService.existeUbicacionTecnica(ubicacionTecnicaId)
+        if (!existeUbicacion) {
+          return res.status(404).json({ status: 'error', message: `La ubicación técnica con ID ${ubicacionTecnicaId} no existe` })
+        }
+        datosActualizados.ubicacionTecnicaId = ubicacionTecnicaId
       }
 
       if (tipoEquipoId !== undefined) {
@@ -239,6 +233,7 @@ export const equipoController = {
       next(error)
     }
   },
+
   // Listar Equipos
   async listarEquipos(
     req: Request<unknown, ResponseDTO, unknown, QueryEquipo>,
@@ -246,17 +241,26 @@ export const equipoController = {
     next: NextFunction
   ) {
     try {
-      const { lineaId, tipoEquipoId, estadoOperativo, busqueda } = req.query
+      const { ubicacionTecnicaId, plantaId, tipoEquipoId, estadoOperativo, busqueda } = req.query
 
-      let idLineaFiltro: number | undefined = undefined
+      let idUbicacionFiltro: number | undefined = undefined
+      let idPlantaFiltro: number | undefined = undefined
       let idTipoEquipoFiltro: number | undefined = undefined
 
-      if (lineaId !== undefined) {
-        const idParseado = parsearId(lineaId)
+      if (ubicacionTecnicaId !== undefined) {
+        const idParseado = parsearId(ubicacionTecnicaId)
         if (idParseado === null) {
-          return res.status(400).json({ status: 'error', message: 'El parámetro lineaId debe ser un número válido' })
+          return res.status(400).json({ status: 'error', message: 'El parámetro ubicacionTecnicaId debe ser un número válido' })
         }
-        idLineaFiltro = idParseado
+        idUbicacionFiltro = idParseado
+      }
+
+      if (plantaId !== undefined) {
+        const idParseado = parsearId(plantaId)
+        if (idParseado === null) {
+          return res.status(400).json({ status: 'error', message: 'El parámetro plantaId debe ser un número válido' })
+        }
+        idPlantaFiltro = idParseado
       }
 
       if (tipoEquipoId !== undefined) {
@@ -275,7 +279,8 @@ export const equipoController = {
       }
 
       const filtros = {
-        lineaId: idLineaFiltro,
+        ubicacionTecnicaId: idUbicacionFiltro,
+        plantaId: idPlantaFiltro,
         tipoEquipoId: idTipoEquipoFiltro,
         estadoOperativo: estadoOperativo as EstadoOperativo | undefined,
         busqueda: busqueda ? busqueda.trim() : undefined
@@ -343,26 +348,26 @@ export const equipoController = {
       next(error)
     }
   },
-  /*---------------------------------------------TIPOS_EQUIPOS-----------------------------------*/
-  //registrar
-  async registrarTipo(req: Request<{},{},RegistrarTipoDTO>, res: Response<ResponseDTO>, next: NextFunction){
-    try{
-      const {nombre, descripcion} = req.body
 
-      if(!nombre || nombre === "" || typeof(nombre) !== 'string'){
+  /*---------------------------------------------TIPOS_EQUIPOS-----------------------------------*/
+  async registrarTipo(req: Request<{}, {}, RegistrarTipoDTO>, res: Response<ResponseDTO>, next: NextFunction) {
+    try {
+      const { nombre, descripcion } = req.body
+
+      if (!nombre || nombre === "" || typeof (nombre) !== 'string') {
         return res.status(400).json({ status: 'error', message: 'se necesita un nombre de tipo de equipo' })
       }
-      if(nombre.length > 50){
+      if (nombre.length > 50) {
         return res.status(400).json({
-            status: 'error',
-            message: 'El nombre del tipo de equipo no puede superar 50 caracteres'
-          })
+          status: 'error',
+          message: 'El nombre del tipo de equipo no puede superar 50 caracteres'
+        })
       }
-      if(descripcion !== undefined && typeof descripcion !== 'string'){
+      if (descripcion !== undefined && typeof descripcion !== 'string') {
         return res.status(400).json({
-            status: 'error',
-            message: 'La descripción debe ser texto'
-          })
+          status: 'error',
+          message: 'La descripción debe ser texto'
+        })
       }
 
       const nuevoTipo: RegistrarTipoDTO = {
@@ -372,69 +377,65 @@ export const equipoController = {
 
       const tipoRegistrado = await equipoService.crearTipo(nuevoTipo)
 
-      if(!tipoRegistrado || tipoRegistrado === null || tipoRegistrado === undefined){
+      if (!tipoRegistrado) {
         return res.status(400).json({ status: 'error', message: 'error al registrar el tipo' })
       }
 
       return res.status(201).json({ status: 'ok', message: 'tipo de equipo registrado correctamente', data: tipoRegistrado })
-    }catch(error: unknown){
+    } catch (error: unknown) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        return res.status(409).json({status: 'error', message: 'ya existe un tipo de equipo con ese nombre'})
+        return res.status(409).json({ status: 'error', message: 'ya existe un tipo de equipo con ese nombre' })
       }
       next(error)
     }
   },
 
-  //listar
-  async listarTipos(req: Request, res: Response<ResponseDTO>, next: NextFunction){
+  async listarTipos(req: Request, res: Response<ResponseDTO>, next: NextFunction) {
     const tipos = await equipoService.obtenerTipos()
 
-    if(!tipos){
+    if (!tipos) {
       return res.status(400).json({ status: 'error', message: 'error al consultar los tipos' })
     }
-    if(tipos.length === 0){
+    if (tipos.length === 0) {
       return res.status(404).json({ status: 'error', message: 'no hay tipos registrados aun' })
     }
 
     return res.status(200).json({ status: 'ok', message: 'tipos de equipos encontrados', data: tipos })
   },
 
-  //editar
-  async editarTipo(req: Request<any, {},EditarTipoDTO>, res: Response<ResponseDTO>, next: NextFunction){
-
+  async editarTipo(req: Request<any, {}, EditarTipoDTO>, res: Response<ResponseDTO>, next: NextFunction) {
     try {
       const id = parsearId(req.params.id)
 
-      if(id === null){
-        return res.status(400).json({ status: 'error', message: 'el id proporcionado deber ser un numero'})
+      if (id === null) {
+        return res.status(400).json({ status: 'error', message: 'el id proporcionado deber ser un numero' })
       }
-      if(Object.keys(req.body).length === 0){
-        return res.status(400).json({ status: 'error', message: 'debe proporcionar al menos un campo para actualizar'})
+      if (Object.keys(req.body).length === 0) {
+        return res.status(400).json({ status: 'error', message: 'debe proporcionar al menos un campo para actualizar' })
       }
 
-      const {nombre, descripcion} = req.body
+      const { nombre, descripcion } = req.body
       const datosActualizados: EditarTipoDTO = {}
 
-      if(nombre !== undefined){
-        if(!nombre || typeof(nombre) !== 'string' || nombre === null || !nombre.trim()){
-          return res.status(400).json({ status: 'error', message: 'el nombre del tipo de equipo es invalido'})
+      if (nombre !== undefined) {
+        if (!nombre || typeof (nombre) !== 'string' || !nombre.trim()) {
+          return res.status(400).json({ status: 'error', message: 'el nombre del tipo de equipo es invalido' })
         }
-        if(nombre.length > 50){
-          return res.status(400).json({ status: 'error', message: 'el nombre del tipo de equipo no puede ser mayor a 50 caracteres'})
+        if (nombre.length > 50) {
+          return res.status(400).json({ status: 'error', message: 'el nombre del tipo de equipo no puede ser mayor a 50 caracteres' })
         }
         datosActualizados.nombre = capitalizarPalabras(nombre)
       }
 
       if (descripcion !== undefined) {
         if (typeof descripcion !== 'string') {
-          return res.status(400).json({status:'error', message: 'la descipcion de tipo de equipo es invalida'})
+          return res.status(400).json({ status: 'error', message: 'la descipcion de tipo de equipo es invalida' })
         }
-
         datosActualizados.descripcion = capitalizar(descripcion.trim()) || undefined
       }
 
       const tipoActualizado = await equipoService.editarTipo(datosActualizados, id)
-      return res.status(200).json({status: 'ok', message:'tipo de equipo actualizado correctamente', data: tipoActualizado})
+      return res.status(200).json({ status: 'ok', message: 'tipo de equipo actualizado correctamente', data: tipoActualizado })
 
     } catch (error: unknown) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -450,36 +451,35 @@ export const equipoController = {
             message: 'Ya existe un tipo de equipo con ese nombre',
           })
         }
-        }
+      }
       next(error)
     }
   },
-  //eliminar
-    async eliminarTipo(req: Request, res: Response<ResponseDTO>, next: NextFunction){
-      try{
-        const id = parsearId(req.params.id)
-        if(id === null){
-          return res.status(400).json({ status: 'error', message: 'el id proporcionado no es valido'})
-        }
 
-        const tipoEncontrado = await equipoService.buscarTipoId(id)
-        if(!tipoEncontrado){
-          return res.status(404).json({ status: 'error', message: `no existe un tipo de quipo con el id ${id}`})
-        }
-
-        const tipoEliminado = await equipoService.eliminarTipo(id)
-
-        if(!tipoEliminado){
-          return res.status(400).json({ status: 'error', message: 'no se ha podido eliminar el tipo de equipo'})
-        }
-
-        return res.status(200).json({ status: 'ok', message: 'tipo de equipo eliminado', data: tipoEliminado})
-      }catch(error){
-        next(error)
+  async eliminarTipo(req: Request, res: Response<ResponseDTO>, next: NextFunction) {
+    try {
+      const id = parsearId(req.params.id)
+      if (id === null) {
+        return res.status(400).json({ status: 'error', message: 'el id proporcionado no es valido' })
       }
-    },
 
-  // buscar tipo por ID
+      const tipoEncontrado = await equipoService.buscarTipoId(id)
+      if (!tipoEncontrado) {
+        return res.status(404).json({ status: 'error', message: `no existe un tipo de quipo con el id ${id}` })
+      }
+
+      const tipoEliminado = await equipoService.eliminarTipo(id)
+
+      if (!tipoEliminado) {
+        return res.status(400).json({ status: 'error', message: 'no se ha podido eliminar el tipo de equipo' })
+      }
+
+      return res.status(200).json({ status: 'ok', message: 'tipo de equipo eliminado', data: tipoEliminado })
+    } catch (error) {
+      next(error)
+    }
+  },
+
   async verTipo(req: Request, res: Response<ResponseDTO>, next: NextFunction) {
     try {
       const id = parsearId(req.params.id)
@@ -501,4 +501,3 @@ export const equipoController = {
     }
   }
 }
-

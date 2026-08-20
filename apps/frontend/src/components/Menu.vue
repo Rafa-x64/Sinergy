@@ -55,7 +55,6 @@ const modulos: ModuloItem[] = [
     { title: 'Auditoría Global', icon: 'mdi-shield-account', color: 'primary-dark', to: '/notificaciones-globales', roles: ROLES_ADMIN },
     { title: 'Plantas', icon: 'mdi-factory', color: 'text-principal', to: '/plantas', roles: ROLES_ADMIN_SUPERVISOR },
     { title: 'Ubicaciones Técnicas', icon: 'mdi-map-marker-radius', color: '#f7474a', to: '/ubicaciones', roles: ROLES_ADMIN_SUPERVISOR },
-    { title: 'Líneas Operativas', icon: 'mdi-chart-timeline', color: 'warning', to: '/lineas', roles: ROLES_ADMIN_SUPERVISOR },
     { title: 'Usuarios', icon: 'mdi-account-group', color: 'purple', to: '/usuarios', roles: ROLES_ADMIN_SUPERVISOR },
     { title: 'Roles', icon: 'mdi-account-key', color: 'purple-light', to: '/roles', roles: ROLES_ADMIN },
 ]

@@ -3,10 +3,9 @@ import { ref, computed, watch } from 'vue'
 import { useToast } from 'vue-toastification'
 import type { VuetifyForm } from '@/core/types/vuetifyForm'
 import {
-  useVariablesCriticasStore,
+  useVariablesStore,
   type PlantillaVariableItem,
-  type TipoEvaluacion,
-  type RegistrarOpcionDTO
+  type TipoEvaluacion
 } from '../variables.store'
 import {
   UNIDADES_MEDIDA_PREDETERMINADAS,
@@ -15,7 +14,7 @@ import {
 import { variableRules } from '../validations/variables'
 
 const toast = useToast()
-const store = useVariablesCriticasStore()
+const store = useVariablesStore()
 
 const formRef = ref<VuetifyForm | null>(null)
 const mostrarDialogo = ref(false)
@@ -26,7 +25,6 @@ const form = ref({
   id: 0,
   tipoEquipoId: 0,
   nombre: '',
-  descripcion: '',
   tipoEvaluacion: 'NUMERICO_DECIMAL' as TipoEvaluacion,
   unidad: '',
   valorMinimo: null as number | null,
@@ -43,7 +41,7 @@ const tiposEvaluacion = [
 ]
 
 const tipoEquipoNombre = computed(() => {
-  const tipo = store.tiposEquipo.find((t) => t.id === form.value.tipoEquipoId)
+  const tipo = store.tiposEquipo.find((t: { id: number }) => t.id === form.value.tipoEquipoId)
   return tipo?.nombre ?? 'General'
 })
 
@@ -107,7 +105,6 @@ const abrirCrear = (tipoEquipoId: number) => {
     id: 0,
     tipoEquipoId,
     nombre: '',
-    descripcion: '',
     tipoEvaluacion: 'NUMERICO_DECIMAL',
     unidad: '',
     valorMinimo: null,
@@ -132,7 +129,6 @@ const abrirEditar = (plantilla: PlantillaVariableItem) => {
     id: plantilla.id,
     tipoEquipoId: plantilla.tipoEquipoId,
     nombre: plantilla.nombre,
-    descripcion: plantilla.descripcion ?? '',
     tipoEvaluacion: plantilla.tipoEvaluacion,
     unidad: plantilla.unidad ?? '',
     valorMinimo: plantilla.valorMinimo !== null ? Number(plantilla.valorMinimo) : null,
@@ -152,7 +148,7 @@ const guardar = async () => {
     return
   }
 
-  let opciones: RegistrarOpcionDTO[] | undefined
+  let opciones: { clave: string; etiqueta: string; ordenPosicion?: number }[] | undefined
 
   if (form.value.tipoEvaluacion === 'SELECCION') {
     const lineas = form.value.opcionesTexto.split('\n').filter((l) => l.trim().length > 0)
@@ -167,7 +163,6 @@ const guardar = async () => {
   if (esEdicion.value) {
     const res = await store.editarPlantilla(form.value.id, {
       nombre: form.value.nombre.trim(),
-      descripcion: form.value.descripcion.trim() || null,
       tipoEvaluacion: form.value.tipoEvaluacion,
       unidad: form.value.unidad.trim() || null,
       valorMinimo: form.value.valorMinimo !== null ? Number(form.value.valorMinimo) : null,
@@ -186,7 +181,6 @@ const guardar = async () => {
     const res = await store.crearPlantilla({
       tipoEquipoId: form.value.tipoEquipoId,
       nombre: form.value.nombre.trim(),
-      descripcion: form.value.descripcion.trim() || null,
       tipoEvaluacion: form.value.tipoEvaluacion,
       unidad: form.value.unidad.trim() || null,
       valorMinimo: form.value.valorMinimo !== null ? Number(form.value.valorMinimo) : null,
@@ -199,7 +193,7 @@ const guardar = async () => {
       toast.success('Variable agregada a la plantilla del tipo de equipo')
       mostrarDialogo.value = false
     } else {
-      toast.error(res.message ?? 'Error al crear la variable de plantilla')
+      toast.error(res.message ?? 'Error al crear la plantilla')
     }
   }
 }
@@ -231,16 +225,6 @@ defineExpose({
             placeholder="Ej: Presión de Succión, Temperatura Aceite, Nivel de Aceite"
             variant="outlined"
             density="comfortable"
-            class="mb-2"
-          />
-
-          <v-textarea
-            v-model="form.descripcion"
-            label="Descripción / Procedimiento"
-            placeholder="Notas de medición o especificaciones técnicas"
-            variant="outlined"
-            density="comfortable"
-            rows="2"
             class="mb-2"
           />
 

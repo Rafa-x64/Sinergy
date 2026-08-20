@@ -141,7 +141,7 @@ model Planta {
 model UbicacionTecnica {
   id            Int      @id @default(autoincrement())
   codigo        String   @unique @db.VarChar(50)
-  nombre        String   @unique @db.VarChar(255)
+  nombre        String   @db.VarChar(255)
   descripcion   String?  @db.Text
   plantaId      Int      @map("planta_id")
   planta        Planta   @relation(fields: [plantaId], references: [id], onDelete: Restrict)
@@ -149,27 +149,10 @@ model UbicacionTecnica {
   creadoEn      DateTime @default(now()) @map("creado_en")
   actualizadoEn DateTime @updatedAt @map("actualizado_en")
 
-  lineas Linea[]
+  equipos Equipo[]
 
   @@index([plantaId])
   @@map("ubicaciones_tecnicas")
-}
-
-model Linea {
-  id                 Int              @id @default(autoincrement())
-  codigo             String           @db.VarChar(50)
-  nombre             String           @db.VarChar(255)
-  ubicacionTecnicaId Int              @map("ubicacion_tecnica_id")
-  ubicacionTecnica   UbicacionTecnica @relation(fields: [ubicacionTecnicaId], references: [id], onDelete: Restrict)
-  activa             Boolean          @default(true)
-  creadoEn           DateTime         @default(now()) @map("creado_en")
-  actualizadoEn      DateTime         @updatedAt @map("actualizado_en")
-
-  equipos Equipo[]
-
-  @@unique([codigo, ubicacionTecnicaId], name: "uq_linea_ubicacion")
-  @@index([ubicacionTecnicaId])
-  @@map("lineas")
 }
 
 model Equipo {
@@ -184,17 +167,17 @@ model Equipo {
   creadoEn        DateTime        @default(now()) @map("creado_en")
   actualizadoEn   DateTime        @updatedAt @map("actualizado_en")
 
-  lineaId      Int? @map("linea_id")
-  tipoEquipoId Int  @map("tipo_equipo_id")
+  ubicacionTecnicaId Int @map("ubicacion_tecnica_id")
+  tipoEquipoId       Int @map("tipo_equipo_id")
 
-  linea      Linea?     @relation(fields: [lineaId], references: [id], onDelete: SetNull)
-  tipoEquipo TipoEquipo @relation(fields: [tipoEquipoId], references: [id], onDelete: Restrict)
+  ubicacionTecnica UbicacionTecnica @relation(fields: [ubicacionTecnicaId], references: [id], onDelete: Restrict)
+  tipoEquipo       TipoEquipo       @relation(fields: [tipoEquipoId], references: [id], onDelete: Restrict)
 
   montacargasDetalle MontacargasDetalle?
   componentes        Componente[]
   inspecciones       Inspeccion[]
 
-  @@index([lineaId])
+  @@index([ubicacionTecnicaId])
   @@index([tipoEquipoId])
   @@index([estadoOperativo])
   @@map("equipos")
