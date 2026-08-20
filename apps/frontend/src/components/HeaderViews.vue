@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const porps = defineProps<{
+defineProps<{
     titulo: string,
     mensaje: string,
     color?: string,

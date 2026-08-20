@@ -1,5 +1,3 @@
-type Rule = (value: string | number | null | undefined) => boolean | string
-
 export const variableRules = {
   nombre: [
     (v: string | null | undefined) => !!v || 'El nombre es obligatorio.',

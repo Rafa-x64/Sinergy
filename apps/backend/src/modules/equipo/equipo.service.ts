@@ -1,6 +1,5 @@
 import prisma from '../../core/prisma'
-import { EditarTipoDTO, RegistrarTipoDTO } from './equipo.schemas'
-import { RegistrarEquipoDTO, EditarEquipoDTO } from './equipo.schemas'
+import { EditarTipoDTO, RegistrarTipoDTO, RegistrarEquipoDTO, EditarEquipoDTO, FiltrosObtenerEquipos } from './equipo.schemas'
 import { Prisma, EstadoOperativo } from '@prisma/client'
 
 const INCLUDE_EQUIPO_RELACIONES: Prisma.EquipoInclude = {
@@ -10,12 +9,12 @@ const INCLUDE_EQUIPO_RELACIONES: Prisma.EquipoInclude = {
       nombre: true
     }
   },
-  linea: {
+  ubicacionTecnica: {
     select: {
       id: true,
       codigo: true,
       nombre: true,
-      ubicacionTecnica: {
+      planta: {
         select: {
           id: true,
           codigo: true,
@@ -25,15 +24,9 @@ const INCLUDE_EQUIPO_RELACIONES: Prisma.EquipoInclude = {
     }
   }
 }
-interface FiltrosObtenerEquipos {
-  lineaId?: number
-  tipoEquipoId?: number
-  estadoOperativo?: EstadoOperativo
-  busqueda?: string
-}
 
 class EquipoService {
-    async crearEquipo(datos: RegistrarEquipoDTO) {
+  async crearEquipo(datos: RegistrarEquipoDTO) {
     return prisma.equipo.create({
       data: datos,
       include: INCLUDE_EQUIPO_RELACIONES
@@ -43,8 +36,14 @@ class EquipoService {
   async obtenerEquipos(filtros: FiltrosObtenerEquipos) {
     const where: Prisma.EquipoWhereInput = {}
 
-    if (filtros.lineaId !== undefined) {
-      where.lineaId = filtros.lineaId
+    if (filtros.ubicacionTecnicaId !== undefined) {
+      where.ubicacionTecnicaId = filtros.ubicacionTecnicaId
+    }
+
+    if (filtros.plantaId !== undefined) {
+      where.ubicacionTecnica = {
+        plantaId: filtros.plantaId
+      }
     }
 
     if (filtros.tipoEquipoId !== undefined) {
@@ -104,41 +103,41 @@ class EquipoService {
     return conteo > 0
   }
 
-  async existeLinea(lineaId: number): Promise<boolean> {
-    const conteo = await prisma.linea.count({
-      where: { id: lineaId }
+  async existeUbicacionTecnica(ubicacionTecnicaId: number): Promise<boolean> {
+    const conteo = await prisma.ubicacionTecnica.count({
+      where: { id: ubicacionTecnicaId }
     })
     return conteo > 0
   }
 
-    async crearTipo(tipo: RegistrarTipoDTO){
-        return prisma.tipoEquipo.create({
-            data: tipo
-        })
-    }
+  async crearTipo(tipo: RegistrarTipoDTO) {
+    return prisma.tipoEquipo.create({
+      data: tipo
+    })
+  }
 
-    async obtenerTipos(){
-        return prisma.tipoEquipo.findMany()
-    }
+  async obtenerTipos() {
+    return prisma.tipoEquipo.findMany()
+  }
 
-    async editarTipo(datos: EditarTipoDTO, id: number){
-        return prisma.tipoEquipo.update({
-            where: { id },
-            data: datos
-        })
-    }
+  async editarTipo(datos: EditarTipoDTO, id: number) {
+    return prisma.tipoEquipo.update({
+      where: { id },
+      data: datos
+    })
+  }
 
-    async eliminarTipo(id: number){
-        return prisma.tipoEquipo.delete({
-            where: { id }
-        })
-    }
+  async eliminarTipo(id: number) {
+    return prisma.tipoEquipo.delete({
+      where: { id }
+    })
+  }
 
-    async buscarTipoId(id: number){
-        return prisma.tipoEquipo.findUnique({
-            where: { id }
-        })
-    }
+  async buscarTipoId(id: number) {
+    return prisma.tipoEquipo.findUnique({
+      where: { id }
+    })
+  }
 }
 
 export const equipoService = new EquipoService()

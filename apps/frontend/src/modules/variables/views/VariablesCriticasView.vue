@@ -10,18 +10,17 @@ import DetalleVariablesPanel from '../components/DetalleVariablesPanel.vue'
 import DialogosJerarquia from '../components/DialogosJerarquia.vue'
 import PlantillasVariablesPanel from '../components/PlantillasVariablesPanel.vue'
 import {
-  useVariablesCriticasStore,
+  useVariablesStore,
   type ContextoComponenteSeleccionado,
   type PlantaNodo,
   type UbicacionTecnicaNodo,
-  type LineaNodo,
   type EquipoNodo,
   type ComponenteNodo,
   type VariableInstancia
 } from '../variables.store'
 
 const toast = useToast()
-const variablesStore = useVariablesCriticasStore()
+const variablesStore = useVariablesStore()
 const refDialogos = ref<InstanceType<typeof DialogosJerarquia> | null>(null)
 
 const pestañaActiva = ref<string | number>('navegacion')
@@ -60,12 +59,8 @@ const manejarCrearUbicacion = (planta: PlantaNodo) => {
   refDialogos.value?.abrirCrearUbicacion(planta)
 }
 
-const manejarCrearLinea = (ubicacion: UbicacionTecnicaNodo) => {
-  refDialogos.value?.abrirCrearLinea(ubicacion)
-}
-
-const manejarCrearEquipo = (linea: LineaNodo) => {
-  refDialogos.value?.abrirCrearEquipo(linea)
+const manejarCrearEquipo = (ubicacion: UbicacionTecnicaNodo) => {
+  refDialogos.value?.abrirCrearEquipo(ubicacion)
 }
 
 const manejarEditarEquipo = (equipo: EquipoNodo) => {
@@ -92,7 +87,7 @@ const manejarCrearVariableArbol = (componente: ComponenteNodo) => {
   refDialogos.value?.abrirCrearVariable(componente)
 }
 
-const manejarSincronizarPlantilla = async (componente: ComponenteNodo, equipo?: EquipoNodo) => {
+const manejarSincronizarPlantilla = async (componente: ComponenteNodo, _equipo?: EquipoNodo) => {
   toast.info(`Iniciando sincronización con plantilla para "${componente.nombre}"...`)
   const res = await variablesStore.sincronizarComponente(componente.id)
   if (res.status === 'ok') {
@@ -169,7 +164,6 @@ onMounted(() => {
               @seleccionar-componente="manejarSeleccionComponente"
               @refrescar="inicializarJerarquia"
               @crear-ubicacion="manejarCrearUbicacion"
-              @crear-linea="manejarCrearLinea"
               @crear-equipo="manejarCrearEquipo"
               @editar-equipo="manejarEditarEquipo"
               @eliminar-equipo="manejarEliminarEquipo"
@@ -181,8 +175,8 @@ onMounted(() => {
             />
           </v-col>
 
-          <!-- Panel Derecho: Detalle de Variables -->
-          <v-col cols="12" md="8" lg="8" class="details-column">
+          <!-- Panel Derecho: Detalle y Variables del Componente -->
+          <v-col cols="12" md="8" lg="8" class="detail-column">
             <DetalleVariablesPanel
               :contexto="componenteSeleccionado"
               :variables="variablesComponente"
@@ -197,31 +191,29 @@ onMounted(() => {
         </v-row>
       </template>
 
-      <!-- Pestaña 2: Plantillas de Variables por Tipo de Equipo -->
+      <!-- Pestaña 2: Plantillas Centralizadas por Tipo de Equipo -->
       <template #tab-plantillas>
         <PlantillasVariablesPanel />
       </template>
     </AppTabs>
 
-    <!-- Diálogos Modales de Gestión Jerárquica -->
+    <!-- Diálogos Contextuales de la Jerarquía -->
     <DialogosJerarquia ref="refDialogos" />
   </v-container>
 </template>
 
 <style scoped>
+.variables-criticas-container {
+  min-height: calc(100vh - 80px);
+}
+
 .split-row {
-  margin-top: -8px;
+  min-height: calc(100vh - 200px);
 }
 
 .tree-column,
-.details-column {
-  min-height: calc(100vh - 230px);
-}
-
-@media (max-width: 959px) {
-  .tree-column,
-  .details-column {
-    min-height: auto;
-  }
+.detail-column {
+  display: flex;
+  flex-direction: column;
 }
 </style>

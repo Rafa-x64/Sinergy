@@ -1,18 +1,17 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { AxiosError } from 'axios'
-import api from '@/core'
-import type { RespuestaApi } from '@/modules/auth/auth.store'
+import api from '../../core/api'
+import type { AxiosError } from 'axios'
+
+// ─── INTERFACES DE DOMINIO Y PAYLOADS ──────────────────────────────────────────
 
 export type TipoEvaluacion = 'NUMERICO_ENTERO' | 'NUMERICO_DECIMAL' | 'TEMPERATURA' | 'SELECCION'
 
-export interface OpcionSeleccion {
-  id: number
-  variableId?: number
-  plantillaId?: number
+export interface OpcionSeleccionItem {
+  id?: number
   clave: string
   etiqueta: string
-  ordenPosicion: number
+  ordenPosicion?: number
 }
 
 export interface VariableInstancia {
@@ -26,32 +25,42 @@ export interface VariableInstancia {
   valorMaximo?: number | null
   ordenPosicion: number
   activa: boolean
-  creadoEn: string | Date
-  actualizadoEn: string | Date
-  opcionesSeleccion?: OpcionSeleccion[]
+  creadoEn: string
+  actualizadoEn: string
+  componente?: {
+    id: number
+    nombre: string
+    equipoId: number
+  }
+  opcionesSeleccion: OpcionSeleccionItem[]
 }
 
 export interface PlantillaVariableItem {
   id: number
   tipoEquipoId: number
-  tipoEquipo?: {
-    id: number
-    nombre: string
-  }
   nombre: string
-  descripcion?: string | null
   tipoEvaluacion: TipoEvaluacion
   unidad?: string | null
   valorMinimo?: number | null
   valorMaximo?: number | null
   ordenPosicion: number
   activa: boolean
-  creadoEn: string | Date
-  actualizadoEn: string | Date
-  opcionesSeleccion?: OpcionSeleccion[]
+  creadoEn: string
+  actualizadoEn: string
+  tipoEquipo?: {
+    id: number
+    nombre: string
+  }
+  opcionesSeleccion: OpcionSeleccionItem[]
   _count?: {
     variablesInstancia: number
   }
+}
+
+export interface TipoEquipoItem {
+  id: number
+  nombre: string
+  descripcion?: string | null
 }
 
 export interface ComponenteNodo {
@@ -66,17 +75,11 @@ export interface ComponenteNodo {
   }
 }
 
-export interface TipoEquipoItem {
-  id: number
-  nombre: string
-  descripcion?: string | null
-}
-
 export interface EquipoNodo {
   id: number
   codigo: string
   nombre: string
-  lineaId?: number | null
+  ubicacionTecnicaId: number
   tipoEquipoId: number
   tipoEquipo: {
     id: number
@@ -85,20 +88,12 @@ export interface EquipoNodo {
   componentes: ComponenteNodo[]
 }
 
-export interface LineaNodo {
-  id: number
-  codigo: string
-  nombre: string
-  ubicacionTecnicaId: number
-  equipos: EquipoNodo[]
-}
-
 export interface UbicacionTecnicaNodo {
   id: number
   codigo: string
   nombre: string
   plantaId: number
-  lineas: LineaNodo[]
+  equipos: EquipoNodo[]
 }
 
 export interface PlantaNodo {
@@ -117,7 +112,6 @@ export interface ContextoComponenteSeleccionado {
     tipoEquipoNombre: string
     tipoEquipoId?: number
   }
-  lineaNombre?: string
   ubicacionNombre?: string
   plantaNombre?: string
 }
@@ -131,18 +125,11 @@ export interface CrearUbicacionDTO {
   activa?: boolean
 }
 
-export interface CrearLineaDTO {
-  codigo: string
-  nombre: string
-  ubicacionTecnicaId: number
-  activa?: boolean
-}
-
 export interface GuardarEquipoDTO {
   codigo: string
   nombre: string
   tipoEquipoId: number
-  lineaId?: number | null
+  ubicacionTecnicaId: number
   serial?: string | null
   marca?: string | null
   modelo?: string | null
@@ -158,12 +145,6 @@ export interface GuardarComponenteDTO {
   ordenPosicion?: number
 }
 
-export interface RegistrarOpcionDTO {
-  clave: string
-  etiqueta: string
-  ordenPosicion?: number
-}
-
 export interface GuardarVariableDTO {
   componenteId: number
   nombre: string
@@ -172,31 +153,46 @@ export interface GuardarVariableDTO {
   valorMinimo?: number | null
   valorMaximo?: number | null
   ordenPosicion?: number
-  opciones?: RegistrarOpcionDTO[]
+  opciones?: {
+    clave: string
+    etiqueta: string
+    ordenPosicion?: number
+  }[]
 }
 
 export interface GuardarPlantillaDTO {
   tipoEquipoId: number
   nombre: string
-  descripcion?: string | null
   tipoEvaluacion: TipoEvaluacion
   unidad?: string | null
   valorMinimo?: number | null
   valorMaximo?: number | null
   ordenPosicion?: number
-  opciones?: RegistrarOpcionDTO[]
+  opciones?: {
+    clave: string
+    etiqueta: string
+    ordenPosicion?: number
+  }[]
 }
 
-export const useVariablesCriticasStore = defineStore('variablesCriticas', () => {
+export interface RespuestaApi<T = unknown> {
+  status: 'ok' | 'error'
+  message?: string
+  data?: T
+}
+
+// ─── STORE DEFINITION ─────────────────────────────────────────────────────────
+
+export const useVariablesStore = defineStore('variables', () => {
   const arbolJerarquico = ref<PlantaNodo[]>([])
   const tiposEquipo = ref<TipoEquipoItem[]>([])
   const plantillasPorTipo = ref<PlantillaVariableItem[]>([])
   const tipoEquipoSeleccionadoId = ref<number | null>(null)
 
-  const cargandoJerarquia = ref<boolean>(false)
-  const cargandoVariables = ref<boolean>(false)
-  const cargandoPlantillas = ref<boolean>(false)
-  const ejecutandoAccion = ref<boolean>(false)
+  const cargandoJerarquia = ref(false)
+  const cargandoVariables = ref(false)
+  const cargandoPlantillas = ref(false)
+  const ejecutandoAccion = ref(false)
 
   const componenteSeleccionado = ref<ContextoComponenteSeleccionado | null>(null)
   const variablesComponente = ref<VariableInstancia[]>([])
@@ -208,19 +204,14 @@ export const useVariablesCriticasStore = defineStore('variablesCriticas', () => 
       if (data.status === 'ok' && data.data) {
         arbolJerarquico.value = data.data
 
-        // Sincroniza el nodo seleccionado con el nodo fresco del árbol para
-        // que _count.variables y demás campos reactivos queden actualizados
-        // sin que el usuario tenga que recargar la página.
         if (componenteSeleccionado.value) {
           const idBuscado = componenteSeleccionado.value.componente.id
           for (const planta of data.data) {
             for (const ubicacion of planta.ubicacionesTecnicas ?? []) {
-              for (const linea of ubicacion.lineas ?? []) {
-                for (const equipo of linea.equipos ?? []) {
-                  const nodoFresco = equipo.componentes?.find((c) => c.id === idBuscado)
-                  if (nodoFresco) {
-                    componenteSeleccionado.value.componente = nodoFresco
-                  }
+              for (const equipo of ubicacion.equipos ?? []) {
+                const nodoFresco = equipo.componentes?.find((c) => c.id === idBuscado)
+                if (nodoFresco) {
+                  componenteSeleccionado.value.componente = nodoFresco
                 }
               }
             }
@@ -291,13 +282,9 @@ export const useVariablesCriticasStore = defineStore('variablesCriticas', () => 
       if (data.status === 'ok' && data.data) {
         variablesComponente.value = data.data
 
-        // Parchea el _count.variables del nodo en el árbol en memoria para que
-        // el badge del árbol refleje el conteo real de forma inmediata,
-        // sin esperar una recarga completa de la jerarquía.
         const conteoActual = data.data.length
         actualizarConteoEnArbol(componenteId, conteoActual)
 
-        // Sincroniza también el componente seleccionado si es el mismo.
         if (componenteSeleccionado.value?.componente.id === componenteId) {
           if (!componenteSeleccionado.value.componente._count) {
             componenteSeleccionado.value.componente._count = { variables: conteoActual }
@@ -319,18 +306,15 @@ export const useVariablesCriticasStore = defineStore('variablesCriticas', () => 
     }
   }
 
-  // Recorre el árbol en memoria y actualiza _count.variables para el componente indicado.
   function actualizarConteoEnArbol(componenteId: number, conteo: number): void {
     for (const planta of arbolJerarquico.value) {
       for (const ubicacion of planta.ubicacionesTecnicas ?? []) {
-        for (const linea of ubicacion.lineas ?? []) {
-          for (const equipo of linea.equipos ?? []) {
-            const nodo = equipo.componentes?.find((c) => c.id === componenteId)
-            if (nodo) {
-              if (!nodo._count) nodo._count = { variables: conteo }
-              else nodo._count.variables = conteo
-              return
-            }
+        for (const equipo of ubicacion.equipos ?? []) {
+          const nodo = equipo.componentes?.find((c) => c.id === componenteId)
+          if (nodo) {
+            if (!nodo._count) nodo._count = { variables: conteo }
+            else nodo._count.variables = conteo
+            return
           }
         }
       }
@@ -363,25 +347,6 @@ export const useVariablesCriticasStore = defineStore('variablesCriticas', () => 
     } catch (error: unknown) {
       const err = error as AxiosError<RespuestaApi>
       return { status: 'error', message: err.response?.data?.message ?? 'Error al crear la ubicación técnica' }
-    } finally {
-      ejecutandoAccion.value = false
-    }
-  }
-
-  async function crearLinea(dto: CrearLineaDTO): Promise<RespuestaApi> {
-    ejecutandoAccion.value = true
-    try {
-      const { data } = await api.post<RespuestaApi>('/lineas/crear', {
-        ...dto,
-        activa: dto.activa ?? true
-      })
-      if (data.status === 'ok') {
-        await cargarArbolJerarquico()
-      }
-      return data
-    } catch (error: unknown) {
-      const err = error as AxiosError<RespuestaApi>
-      return { status: 'error', message: err.response?.data?.message ?? 'Error al crear la línea operativa' }
     } finally {
       ejecutandoAccion.value = false
     }
@@ -735,7 +700,6 @@ export const useVariablesCriticasStore = defineStore('variablesCriticas', () => 
     seleccionarComponente,
     limpiarSeleccion,
     crearUbicacion,
-    crearLinea,
     crearEquipo,
     editarEquipo,
     eliminarEquipo,

@@ -103,8 +103,6 @@ const formatearRango = (variable: VariableInstancia): string => {
               <v-icon size="12">mdi-chevron-right</v-icon>
               <span>{{ contexto.ubicacionNombre }}</span>
               <v-icon size="12">mdi-chevron-right</v-icon>
-              <span>{{ contexto.lineaNombre }}</span>
-              <v-icon size="12">mdi-chevron-right</v-icon>
               <span class="font-weight-bold text-high-emphasis">{{ contexto.equipo?.nombre }}</span>
             </div>
 

@@ -150,50 +150,40 @@ class VariableCriticaService {
         nombre: true,
         ubicacionesTecnicas: {
           where: { activa: true },
-          orderBy: { nombre: 'asc' },
+          orderBy: { codigo: 'asc' },
           select: {
             id: true,
             codigo: true,
             nombre: true,
             plantaId: true,
-            lineas: {
-              where: { activa: true },
+            equipos: {
               orderBy: { nombre: 'asc' },
               select: {
                 id: true,
                 codigo: true,
                 nombre: true,
                 ubicacionTecnicaId: true,
-                equipos: {
-                  orderBy: { nombre: 'asc' },
+                tipoEquipoId: true,
+                tipoEquipo: {
                   select: {
                     id: true,
-                    codigo: true,
+                    nombre: true
+                  }
+                },
+                componentes: {
+                  where: { activo: true },
+                  orderBy: { ordenPosicion: 'asc' },
+                  select: {
+                    id: true,
                     nombre: true,
-                    lineaId: true,
-                    tipoEquipoId: true,
-                    tipoEquipo: {
+                    descripcion: true,
+                    equipoId: true,
+                    activo: true,
+                    ordenPosicion: true,
+                    _count: {
                       select: {
-                        id: true,
-                        nombre: true
-                      }
-                    },
-                    componentes: {
-                      where: { activo: true },
-                      orderBy: { ordenPosicion: 'asc' },
-                      select: {
-                        id: true,
-                        nombre: true,
-                        descripcion: true,
-                        equipoId: true,
-                        activo: true,
-                        ordenPosicion: true,
-                        _count: {
-                          select: {
-                            variables: {
-                              where: { activa: true }
-                            }
-                          }
+                        variables: {
+                          where: { activa: true }
                         }
                       }
                     }

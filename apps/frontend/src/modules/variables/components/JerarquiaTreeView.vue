@@ -3,7 +3,6 @@ import { ref, computed } from 'vue'
 import type {
   PlantaNodo,
   UbicacionTecnicaNodo,
-  LineaNodo,
   EquipoNodo,
   ComponenteNodo,
   ContextoComponenteSeleccionado
@@ -24,8 +23,7 @@ const emit = defineEmits<{
   (e: 'seleccionar-componente', contexto: ContextoComponenteSeleccionado): void
   (e: 'refrescar'): void
   (e: 'crear-ubicacion', planta: PlantaNodo): void
-  (e: 'crear-linea', ubicacion: UbicacionTecnicaNodo): void
-  (e: 'crear-equipo', linea: LineaNodo): void
+  (e: 'crear-equipo', ubicacion: UbicacionTecnicaNodo): void
   (e: 'editar-equipo', equipo: EquipoNodo): void
   (e: 'eliminar-equipo', equipo: EquipoNodo): void
   (e: 'crear-componente', equipo: EquipoNodo): void
@@ -42,11 +40,10 @@ const nodosExpandidos = ref<Set<string>>(new Set())
 const mostrarMenu = ref(false)
 const menuCoordenadas = ref<[number, number]>([0, 0])
 
-type TipoNodoMenu = 'PLANTA' | 'UBICACION' | 'LINEA' | 'EQUIPO' | 'COMPONENTE'
+type TipoNodoMenu = 'PLANTA' | 'UBICACION' | 'EQUIPO' | 'COMPONENTE'
 const tipoNodoActual = ref<TipoNodoMenu | null>(null)
 const nodoPlantaSeleccionado = ref<PlantaNodo | null>(null)
 const nodoUbicacionSeleccionado = ref<UbicacionTecnicaNodo | null>(null)
-const nodoLineaSeleccionado = ref<LineaNodo | null>(null)
 const nodoEquipoSeleccionado = ref<EquipoNodo | null>(null)
 const nodoComponenteSeleccionado = ref<ComponenteNodo | null>(null)
 
@@ -56,7 +53,6 @@ const abrirMenuContextual = (
   payload: {
     planta?: PlantaNodo
     ubicacion?: UbicacionTecnicaNodo
-    linea?: LineaNodo
     equipo?: EquipoNodo
     componente?: ComponenteNodo
   }
@@ -67,7 +63,6 @@ const abrirMenuContextual = (
   tipoNodoActual.value = tipo
   nodoPlantaSeleccionado.value = payload.planta || null
   nodoUbicacionSeleccionado.value = payload.ubicacion || null
-  nodoLineaSeleccionado.value = payload.linea || null
   nodoEquipoSeleccionado.value = payload.equipo || null
   nodoComponenteSeleccionado.value = payload.componente || null
 
@@ -93,11 +88,8 @@ const expandirTodo = () => {
     nodosExpandidos.value.add(`p-${p.id}`)
     p.ubicacionesTecnicas?.forEach((u) => {
       nodosExpandidos.value.add(`u-${u.id}`)
-      u.lineas?.forEach((l) => {
-        nodosExpandidos.value.add(`l-${l.id}`)
-        l.equipos?.forEach((e) => {
-          nodosExpandidos.value.add(`e-${e.id}`)
-        })
+      u.equipos?.forEach((e) => {
+        nodosExpandidos.value.add(`e-${e.id}`)
       })
     })
   })
@@ -110,7 +102,6 @@ const colapsarTodo = () => {
 const seleccionarComponente = (
   componente: ComponenteNodo,
   equipo: EquipoNodo,
-  linea: LineaNodo,
   ubicacion: UbicacionTecnicaNodo,
   planta: PlantaNodo
 ) => {
@@ -122,8 +113,7 @@ const seleccionarComponente = (
       nombre: equipo.nombre,
       tipoEquipoNombre: equipo.tipoEquipo?.nombre ?? 'General'
     },
-    lineaNombre: linea.nombre,
-    ubicacionNombre: ubicacion.nombre,
+    ubicacionNombre: `${ubicacion.codigo} - ${ubicacion.nombre}`,
     plantaNombre: planta.nombre
   })
 }
@@ -141,34 +131,23 @@ const plantasFiltradas = computed(() => {
         .map((u) => {
           const matchUbicacion = u.nombre.toLowerCase().includes(termino) || u.codigo.toLowerCase().includes(termino)
 
-          const lineas = (u.lineas || [])
-            .map((l) => {
-              const matchLinea = l.nombre.toLowerCase().includes(termino) || l.codigo.toLowerCase().includes(termino)
+          const equipos = (u.equipos || [])
+            .map((e) => {
+              const matchEquipo = e.nombre.toLowerCase().includes(termino) || e.codigo.toLowerCase().includes(termino)
 
-              const equipos = (l.equipos || [])
-                .map((e) => {
-                  const matchEquipo = e.nombre.toLowerCase().includes(termino) || e.codigo.toLowerCase().includes(termino)
+              const componentes = (e.componentes || []).filter((c) =>
+                c.nombre.toLowerCase().includes(termino)
+              )
 
-                  const componentes = (e.componentes || []).filter((c) =>
-                    c.nombre.toLowerCase().includes(termino)
-                  )
-
-                  if (matchPlanta || matchUbicacion || matchLinea || matchEquipo || componentes.length > 0) {
-                    return { ...e, componentes: matchPlanta || matchUbicacion || matchLinea || matchEquipo ? e.componentes : componentes }
-                  }
-                  return null
-                })
-                .filter(Boolean) as EquipoNodo[]
-
-              if (matchPlanta || matchUbicacion || matchLinea || equipos.length > 0) {
-                return { ...l, equipos: matchPlanta || matchUbicacion || matchLinea ? l.equipos : equipos }
+              if (matchPlanta || matchUbicacion || matchEquipo || componentes.length > 0) {
+                return { ...e, componentes: matchPlanta || matchUbicacion || matchEquipo ? e.componentes : componentes }
               }
               return null
             })
-            .filter(Boolean) as LineaNodo[]
+            .filter(Boolean) as EquipoNodo[]
 
-          if (matchPlanta || matchUbicacion || lineas.length > 0) {
-            return { ...u, lineas: matchPlanta || matchUbicacion ? u.lineas : lineas }
+          if (matchPlanta || matchUbicacion || equipos.length > 0) {
+            return { ...u, equipos: matchPlanta || matchUbicacion ? u.equipos : equipos }
           }
           return null
         })
@@ -226,7 +205,7 @@ const plantasFiltradas = computed(() => {
       <v-text-field
         v-model="busqueda"
         prepend-inner-icon="mdi-magnify"
-        placeholder="Buscar planta, línea, equipo..."
+        placeholder="Buscar planta, ubicación, equipo..."
         density="compact"
         variant="outlined"
         hide-details
@@ -288,100 +267,80 @@ const plantasFiltradas = computed(() => {
                     {{ estaExpandido('u-' + ubicacion.id) ? 'mdi-folder-open-outline' : 'mdi-folder-outline' }}
                   </v-icon>
                   <span class="text-body-2 flex-grow-1 text-truncate">
-                    {{ ubicacion.nombre }}
+                    <strong>{{ ubicacion.codigo }}</strong> - {{ ubicacion.nombre }}
                   </span>
                   <v-chip size="x-small" variant="tonal" color="amber-darken-3" class="ml-1 node-badge">
                     Ubicación
                   </v-chip>
                 </div>
 
-                <!-- Nivel 3: Líneas -->
+                <!-- Nivel 3: Equipos -->
                 <v-expand-transition>
                   <div v-show="estaExpandido('u-' + ubicacion.id)" class="pl-4 border-left-tree">
-                    <div v-for="linea in ubicacion.lineas" :key="'l-' + linea.id" class="node-level">
+                    <div
+                      v-if="!ubicacion.equipos || ubicacion.equipos.length === 0"
+                      class="text-caption text-secondary py-1 pl-4 font-italic"
+                    >
+                      Sin equipos asignados
+                    </div>
+                    <div v-for="equipo in ubicacion.equipos" :key="'e-' + equipo.id" class="node-level">
                       <div
                         class="tree-row d-flex align-center py-1 px-2 rounded cursor-pointer"
-                        @click="toggleNodo('l-' + linea.id)"
-                        @contextmenu="abrirMenuContextual($event, 'LINEA', { planta, ubicacion, linea })"
+                        @click="toggleNodo('e-' + equipo.id)"
+                        @contextmenu="abrirMenuContextual($event, 'EQUIPO', { planta, ubicacion, equipo })"
                       >
                         <v-icon size="18" class="mr-1 toggle-icon">
-                          {{ estaExpandido('l-' + linea.id) ? 'mdi-chevron-down' : 'mdi-chevron-right' }}
+                          {{ estaExpandido('e-' + equipo.id) ? 'mdi-chevron-down' : 'mdi-chevron-right' }}
                         </v-icon>
-                        <v-icon size="18" color="teal" class="mr-2">
-                          {{ estaExpandido('l-' + linea.id) ? 'mdi-folder-network-outline' : 'mdi-folder-network' }}
+                        <v-icon size="18" color="deep-orange" class="mr-2">
+                          {{ estaExpandido('e-' + equipo.id) ? 'mdi-cog-sync' : 'mdi-cog' }}
                         </v-icon>
                         <span class="text-body-2 flex-grow-1 text-truncate">
-                          {{ linea.nombre }}
+                          <strong>{{ equipo.codigo }}</strong> - {{ equipo.nombre }}
                         </span>
-                        <v-chip size="x-small" variant="tonal" color="teal" class="ml-1 node-badge">
-                          Línea
+                        <v-chip
+                          size="x-small"
+                          variant="tonal"
+                          color="deep-orange"
+                          class="ml-1 node-badge"
+                        >
+                          {{ equipo.tipoEquipo?.nombre ?? 'Equipo' }}
                         </v-chip>
                       </div>
 
-                      <!-- Nivel 4: Equipos -->
+                      <!-- Nivel 4: Componentes (Hojas) -->
                       <v-expand-transition>
-                        <div v-show="estaExpandido('l-' + linea.id)" class="pl-4 border-left-tree">
-                          <div v-for="equipo in linea.equipos" :key="'e-' + equipo.id" class="node-level">
-                            <div
-                              class="tree-row d-flex align-center py-1 px-2 rounded cursor-pointer"
-                              @click="toggleNodo('e-' + equipo.id)"
-                              @contextmenu="abrirMenuContextual($event, 'EQUIPO', { planta, ubicacion, linea, equipo })"
-                            >
-                              <v-icon size="18" class="mr-1 toggle-icon">
-                                {{ estaExpandido('e-' + equipo.id) ? 'mdi-chevron-down' : 'mdi-chevron-right' }}
-                              </v-icon>
-                              <v-icon size="18" color="deep-orange" class="mr-2">
-                                {{ estaExpandido('e-' + equipo.id) ? 'mdi-cog-sync' : 'mdi-cog' }}
-                              </v-icon>
-                              <span class="text-body-2 flex-grow-1 text-truncate">
-                                {{ equipo.nombre }}
-                              </span>
-                              <v-chip
-                                size="x-small"
-                                variant="tonal"
-                                color="deep-orange"
-                                class="ml-1 node-badge"
-                              >
-                                {{ equipo.tipoEquipo?.nombre ?? 'Equipo' }}
-                              </v-chip>
-                            </div>
-
-                            <!-- Nivel 5: Componentes (Hojas) -->
-                            <v-expand-transition>
-                              <div v-show="estaExpandido('e-' + equipo.id)" class="pl-4 border-left-tree">
-                                <div
-                                  v-if="!equipo.componentes || equipo.componentes.length === 0"
-                                  class="text-caption text-secondary py-1 pl-4 font-italic"
-                                >
-                                  Sin componentes
-                                </div>
-                                <div
-                                  v-for="componente in equipo.componentes"
-                                  :key="'c-' + componente.id"
-                                  class="tree-row component-leaf d-flex align-center py-1 px-2 rounded cursor-pointer"
-                                  :class="{ 'component-selected': componenteSeleccionadoId === componente.id }"
-                                  @click="seleccionarComponente(componente, equipo, linea, ubicacion, planta)"
-                                  @contextmenu="abrirMenuContextual($event, 'COMPONENTE', { planta, ubicacion, linea, equipo, componente })"
-                                >
-                                  <v-icon size="16" class="mr-2 ml-1" color="indigo">
-                                    mdi-file-document-outline
-                                  </v-icon>
-                                  <span class="text-body-2 flex-grow-1 text-truncate font-weight-medium">
-                                    {{ componente.nombre }}
-                                  </span>
-                                  <v-chip size="x-small" variant="tonal" color="indigo" class="ml-1 node-badge">
-                                    Componente
-                                  </v-chip>
-                                  <v-badge
-                                    v-if="componente._count?.variables !== undefined"
-                                    :content="componente._count.variables"
-                                    :color="componente._count.variables > 0 ? 'primary' : 'grey'"
-                                    inline
-                                    class="ml-1"
-                                  />
-                                </div>
-                              </div>
-                            </v-expand-transition>
+                        <div v-show="estaExpandido('e-' + equipo.id)" class="pl-4 border-left-tree">
+                          <div
+                            v-if="!equipo.componentes || equipo.componentes.length === 0"
+                            class="text-caption text-secondary py-1 pl-4 font-italic"
+                          >
+                            Sin componentes
+                          </div>
+                          <div
+                            v-for="componente in equipo.componentes"
+                            :key="'c-' + componente.id"
+                            class="tree-row component-leaf d-flex align-center py-1 px-2 rounded cursor-pointer"
+                            :class="{ 'component-selected': componenteSeleccionadoId === componente.id }"
+                            @click="seleccionarComponente(componente, equipo, ubicacion, planta)"
+                            @contextmenu="abrirMenuContextual($event, 'COMPONENTE', { planta, ubicacion, equipo, componente })"
+                          >
+                            <v-icon size="16" class="mr-2 ml-1" color="indigo">
+                              mdi-file-document-outline
+                            </v-icon>
+                            <span class="text-body-2 flex-grow-1 text-truncate font-weight-medium">
+                              {{ componente.nombre }}
+                            </span>
+                            <v-chip size="x-small" variant="tonal" color="indigo" class="ml-1 node-badge">
+                              Componente
+                            </v-chip>
+                            <v-badge
+                              v-if="componente._count?.variables !== undefined"
+                              :content="componente._count.variables"
+                              :color="componente._count.variables > 0 ? 'primary' : 'grey'"
+                              inline
+                              class="ml-1"
+                            />
                           </div>
                         </div>
                       </v-expand-transition>
@@ -416,18 +375,9 @@ const plantasFiltradas = computed(() => {
         <!-- Opciones para UBICACIÓN TÉCNICA -->
         <template v-if="tipoNodoActual === 'UBICACION' && nodoUbicacionSeleccionado">
           <v-list-item
-            prepend-icon="mdi-chart-timeline"
-            title="Agregar Línea"
-            @click="emit('crear-linea', nodoUbicacionSeleccionado!)"
-          />
-        </template>
-
-        <!-- Opciones para LÍNEA -->
-        <template v-if="tipoNodoActual === 'LINEA' && nodoLineaSeleccionado">
-          <v-list-item
             prepend-icon="mdi-cog-plus"
             title="Agregar Equipo"
-            @click="emit('crear-equipo', nodoLineaSeleccionado!)"
+            @click="emit('crear-equipo', nodoUbicacionSeleccionado!)"
           />
         </template>
 

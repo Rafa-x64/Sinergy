@@ -13,7 +13,6 @@ import rolesRoutes from '../modules/roles/roles.routes'
 import equipoRoutes from '../modules/equipo/equipo.routes'
 import plantaRoutes from '../modules/plantas/planta.routes'
 import ubicacionRoutes from '../modules/ubicaciones/ubicacion.routes'
-import lineaRoutes from '../modules/lineas/linea.routes'
 import componenteRoutes from '../modules/componentes/componente.routes'
 import variableCriticaRoutes from '../modules/variables-criticas/variable-critica.routes'
 import inspeccionRoutes from '../modules/inspecciones/inspeccion.routes'
@@ -91,7 +90,6 @@ app.use('/api/roles', rolesRoutes)
 app.use('/api/equipos', equipoRoutes)
 app.use('/api/plantas', plantaRoutes)
 app.use('/api/ubicaciones', ubicacionRoutes)
-app.use('/api/lineas', lineaRoutes)
 app.use('/api/componentes', componenteRoutes)
 app.use('/api/variables-criticas', variableCriticaRoutes)
 app.use('/api/inspecciones', inspeccionRoutes)

@@ -2,14 +2,14 @@
 import { ref, computed } from 'vue'
 import { useToast } from 'vue-toastification'
 import {
-  useVariablesCriticasStore,
+  useVariablesStore,
   type PlantillaVariableItem,
   type TipoEvaluacion
 } from '../variables.store'
 import DialogoPlantillaVariable from './DialogoPlantillaVariable.vue'
 
 const toast = useToast()
-const store = useVariablesCriticasStore()
+const store = useVariablesStore()
 const refDialogoPlantilla = ref<InstanceType<typeof DialogoPlantillaVariable> | null>(null)
 
 // ─── FILTRO DE BÚSQUEDA ───────────────────────────────────────────────────────
@@ -23,17 +23,16 @@ const mostrarDialogoSincronizarTodos = ref(false)
 const ejecutandoSincronizacion = ref(false)
 
 const tipoEquipoActual = computed(() => {
-  return store.tiposEquipo.find((t) => t.id === store.tipoEquipoSeleccionadoId) || store.tiposEquipo[0]
+  return store.tiposEquipo.find((t: { id: number }) => t.id === store.tipoEquipoSeleccionadoId) || store.tiposEquipo[0]
 })
 
 const plantillasFiltradas = computed(() => {
   const termino = busqueda.value.trim().toLowerCase()
   if (!termino) return store.plantillasPorTipo
 
-  return store.plantillasPorTipo.filter((p) => {
+  return store.plantillasPorTipo.filter((p: PlantillaVariableItem) => {
     return (
       p.nombre.toLowerCase().includes(termino) ||
-      (p.descripcion && p.descripcion.toLowerCase().includes(termino)) ||
       (p.unidad && p.unidad.toLowerCase().includes(termino)) ||
       p.tipoEvaluacion.toLowerCase().includes(termino)
     )
@@ -263,9 +262,6 @@ const formatearRango = (item: PlantillaVariableItem): string => {
             <tr v-for="item in plantillasFiltradas" :key="item.id">
               <td class="font-weight-medium text-high-emphasis">
                 <div class="text-subtitle-2 font-weight-bold text-high-emphasis">{{ item.nombre }}</div>
-                <div v-if="item.descripcion" class="text-caption text-medium-emphasis">
-                  {{ item.descripcion }}
-                </div>
               </td>
 
               <td class="text-center">

@@ -3,15 +3,13 @@ import { ref, computed } from 'vue'
 import { useToast } from 'vue-toastification'
 import type { VuetifyForm } from '@/core/types/vuetifyForm'
 import {
-  useVariablesCriticasStore,
+  useVariablesStore,
   type PlantaNodo,
   type UbicacionTecnicaNodo,
-  type LineaNodo,
   type EquipoNodo,
   type ComponenteNodo,
   type VariableInstancia,
-  type TipoEvaluacion,
-  type RegistrarOpcionDTO
+  type TipoEvaluacion
 } from '../variables.store'
 import {
   UNIDADES_MEDIDA_PREDETERMINADAS,
@@ -20,18 +18,16 @@ import {
 import { variableRules, jerarquiaRules } from '../validations/variables'
 
 const toast = useToast()
-const store = useVariablesCriticasStore()
+const store = useVariablesStore()
 
 // ─── REFS DE FORMULARIOS VUETIFY ──────────────────────────────────────────────
 const formUbicacionRef = ref<VuetifyForm | null>(null)
-const formLineaRef = ref<VuetifyForm | null>(null)
 const formEquipoRef = ref<VuetifyForm | null>(null)
 const formComponenteRef = ref<VuetifyForm | null>(null)
 const formVariableRef = ref<VuetifyForm | null>(null)
 
 // ─── CONTROL DE VISIBILIDAD DE DIÁLOGOS ───────────────────────────────────────
 const mostrarDialogoUbicacion = ref(false)
-const mostrarDialogoLinea = ref(false)
 const mostrarDialogoEquipo = ref(false)
 const mostrarDialogoComponente = ref(false)
 const mostrarDialogoVariable = ref(false)
@@ -43,7 +39,6 @@ const cargando = computed(() => store.ejecutandoAccion)
 // ─── CONTEXTO TEMPORAL DEL NODO ───────────────────────────────────────────────
 const nodoPlantaPadre = ref<PlantaNodo | null>(null)
 const nodoUbicacionPadre = ref<UbicacionTecnicaNodo | null>(null)
-const nodoLineaPadre = ref<LineaNodo | null>(null)
 const nodoEquipoActivo = ref<EquipoNodo | null>(null)
 const nodoComponenteActivo = ref<ComponenteNodo | null>(null)
 const variableActiva = ref<VariableInstancia | null>(null)
@@ -58,11 +53,6 @@ const formUbicacion = ref({
   codigo: '',
   nombre: '',
   descripcion: ''
-})
-
-const formLinea = ref({
-  codigo: '',
-  nombre: ''
 })
 
 const formEquipo = ref({
@@ -155,15 +145,8 @@ const abrirCrearUbicacion = (planta: PlantaNodo) => {
   mostrarDialogoUbicacion.value = true
 }
 
-const abrirCrearLinea = (ubicacion: UbicacionTecnicaNodo) => {
+const abrirCrearEquipo = (ubicacion: UbicacionTecnicaNodo) => {
   nodoUbicacionPadre.value = ubicacion
-  formLinea.value = { codigo: '', nombre: '' }
-  formLineaRef.value?.resetValidation()
-  mostrarDialogoLinea.value = true
-}
-
-const abrirCrearEquipo = (linea: LineaNodo) => {
-  nodoLineaPadre.value = linea
   esEdicion.value = false
   formEquipo.value = {
     id: 0,
@@ -317,29 +300,6 @@ const guardarUbicacion = async () => {
   }
 }
 
-const guardarLinea = async () => {
-  if (!formLineaRef.value) return
-  const { valid } = await formLineaRef.value.validate()
-  if (!valid) {
-    toast.warning('Por favor, completa los campos requeridos')
-    return
-  }
-  if (!nodoUbicacionPadre.value) return
-
-  const res = await store.crearLinea({
-    ubicacionTecnicaId: nodoUbicacionPadre.value.id,
-    codigo: formLinea.value.codigo.trim(),
-    nombre: formLinea.value.nombre.trim()
-  })
-
-  if (res.status === 'ok') {
-    toast.success('Línea operativa creada correctamente')
-    mostrarDialogoLinea.value = false
-  } else {
-    toast.error(res.message ?? 'Error al crear la línea')
-  }
-}
-
 const guardarEquipo = async () => {
   if (!formEquipoRef.value) return
   const { valid } = await formEquipoRef.value.validate()
@@ -366,9 +326,9 @@ const guardarEquipo = async () => {
       toast.error(res.message ?? 'Error al editar el equipo')
     }
   } else {
-    if (!nodoLineaPadre.value) return
+    if (!nodoUbicacionPadre.value) return
     const res = await store.crearEquipo({
-      lineaId: nodoLineaPadre.value.id,
+      ubicacionTecnicaId: nodoUbicacionPadre.value.id,
       codigo: formEquipo.value.codigo.trim(),
       nombre: formEquipo.value.nombre.trim(),
       tipoEquipoId: formEquipo.value.tipoEquipoId as number,
@@ -434,7 +394,7 @@ const guardarVariable = async () => {
     return
   }
 
-  let opciones: RegistrarOpcionDTO[] | undefined
+  let opciones: { clave: string; etiqueta: string; ordenPosicion?: number }[] | undefined
 
   if (formVariable.value.tipoEvaluacion === 'SELECCION') {
     const lineas = formVariable.value.opcionesTexto.split('\n').filter((l) => l.trim().length > 0)
@@ -512,7 +472,6 @@ const confirmarEliminar = async () => {
 
 defineExpose({
   abrirCrearUbicacion,
-  abrirCrearLinea,
   abrirCrearEquipo,
   abrirEditarEquipo,
   abrirCrearComponente,
@@ -544,7 +503,7 @@ defineExpose({
               v-model="formUbicacion.codigo"
               :rules="jerarquiaRules.codigo"
               label="Código *"
-              placeholder="Ej: UB-EXT-01"
+              placeholder="Ej: 1000-EXT-EQ01 o 1000-EXT-EX01-LI02"
               variant="outlined"
               density="comfortable"
               class="mb-2"
@@ -553,7 +512,7 @@ defineExpose({
               v-model="formUbicacion.nombre"
               :rules="jerarquiaRules.nombre"
               label="Nombre *"
-              placeholder="Ej: Área de Extrusión"
+              placeholder="Ej: Equipos en Reserva / Línea # 02"
               variant="outlined"
               density="comfortable"
               class="mb-2"
@@ -579,50 +538,7 @@ defineExpose({
       </v-card>
     </v-dialog>
 
-    <!-- 2. DIÁLOGO LÍNEA -->
-    <v-dialog v-model="mostrarDialogoLinea" max-width="500px" persistent>
-      <v-card class="rounded-lg">
-        <v-card-title class="bg-teal text-white py-3 px-4 d-flex align-center">
-          <v-icon start>mdi-chart-timeline</v-icon>
-          <span>Nueva Línea Operativa</span>
-        </v-card-title>
-
-        <v-form ref="formLineaRef" @submit.prevent="guardarLinea">
-          <v-card-text class="pa-4 pt-5">
-            <div class="text-caption text-secondary mb-3">
-              Ubicación Técnica: <strong>{{ nodoUbicacionPadre?.nombre }}</strong>
-            </div>
-            <v-text-field
-              v-model="formLinea.codigo"
-              :rules="jerarquiaRules.codigo"
-              label="Código *"
-              placeholder="Ej: LIN-PVC-01"
-              variant="outlined"
-              density="comfortable"
-              class="mb-2"
-            />
-            <v-text-field
-              v-model="formLinea.nombre"
-              :rules="jerarquiaRules.nombre"
-              label="Nombre *"
-              placeholder="Ej: Línea 1 Extrusión PVC"
-              variant="outlined"
-              density="comfortable"
-            />
-          </v-card-text>
-          <v-card-actions class="pa-4 pt-0 justify-end">
-            <v-btn variant="text" :disabled="cargando" @click="mostrarDialogoLinea = false">
-              Cancelar
-            </v-btn>
-            <v-btn color="teal" variant="flat" :loading="cargando" type="submit">
-              Guardar Línea
-            </v-btn>
-          </v-card-actions>
-        </v-form>
-      </v-card>
-    </v-dialog>
-
-    <!-- 3. DIÁLOGO EQUIPO (CREAR / EDITAR) -->
+    <!-- 2. DIÁLOGO EQUIPO (CREAR / EDITAR) -->
     <v-dialog v-model="mostrarDialogoEquipo" max-width="600px" persistent>
       <v-card class="rounded-lg">
         <v-card-title class="bg-deep-orange text-white py-3 px-4 d-flex align-center">
@@ -633,7 +549,7 @@ defineExpose({
         <v-form ref="formEquipoRef" @submit.prevent="guardarEquipo">
           <v-card-text class="pa-4 pt-5">
             <div v-if="!esEdicion" class="text-caption text-secondary mb-3">
-              Línea: <strong>{{ nodoLineaPadre?.nombre }}</strong>
+              Ubicación Técnica: <strong>{{ nodoUbicacionPadre?.codigo }} - {{ nodoUbicacionPadre?.nombre }}</strong>
             </div>
             <v-row dense>
               <v-col cols="12" sm="6">
@@ -641,7 +557,7 @@ defineExpose({
                   v-model="formEquipo.codigo"
                   :rules="jerarquiaRules.codigo"
                   label="Código *"
-                  placeholder="Ej: EXT-01"
+                  placeholder="Ej: 1000ACA00002"
                   variant="outlined"
                   density="comfortable"
                 />
@@ -651,7 +567,7 @@ defineExpose({
                   v-model="formEquipo.nombre"
                   :rules="jerarquiaRules.nombre"
                   label="Nombre *"
-                  placeholder="Ej: Extrusora Principal"
+                  placeholder="Ej: Acampanadora SICA"
                   variant="outlined"
                   density="comfortable"
                 />
@@ -715,7 +631,7 @@ defineExpose({
       </v-card>
     </v-dialog>
 
-    <!-- 4. DIÁLOGO COMPONENTE (CREAR / EDITAR) -->
+    <!-- 3. DIÁLOGO COMPONENTE (CREAR / EDITAR) -->
     <v-dialog v-model="mostrarDialogoComponente" max-width="500px" persistent>
       <v-card class="rounded-lg">
         <v-card-title class="bg-indigo text-white py-3 px-4 d-flex align-center">
@@ -766,7 +682,7 @@ defineExpose({
       </v-card>
     </v-dialog>
 
-    <!-- 5. DIÁLOGO VARIABLE (CREAR / EDITAR) -->
+    <!-- 4. DIÁLOGO VARIABLE (CREAR / EDITAR) -->
     <v-dialog v-model="mostrarDialogoVariable" max-width="560px" persistent>
       <v-card class="rounded-lg">
         <v-card-title class="bg-primary text-white py-3 px-4 d-flex align-center">
@@ -901,7 +817,7 @@ defineExpose({
       </v-card>
     </v-dialog>
 
-    <!-- 6. DIÁLOGO DE CONFIRMACIÓN DE ELIMINACIÓN -->
+    <!-- 5. DIÁLOGO DE CONFIRMACIÓN DE ELIMINACIÓN -->
     <v-dialog v-model="mostrarDialogoEliminar" max-width="440px" persistent>
       <v-card class="rounded-lg">
         <v-card-title class="bg-error text-white py-3 px-4 d-flex align-center">
