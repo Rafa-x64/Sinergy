@@ -20,6 +20,7 @@ export const UNIDADES_MEDIDA_PREDETERMINADAS: string[] = [
   'kW',
   'kVA',
   'Hz',
+  'Amp',
   // Mecánico / Dinámico
   'RPM',
   'mm/s',
