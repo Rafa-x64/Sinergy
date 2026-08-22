@@ -134,6 +134,7 @@ model Planta {
   actualizadoEn DateTime @updatedAt @map("actualizado_en")
 
   ubicacionesTecnicas UbicacionTecnica[]
+  inspecciones        Inspeccion[]
 
   @@map("plantas")
 }
@@ -149,7 +150,8 @@ model UbicacionTecnica {
   creadoEn      DateTime @default(now()) @map("creado_en")
   actualizadoEn DateTime @updatedAt @map("actualizado_en")
 
-  equipos Equipo[]
+  equipos      Equipo[]
+  inspecciones Inspeccion[]
 
   @@index([plantaId])
   @@map("ubicaciones_tecnicas")
@@ -188,8 +190,9 @@ model TipoEquipo {
   nombre      String  @unique @db.VarChar(50)
   descripcion String? @db.Text
 
-  equipos    Equipo[]
-  plantillas PlantillaVariable[]
+  equipos      Equipo[]
+  plantillas   PlantillaVariable[]
+  inspecciones Inspeccion[]
 
   @@map("tipos_equipo")
 }
@@ -312,8 +315,19 @@ model Inspeccion {
   id                     BigInt           @id @default(autoincrement())
   codigoInspeccion       String           @unique @map("codigo_inspeccion") @db.VarChar(100)
   tipoInspeccion         TipoInspeccion   @map("tipo_inspeccion")
-  equipoId               Int              @map("equipo_id")
-  equipo                 Equipo           @relation(fields: [equipoId], references: [id], onDelete: Restrict)
+
+  plantaId               Int?             @map("planta_id")
+  planta                 Planta?          @relation(fields: [plantaId], references: [id], onDelete: SetNull)
+
+  ubicacionTecnicaId     Int?             @map("ubicacion_tecnica_id")
+  ubicacionTecnica       UbicacionTecnica? @relation(fields: [ubicacionTecnicaId], references: [id], onDelete: SetNull)
+
+  tipoEquipoId           Int?             @map("tipo_equipo_id")
+  tipoEquipo             TipoEquipo?      @relation(fields: [tipoEquipoId], references: [id], onDelete: SetNull)
+
+  equipoId               Int?             @map("equipo_id")
+  equipo                 Equipo?          @relation(fields: [equipoId], references: [id], onDelete: SetNull)
+
   elaboradoPorId         Int              @map("elaborado_por")
   elaboradoPor           Usuario          @relation("ElaboradoPor", fields: [elaboradoPorId], references: [id], onDelete: Restrict)
   revisadoPorId          Int?             @map("revisado_por")
@@ -325,12 +339,16 @@ model Inspeccion {
   estadoInspeccion       EstadoInspeccion @default(PENDIENTE) @map("estado_inspeccion")
   origenDatos            OrigenDatos      @default(ONLINE) @map("origen_datos")
   observacionesGenerales String?          @map("observaciones_generales") @db.Text
+  motivoRechazo          String?          @map("motivo_rechazo") @db.Text
   creadoEn               DateTime         @default(now()) @map("creado_en")
   actualizadoEn          DateTime         @updatedAt @map("actualizado_en")
 
   detalles InspeccionDetalle[]
   adjuntos InspeccionAdjunto[]
 
+  @@index([plantaId])
+  @@index([ubicacionTecnicaId])
+  @@index([tipoEquipoId])
   @@index([equipoId])
   @@index([elaboradoPorId])
   @@index([fechaRegistro])
