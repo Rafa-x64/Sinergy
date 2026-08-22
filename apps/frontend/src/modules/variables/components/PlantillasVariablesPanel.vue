@@ -138,32 +138,40 @@ const formatearRango = (item: PlantillaVariableItem): string => {
 
 <template>
   <div class="plantillas-panel">
-    <!-- Selector Superior de Tipo de Equipo -->
+    <!-- Selector Superior de Tipo de Equipo con Búsqueda -->
     <v-card class="elevation-1 rounded-lg mb-3 pa-3 bg-surface border">
-      <div class="d-flex align-center justify-space-between flex-wrap gap-2">
-        <div class="d-flex align-center flex-wrap gap-2 chip-container">
-          <span class="text-subtitle-2 font-weight-bold text-high-emphasis mr-2">
-            Tipo de Equipo:
-          </span>
-          <v-chip-group
+      <div class="d-flex align-center justify-space-between flex-wrap gap-3">
+        <!-- Selector Búsqueda de Tipo de Equipo -->
+        <div class="d-flex align-center flex-grow-1 flex-wrap gap-2" style="min-width: 320px; max-width: 520px">
+          <v-autocomplete
             :model-value="store.tipoEquipoSeleccionadoId"
-            selected-class="bg-primary text-white font-weight-bold"
-            mandatory
-            show-arrows
+            :items="store.tiposEquipo"
+            item-title="nombre"
+            item-value="id"
+            label="Tipo de Equipo"
+            placeholder="Escribe para buscar (ej. ACAMPANADORA, EXTRUSORA...)"
+            density="compact"
+            variant="outlined"
+            hide-details
+            prepend-inner-icon="mdi-magnify"
+            clearable
+            class="flex-grow-1"
             @update:model-value="seleccionarTipoEquipo($event)"
           >
-            <v-chip
-              v-for="tipo in store.tiposEquipo"
-              :key="tipo.id"
-              :value="tipo.id"
-              filter
-              variant="tonal"
-              color=""
-              class="font-weight-medium"
-            >
-              {{ tipo.nombre }}
-            </v-chip>
-          </v-chip-group>
+            <template #item="{ props: itemProps, item }">
+              <v-list-item v-bind="itemProps" :title="item.raw.nombre">
+                <template #prepend>
+                  <v-icon size="18" color="primary">mdi-cog-box</v-icon>
+                </template>
+                <template #append v-if="item.raw.descripcion">
+                  <span class="text-caption text-medium-emphasis">{{ item.raw.descripcion }}</span>
+                </template>
+              </v-list-item>
+            </template>
+          </v-autocomplete>
+          <v-chip size="small" variant="tonal" color="primary" class="font-weight-bold">
+            {{ store.tiposEquipo.length }} tipos
+          </v-chip>
         </div>
 
         <div class="d-flex align-center gap-2 flex-wrap">

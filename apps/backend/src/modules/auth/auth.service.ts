@@ -27,9 +27,17 @@ export class AuthService {
       throw new AppError('Credenciales inválidas', 401)
     }
 
-    const passwordValida = await comparar(credentials.password, usuario.passwordHash)
-    if (!passwordValida) {
+    const resultadoPassword = await comparar(credentials.password, usuario.passwordHash)
+    if (!resultadoPassword.valida) {
       throw new AppError('Credenciales inválidas', 401)
+    }
+
+    if (resultadoPassword.requiereRehash) {
+      const nuevoHash = await encriptar(credentials.password)
+      await prisma.usuario.update({
+        where: { id: usuario.id },
+        data: { passwordHash: nuevoHash },
+      }).catch(() => null)
     }
 
     const roles = usuario.rolesUsuario.map((ur) => ur.rol.nombre)
