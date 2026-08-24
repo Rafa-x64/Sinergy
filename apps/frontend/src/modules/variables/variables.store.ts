@@ -38,6 +38,7 @@ export interface VariableInstancia {
 export interface PlantillaVariableItem {
   id: number
   tipoEquipoId: number
+  nombreComponente?: string | null
   nombre: string
   tipoEvaluacion: TipoEvaluacion
   unidad?: string | null
@@ -162,6 +163,7 @@ export interface GuardarVariableDTO {
 
 export interface GuardarPlantillaDTO {
   tipoEquipoId: number
+  nombreComponente?: string | null
   nombre: string
   tipoEvaluacion: TipoEvaluacion
   unidad?: string | null

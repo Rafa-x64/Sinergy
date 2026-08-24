@@ -269,27 +269,29 @@ model OpcionSeleccion {
 }
 
 model PlantillaVariable {
-  id             Int             @id @default(autoincrement())
-  tipoEquipoId   Int             @map("tipo_equipo_id")
-  tipoEquipo     TipoEquipo      @relation(fields: [tipoEquipoId], references: [id], onDelete: Cascade)
+  id               Int             @id @default(autoincrement())
+  tipoEquipoId     Int             @map("tipo_equipo_id")
+  tipoEquipo       TipoEquipo      @relation(fields: [tipoEquipoId], references: [id], onDelete: Cascade)
   // Opcional: si quieres diferenciar por tipo de inspección
-  tipoInspeccion TipoInspeccion? @map("tipo_inspeccion")
-  nombre         String          @db.VarChar(255)
-  descripcion    String?         @db.Text
-  tipoEvaluacion TipoEvaluacion  @map("tipo_evaluacion")
-  unidad         String?         @db.VarChar(20)
-  valorMinimo    Decimal?        @map("valor_minimo") @db.Decimal(12, 4)
-  valorMaximo    Decimal?        @map("valor_maximo") @db.Decimal(12, 4)
-  ordenPosicion  Int             @default(0) @map("orden_posicion")
-  activa         Boolean         @default(true)
-  creadoEn       DateTime        @default(now()) @map("creado_en")
-  actualizadoEn  DateTime        @updatedAt @map("actualizado_en")
+  tipoInspeccion   TipoInspeccion? @map("tipo_inspeccion")
+  nombreComponente String?         @map("nombre_componente") @db.VarChar(255)
+  nombre           String          @db.VarChar(255)
+  descripcion      String?         @db.Text
+  tipoEvaluacion   TipoEvaluacion  @map("tipo_evaluacion")
+  unidad           String?         @db.VarChar(20)
+  valorMinimo      Decimal?        @map("valor_minimo") @db.Decimal(12, 4)
+  valorMaximo      Decimal?        @map("valor_maximo") @db.Decimal(12, 4)
+  ordenPosicion    Int             @default(0) @map("orden_posicion")
+  activa           Boolean         @default(true)
+  creadoEn         DateTime        @default(now()) @map("creado_en")
+  actualizadoEn    DateTime        @updatedAt @map("actualizado_en")
 
   opcionesSeleccion  PlantillaOpcionSeleccion[]
   variablesInstancia Variable[]
 
   @@index([tipoEquipoId])
   @@index([tipoInspeccion])
+  @@index([nombreComponente])
   @@map("plantilla_variables")
 }
 
