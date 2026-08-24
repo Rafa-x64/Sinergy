@@ -24,6 +24,7 @@ const cargando = computed(() => store.ejecutandoAccion)
 const form = ref({
   id: 0,
   tipoEquipoId: 0,
+  nombreComponente: '',
   nombre: '',
   tipoEvaluacion: 'NUMERICO_DECIMAL' as TipoEvaluacion,
   unidad: '',
@@ -43,6 +44,25 @@ const tiposEvaluacion = [
 const tipoEquipoNombre = computed(() => {
   const tipo = store.tiposEquipo.find((t: { id: number }) => t.id === form.value.tipoEquipoId)
   return tipo?.nombre ?? 'General'
+})
+
+// Sugerencias de componentes existentes en equipos de este tipo
+const sugerenciasComponentes = computed(() => {
+  const nombres = new Set<string>()
+  for (const planta of store.arbolJerarquico) {
+    for (const ut of planta.ubicacionesTecnicas) {
+      for (const eq of ut.equipos) {
+        if (eq.tipoEquipoId === form.value.tipoEquipoId) {
+          for (const comp of eq.componentes) {
+            if (comp.nombre?.trim()) {
+              nombres.add(comp.nombre.trim().toUpperCase())
+            }
+          }
+        }
+      }
+    }
+  }
+  return Array.from(nombres).sort()
 })
 
 // Opciones previsualizadas en chips
@@ -104,6 +124,7 @@ const abrirCrear = (tipoEquipoId: number) => {
   form.value = {
     id: 0,
     tipoEquipoId,
+    nombreComponente: '',
     nombre: '',
     tipoEvaluacion: 'NUMERICO_DECIMAL',
     unidad: '',
@@ -128,6 +149,7 @@ const abrirEditar = (plantilla: PlantillaVariableItem) => {
   form.value = {
     id: plantilla.id,
     tipoEquipoId: plantilla.tipoEquipoId,
+    nombreComponente: plantilla.nombreComponente ?? '',
     nombre: plantilla.nombre,
     tipoEvaluacion: plantilla.tipoEvaluacion,
     unidad: plantilla.unidad ?? '',
@@ -162,6 +184,7 @@ const guardar = async () => {
 
   if (esEdicion.value) {
     const res = await store.editarPlantilla(form.value.id, {
+      nombreComponente: form.value.nombreComponente?.trim().toUpperCase() || null,
       nombre: form.value.nombre.trim(),
       tipoEvaluacion: form.value.tipoEvaluacion,
       unidad: form.value.unidad.trim() || null,
@@ -180,6 +203,7 @@ const guardar = async () => {
   } else {
     const res = await store.crearPlantilla({
       tipoEquipoId: form.value.tipoEquipoId,
+      nombreComponente: form.value.nombreComponente?.trim().toUpperCase() || null,
       nombre: form.value.nombre.trim(),
       tipoEvaluacion: form.value.tipoEvaluacion,
       unidad: form.value.unidad.trim() || null,
@@ -217,6 +241,25 @@ defineExpose({
           <div class="text-caption text-secondary mb-3">
             Tipo de Equipo: <strong>{{ tipoEquipoNombre }}</strong>
           </div>
+
+          <v-combobox
+            v-model="form.nombreComponente"
+            :items="sugerenciasComponentes"
+            :rules="variableRules.nombreComponente"
+            label="Componente Destino"
+            placeholder="Ej: MOTOR TRASLADO, TABLERO ELÉCTRICO, BOMBA DE LUBRICACIÓN"
+            variant="outlined"
+            density="comfortable"
+            clearable
+            hide-no-data
+            class="mb-3"
+            hint="Componente específico al que se asociará esta variable (deja en blanco si aplica a todos)"
+            persistent-hint
+          >
+            <template #prepend-inner>
+              <v-icon color="indigo" size="20">mdi-puzzle-outline</v-icon>
+            </template>
+          </v-combobox>
 
           <v-text-field
             v-model="form.nombre"

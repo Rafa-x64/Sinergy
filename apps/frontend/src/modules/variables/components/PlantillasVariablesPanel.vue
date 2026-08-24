@@ -33,6 +33,7 @@ const plantillasFiltradas = computed(() => {
   return store.plantillasPorTipo.filter((p: PlantillaVariableItem) => {
     return (
       p.nombre.toLowerCase().includes(termino) ||
+      (p.nombreComponente && p.nombreComponente.toLowerCase().includes(termino)) ||
       (p.unidad && p.unidad.toLowerCase().includes(termino)) ||
       p.tipoEvaluacion.toLowerCase().includes(termino)
     )
@@ -258,6 +259,7 @@ const formatearRango = (item: PlantillaVariableItem): string => {
           <thead>
             <tr class="table-header-row">
               <th class="text-left font-weight-bold text-high-emphasis">Nombre de Variable</th>
+              <th class="text-left font-weight-bold text-high-emphasis">Componente Destino</th>
               <th class="text-center font-weight-bold text-high-emphasis">Tipo de Evaluación</th>
               <th class="text-center font-weight-bold text-high-emphasis">Unidad</th>
               <th class="text-center font-weight-bold text-high-emphasis">Rango Operativo</th>
@@ -270,6 +272,28 @@ const formatearRango = (item: PlantillaVariableItem): string => {
             <tr v-for="item in plantillasFiltradas" :key="item.id">
               <td class="font-weight-medium text-high-emphasis">
                 <div class="text-subtitle-2 font-weight-bold text-high-emphasis">{{ item.nombre }}</div>
+              </td>
+
+              <td class="text-left">
+                <v-chip
+                  v-if="item.nombreComponente"
+                  size="x-small"
+                  variant="tonal"
+                  color="indigo"
+                  class="font-weight-bold"
+                >
+                  <v-icon start size="12">mdi-puzzle-outline</v-icon>
+                  {{ item.nombreComponente }}
+                </v-chip>
+                <v-chip
+                  v-else
+                  size="x-small"
+                  variant="outlined"
+                  color="secondary"
+                  class="font-weight-medium"
+                >
+                  Todos (Global)
+                </v-chip>
               </td>
 
               <td class="text-center">

@@ -438,10 +438,18 @@ export const variableCriticaController = {
     next: NextFunction
   ) {
     try {
-      const { tipoEquipoId, nombre, descripcion, tipoEvaluacion, unidad, valorMinimo, valorMaximo, ordenPosicion, opciones } = req.body
+      const { tipoEquipoId, nombreComponente, nombre, descripcion, tipoEvaluacion, unidad, valorMinimo, valorMaximo, ordenPosicion, opciones } = req.body
 
       if (typeof tipoEquipoId !== 'number') {
         return res.status(400).json({ status: 'error', message: 'El ID del tipo de equipo es requerido y debe ser un número' })
+      }
+
+      if (nombreComponente !== undefined && nombreComponente !== null && typeof nombreComponente !== 'string') {
+        return res.status(400).json({ status: 'error', message: 'El nombre del componente debe ser texto' })
+      }
+
+      if (nombreComponente && typeof nombreComponente === 'string' && nombreComponente.trim().length > 255) {
+        return res.status(400).json({ status: 'error', message: 'El nombre del componente no puede superar los 255 caracteres' })
       }
 
       if (!nombre || typeof nombre !== 'string' || !nombre.trim()) {
@@ -457,6 +465,7 @@ export const variableCriticaController = {
 
       const plantilla = await variableCriticaService.crearPlantilla({
         tipoEquipoId,
+        nombreComponente: nombreComponente ? nombreComponente.trim().toUpperCase() : null,
         nombre: nombre.trim(),
         descripcion: descripcion?.trim() || null,
         tipoEvaluacion,
@@ -488,7 +497,18 @@ export const variableCriticaController = {
         return res.status(400).json({ status: 'error', message: 'ID de plantilla inválido' })
       }
 
-      const plantillaActualizada = await variableCriticaService.editarPlantilla(id, req.body)
+      const datos = { ...req.body }
+      if (datos.nombreComponente !== undefined) {
+        if (datos.nombreComponente !== null && typeof datos.nombreComponente !== 'string') {
+          return res.status(400).json({ status: 'error', message: 'El nombre del componente debe ser texto' })
+        }
+        if (datos.nombreComponente && typeof datos.nombreComponente === 'string' && datos.nombreComponente.trim().length > 255) {
+          return res.status(400).json({ status: 'error', message: 'El nombre del componente no puede superar los 255 caracteres' })
+        }
+        datos.nombreComponente = datos.nombreComponente ? datos.nombreComponente.trim().toUpperCase() : null
+      }
+
+      const plantillaActualizada = await variableCriticaService.editarPlantilla(id, datos)
 
       return res.status(200).json({
         status: 'ok',

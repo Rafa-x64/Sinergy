@@ -35,8 +35,12 @@ class ComponenteService {
           orderBy: { ordenPosicion: 'asc' }
         })
 
-        // Instanciar automáticamente cada variable
-        for (const p of plantillas) {
+        // Instanciar únicamente las variables de plantilla asignadas a este componente (o globales)
+        const plantillasAplicables = plantillas.filter(
+          p => !p.nombreComponente || p.nombreComponente.trim().toUpperCase() === componente.nombre.trim().toUpperCase()
+        )
+
+        for (const p of plantillasAplicables) {
           const nuevaVar = await tx.variable.create({
             data: {
               componenteId: componente.id,

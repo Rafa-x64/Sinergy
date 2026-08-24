@@ -81,12 +81,12 @@ A continuación se detalla la secuencia incremental de prompts para guiar el des
 | Modelo | Tipo de Cambio | Descripción |
 | :--- | :--- | :--- |
 | `Variable` | Modificación | Agregar campo `plantillaId` (Foreign Key hacia `PlantillaVariable`, anulable). |
-| `PlantillaVariable` | Nuevo | Almacena las definiciones base de variables asociadas a un `TipoEquipo`. |
+| `PlantillaVariable` | Modificación | Contiene `tipoEquipoId`, `nombreComponente` (opcional/segmentado), rangos, unidades y tipos de evaluación. Permite asignar variables específicamente a componentes individuales (ej. `MOTOR TRASLADO`, `TABLERO ELÉCTRICO`, `BOMBA DE LUBRICACIÓN`). |
 | `PlantillaOpcionSeleccion` | Nuevo | Opciones predeterminadas para variables de tipo lista/selección en plantillas. |
 
-### Estrategia de Migración
+### Estrategia de Migración y Segmentación por Componente
 
-1. Crear tablas correspondientes a las entidades de plantilla.
-2. Agrupar variables existentes según la relación del componente con su `TipoEquipo`.
-3. Extraer patrones comunes para poblar la tabla `PlantillaVariable`.
-4. Ejecutar script de actualización masiva asignando la FK `plantillaId` a las instancias de variables previamente existentes.
+1. Columna `nombre_componente`: Al crear o sincronizar variables desde plantilla, el sistema evalúa `plantilla.nombreComponente` contra `componente.nombre`.
+2. Las variables de temperatura se vinculan a los motores, las de voltaje a los tableros y las de presión al sistema neumático/hidráulico.
+3. Si `nombre_componente` es nulo, la variable opera como global para todos los componentes de dicho `TipoEquipo`.
+4. Al sincronizar un componente, las variables que ya no correspondan a su nombre son desactivadas de forma segura.

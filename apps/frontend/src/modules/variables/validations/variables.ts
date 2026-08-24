@@ -10,6 +10,9 @@ export const variableRules = {
   unidad: [
     (v: string | null | undefined) => !v || String(v).trim().length <= 20 || 'La unidad no puede superar los 20 caracteres.'
   ],
+  nombreComponente: [
+    (v: string | null | undefined) => !v || String(v).length <= 255 || 'El nombre del componente no puede superar los 255 caracteres.'
+  ],
   opcionesTexto: [
     (v: string | null | undefined) => !!v && v.trim().length > 0 || 'Debes ingresar al menos una opción de selección (CLAVE: Etiqueta).',
     (v: string | null | undefined) => {

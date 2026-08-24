@@ -37,6 +37,7 @@ export interface FiltrosVariable {
 
 export interface RegistrarPlantillaVariableDTO {
   tipoEquipoId: number
+  nombreComponente?: string | null
   nombre: string
   descripcion?: string | null
   tipoEvaluacion: TipoEvaluacion
@@ -48,6 +49,7 @@ export interface RegistrarPlantillaVariableDTO {
 }
 
 export interface EditarPlantillaVariableDTO {
+  nombreComponente?: string | null
   nombre?: string
   descripcion?: string | null
   tipoEvaluacion?: TipoEvaluacion

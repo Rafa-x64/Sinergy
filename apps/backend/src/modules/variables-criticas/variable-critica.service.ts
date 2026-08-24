@@ -252,19 +252,22 @@ class VariableCriticaService {
         }
       })
 
-      // Propagar automáticamente como variable instancia a todos los componentes activos de equipos de este tipo
+      // Propagar automáticamente como variable instancia a los componentes activos cuyo nombre coincida
       const equipos = await tx.equipo.findMany({
         where: { tipoEquipoId: datos.tipoEquipoId },
         include: {
           componentes: {
             where: { activo: true },
-            select: { id: true }
+            select: { id: true, nombre: true }
           }
         }
       })
 
       for (const equipo of equipos) {
         for (const comp of equipo.componentes) {
+          const coincideComponente = !plantilla.nombreComponente || comp.nombre.trim().toUpperCase() === plantilla.nombreComponente.trim().toUpperCase()
+          if (!coincideComponente) continue
+
           const nuevaVar = await tx.variable.create({
             data: {
               componenteId: comp.id,
@@ -428,13 +431,18 @@ class VariableCriticaService {
       }
     })
 
+    // Filtrar solo las plantillas que corresponden a este componente específico (o plantillas globales sin componente asignado)
+    const plantillasAplicables = plantillas.filter(
+      p => !p.nombreComponente || p.nombreComponente.trim().toUpperCase() === componente.nombre.trim().toUpperCase()
+    )
+
     let creadas = 0
     let actualizadas = 0
     let desactivadas = 0
 
     await prisma.$transaction(async (tx) => {
-      // 1. Sincronizar o crear variables desde la plantilla
-      for (const plantilla of plantillas) {
+      // 1. Sincronizar o crear variables desde la plantilla aplicable
+      for (const plantilla of plantillasAplicables) {
         const variableExistente = componente.variables.find(
           v => v.plantillaId === plantilla.id || v.nombre.trim().toLowerCase() === plantilla.nombre.trim().toLowerCase()
         )
@@ -503,10 +511,10 @@ class VariableCriticaService {
         }
       }
 
-      // 2. Desactivar variables que provienen de plantilla pero ya no existen en la definición actual
-      const idsPlantillasActivas = new Set(plantillas.map(p => p.id))
+      // 2. Desactivar variables que provienen de plantilla pero ya no aplican a este componente
+      const idsPlantillasAplicables = new Set(plantillasAplicables.map(p => p.id))
       for (const variable of componente.variables) {
-        if (variable.plantillaId && !idsPlantillasActivas.has(variable.plantillaId) && variable.activa) {
+        if (variable.plantillaId && !idsPlantillasAplicables.has(variable.plantillaId) && variable.activa) {
           await tx.variable.update({
             where: { id: variable.id },
             data: { activa: false }
@@ -522,7 +530,7 @@ class VariableCriticaService {
       creadas,
       actualizadas,
       desactivadas,
-      totalPlantillas: plantillas.length
+      totalPlantillas: plantillasAplicables.length
     }
   }
 
