@@ -243,10 +243,10 @@ const plantasFiltradas = computed(() => {
             <v-icon size="18" color="primary" class="mr-2">
               {{ estaExpandido('p-' + planta.id) ? 'mdi-folder-open' : 'mdi-folder' }}
             </v-icon>
-            <span class="font-weight-medium text-body-2 flex-grow-1 text-truncate">
+            <span class="font-weight-medium text-body-2 node-title mr-2">
               {{ planta.nombre }}
             </span>
-            <v-chip size="x-small" variant="tonal" color="primary" class="ml-1 node-badge">
+            <v-chip size="x-small" variant="tonal" color="primary" class="ml-auto node-badge">
               Planta
             </v-chip>
           </div>
@@ -266,10 +266,10 @@ const plantasFiltradas = computed(() => {
                   <v-icon size="18" color="amber-darken-2" class="mr-2">
                     {{ estaExpandido('u-' + ubicacion.id) ? 'mdi-folder-open-outline' : 'mdi-folder-outline' }}
                   </v-icon>
-                  <span class="text-body-2 flex-grow-1 text-truncate">
+                  <span class="text-body-2 node-title mr-2">
                     <strong>{{ ubicacion.codigo }}</strong> - {{ ubicacion.nombre }}
                   </span>
-                  <v-chip size="x-small" variant="tonal" color="amber-darken-3" class="ml-1 node-badge">
+                  <v-chip size="x-small" variant="tonal" color="amber-darken-3" class="ml-auto node-badge">
                     Ubicación
                   </v-chip>
                 </div>
@@ -295,14 +295,14 @@ const plantasFiltradas = computed(() => {
                         <v-icon size="18" color="deep-orange" class="mr-2">
                           {{ estaExpandido('e-' + equipo.id) ? 'mdi-cog-sync' : 'mdi-cog' }}
                         </v-icon>
-                        <span class="text-body-2 flex-grow-1 text-truncate">
+                        <span class="text-body-2 node-title mr-2">
                           <strong>{{ equipo.codigo }}</strong> - {{ equipo.nombre }}
                         </span>
                         <v-chip
                           size="x-small"
                           variant="tonal"
                           color="deep-orange"
-                          class="ml-1 node-badge"
+                          class="ml-auto node-badge"
                         >
                           {{ equipo.tipoEquipo?.nombre ?? 'Equipo' }}
                         </v-chip>
@@ -328,19 +328,20 @@ const plantasFiltradas = computed(() => {
                             <v-icon size="16" class="mr-2 ml-1" color="indigo">
                               mdi-file-document-outline
                             </v-icon>
-                            <span class="text-body-2 flex-grow-1 text-truncate font-weight-medium">
+                            <span class="text-body-2 node-title font-weight-medium mr-2">
                               {{ componente.nombre }}
                             </span>
-                            <v-chip size="x-small" variant="tonal" color="indigo" class="ml-1 node-badge">
-                              Componente
-                            </v-chip>
-                            <v-badge
-                              v-if="componente._count?.variables !== undefined"
-                              :content="componente._count.variables"
-                              :color="componente._count.variables > 0 ? 'primary' : 'grey'"
-                              inline
-                              class="ml-1"
-                            />
+                            <div class="ml-auto d-flex align-center gap-1">
+                              <v-chip size="x-small" variant="tonal" color="indigo" class="node-badge">
+                                Componente
+                              </v-chip>
+                              <v-badge
+                                v-if="componente._count?.variables !== undefined"
+                                :content="componente._count.variables"
+                                :color="componente._count.variables > 0 ? 'primary' : 'grey'"
+                                inline
+                              />
+                            </div>
                           </div>
                         </div>
                       </v-expand-transition>
@@ -446,13 +447,23 @@ const plantasFiltradas = computed(() => {
 
 .tree-body {
   flex-grow: 1;
-  overflow-y: auto;
+  overflow: auto;
   max-height: calc(100vh - 220px);
+}
+
+.tree-nodes {
+  min-width: max-content;
+  width: 100%;
 }
 
 .tree-row {
   transition: all 0.15s ease-in-out;
   user-select: none;
+  white-space: nowrap;
+}
+
+.node-title {
+  white-space: nowrap;
 }
 
 .tree-row:hover {
@@ -488,6 +499,7 @@ const plantasFiltradas = computed(() => {
   font-size: 10px !important;
   height: 18px !important;
   padding: 0 6px !important;
+  flex-shrink: 0;
 }
 
 .context-menu-list {
@@ -495,7 +507,8 @@ const plantasFiltradas = computed(() => {
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-  width: 5px;
+  width: 6px;
+  height: 6px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {

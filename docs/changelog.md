@@ -16,7 +16,18 @@ El formato sigue el estándar [Keep a Changelog](https://keepachangelog.com/es/1
 
 ## [Unreleased]
 
-### Added
+- **Módulo Completo de Inspecciones por Planta (`src/modules/inspecciones/`)**:
+  - **Filtro de Equipos Operativos**: Consulta estricta en backend que expone en el Wizard únicamente maquinarias con `estadoOperativo === 'OPERATIVO'`.
+  - **Form Wizard Interactivo de Captura (`FormWizardInspeccion.vue`, `WizardSeleccionAlcance.vue`)**: Flujo por pasos para técnicos navegando por Planta, Tipo de Maquinaria, Maquinaria Específica (con autocompletado inteligente por código alfanumérico y denominación) o Línea Completa.
+  - **Evaluación Diferenciada de Variables**: Alertas automáticas de desvío para variables **con rango operativo** e ingreso directo sin restricción para variables **sin rango** (`valorMinimo` y `valorMaximo` en `null`).
+  - **Borrador Local Resiliente**: Autoguardado en `localStorage` (`sinergy_draft_inspeccion`) para proteger capturas ante pérdidas de red.
+  - **Bandeja y Evaluación de Supervisión (`BandejaSupervisionPanel.vue`, `DetalleInspeccionModal.vue`)**: Panel de supervisores con vista tipo reporte, resaltado de anomalías y flujo de Aprobación / Rechazo con motivo obligatorio.
+  - **Identidad Cromática Coherente**: Unificación de la paleta en toda la vista de inspecciones con el verde representativo del módulo (`#5cb85c`).
+- **Selector Autocompletable de Tipos de Equipo en Plantillas (`PlantillasVariablesPanel.vue`)**: Reemplazo del selector horizontal por un `v-autocomplete` interactivo con búsqueda en tiempo real e íconos, facilitando la selección inmediata entre más de 50 tipos de equipo.
+- **Scroll Horizontal en Árbol Jerárquico de Variables (`JerarquiaTreeView.vue`)**: Configuración de scroll bidireccional (`overflow: auto`) y expansión natural de filas (`white-space: nowrap`, `min-width: max-content`) para evitar el truncamiento de nombres y códigos en niveles profundos de la jerarquía de planta.
+
+### Security
+- **Autenticación Híbrida y Auto-Migración a Bcrypt (`comparePassword.ts`, `auth.service.ts`)**: Implementación de detección de hash bcrypt con fallback a texto plano para usuarios insertados manualmente en base de datos. Tras un login exitoso en texto plano, la contraseña se re-encripta automáticamente con bcrypt en la base de datos.
 - **Control de Acceso por Roles (RBAC) y Menú Dinámico**: Implementación de filtrado de menú en `Menu.vue` usando `authStore.tieneRol` y decodificación de payload JWT en `auth.store.ts`. Restricción de navegación mediante `meta.roles` y guard `router.beforeEach` en `router.ts`. (`apps/frontend/src/modules/auth/auth.store.ts`, `apps/frontend/src/core/router.ts`, `apps/frontend/src/components/Menu.vue`)
 - **Estandarización de `apiFetch` en `auth.store.ts`**: Implementación de la función `apiFetch` para consumo centralizado de la API REST, inyectando automáticamente `Authorization: Bearer <accessToken>`, `credentials: 'include'` y prefijo `API_URL`. (`apps/frontend/src/modules/auth/auth.store.ts`)
 - **Vistas y Componentes de Interfaz (`LoginView.vue`, `DashboardView.vue`, `Menu.vue`, `SinergyChip.vue`)**: Implementación del formulario de inicio de sesión con Vuetify 3, vista inicial de Dashboard con pestañas, menú responsivo adaptativo (drawer permanente en desktop y app-bar en móvil) y componente visual `SinergyChip`. (`apps/frontend/src/modules/auth/views/LoginView.vue`, `apps/frontend/src/modules/dashboard/views/DashboardView.vue`, `apps/frontend/src/components/Menu.vue`, `apps/frontend/src/components/SinergyChip.vue`)

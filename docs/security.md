@@ -112,9 +112,10 @@ Prisma parametriza todas las consultas automáticamente. **Regla:** nunca usar `
 
 ## 4. Criptografía y Contraseñas
 
-- Contraseñas hasheadas con **bcrypt**, `SALT_ROUNDS = 12`.
+- Contraseñas encriptadas con **bcrypt**, `SALT_ROUNDS = 12`.
+- **Verificación Híbrida y Auto-Migración Transparente**: Se detecta dinámicamente mediante regex (`/^\$2[ayb]\$.{56}$/`) si la contraseña almacenada posee el formato bcrypt. Si la contraseña fue insertada en texto plano (p. ej. scripts directos de prueba), se compara por texto plano y, tras un login exitoso, se re-encripta automáticamente con bcrypt actualizando el hash en la base de datos.
 - El campo `passwordHash` nunca se retorna en las queries públicas (uso de `omit: { passwordHash: true }` en Prisma).
-- **Regla prohibida:** guardar contraseñas en texto plano o transmitirlas en logs.
+- **Regla prohibida:** transmitir contraseñas en logs o mantenerlas en texto plano de forma permanente.
 
 ---
 
