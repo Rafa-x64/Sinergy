@@ -1103,6 +1103,63 @@ Registra una inspección completa (por línea o por equipo) con todos sus detall
 
 ---
 
+### `GET /api/inspecciones/equipos-elegibles`
+Obtiene la jerarquía Data-Driven de equipos en estado **OPERATIVO** con sus componentes y variables activas para la captura guiada en el Form Wizard.
+
+- **Acceso:** Protegido (`validarJWT`)
+- **Query Parameters:** `plantaId` (number, obligatorio), `alcance` (`POR_LINEA` | `POR_TIPO_EQUIPO` | `POR_EQUIPO`), `referenciaId` (number, opcional)
+- **Response (200 OK):** Array de equipos operativos filtrados con sus componentes y variables.
+
+---
+
+### `POST /api/inspecciones`
+Registra una inspección técnica elaborada por el técnico en estado `PENDIENTE` y emite notificaciones a los supervisores.
+
+- **Acceso:** Protegido (`validarJWT`)
+- **Request Body (`CrearInspeccionDTO`):**
+  ```json
+  {
+    "plantaId": 1,
+    "alcance": "POR_LINEA",
+    "ubicacionTecnicaId": 2,
+    "observacionesGenerales": "Sin novedad durante recorrido",
+    "detalles": [
+      {
+        "variableId": 10,
+        "valorNumerico": 45.5,
+        "observaciones": null,
+        "estadoComponente": true
+      }
+    ]
+  }
+  ```
+- **Response (201 Created):** `{ "status": "ok", "message": "Inspección INSP-PL1-20260822-0001 registrada correctamente", "data": { ... } }`
+
+---
+
+### `GET /api/inspecciones/pendientes`
+Retorna la bandeja de inspecciones en estado `PENDIENTE` para revisión de supervisores.
+
+- **Acceso:** Protegido (`validarJWT`)
+- **Query Parameters:** `plantaId` (opcional)
+
+---
+
+### `PATCH /api/inspecciones/:id/evaluar`
+Permite a un supervisor **Aprobar** o **Rechazar** una inspección pendiente. En caso de rechazo, exige `motivoRechazo`.
+
+- **Acceso:** Protegido (`validarJWT` con rol Supervisor)
+- **Request Body (`EvaluarInspeccionDTO`):**
+  ```json
+  {
+    "estado": "RECHAZADO",
+    "motivoRechazo": "Temperatura de rodamiento excesivamente alta sin observación explicativa."
+  }
+  ```
+- **Response (200 OK):** Inspección evaluada con notificación enviada al técnico elaborador.
+
+---
+
 ### `GET /api/inspecciones/listar`
 Retorna inspecciones filtradas, ordenadas por `fechaRegistro DESC`.
 
