@@ -21,6 +21,8 @@ import mantenimientoRoutes from '../modules/mantenimiento/mantenimiento.routes'
 import { inicializarWebSockets } from '../modules/notificaciones/notification.socket'
 import { registrarListenersNotificaciones } from '../modules/notificaciones/notification.events'
 
+import { corsOptions } from './security/cors'
+
 const app = express()
 
 const httpServer = http.createServer(app)
@@ -29,32 +31,12 @@ registrarListenersNotificaciones()
 inicializarWebSockets(httpServer)
 
 // ─── Middlewares de seguridad y parseo ────────────────────────────────────────
-app.use(helmet())
 app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true)
-
-      if (process.env.NODE_ENV !== 'production') {
-        const esLocal = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(
-          origin
-        )
-        if (esLocal) return callback(null, true)
-      }
-
-      const origenesPermitidos = [
-        'http://localhost:3000',
-        'http://localhost:5173',
-      ]
-      if (origenesPermitidos.includes(origin)) {
-        return callback(null, true)
-      }
-
-      callback(new Error('No permitido por la política CORS'))
-    },
-    credentials: true,
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' }
   })
 )
+app.use(cors(corsOptions))
 app.use(express.json())
 app.use(cookieParser())
 

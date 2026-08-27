@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { io, Socket } from 'socket.io-client'
+import api from '@/core/api'
 
 export type NotificationType = 'ERROR' | 'WARNING' | 'ALERT' | 'SUCCESS'
 
@@ -44,24 +45,14 @@ export const useNotificationStore = defineStore('notification', () => {
         globalNotifications.value.filter((n) => !n.leido).length
     )
 
-    async function cargarNotificaciones(token: string): Promise<void> {
+    async function cargarNotificaciones(_token?: string): Promise<void> {
         isLoading.value = true
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'
-            const response = await fetch(`${backendUrl}/api/notificaciones`, {
-                headers: { Authorization: `Bearer ${token}` }
-            })
-
-            if (!response.ok) {
-                console.error('[Store Notificaciones] Error HTTP:', response.status)
-                return
-            }
-
-            const result = await response.json()
-            if (result.status === 'ok' && Array.isArray(result.data)) {
-                notifications.value = result.data as Notification[]
-            } else if (Array.isArray(result)) {
-                notifications.value = result as Notification[]
+            const { data } = await api.get('/notificaciones')
+            if (data.status === 'ok' && Array.isArray(data.data)) {
+                notifications.value = data.data as Notification[]
+            } else if (Array.isArray(data)) {
+                notifications.value = data as Notification[]
             }
         } catch (error) {
             console.error('[Store Notificaciones] Error de red al cargar notificaciones:', error)
@@ -70,22 +61,12 @@ export const useNotificationStore = defineStore('notification', () => {
         }
     }
 
-    async function cargarNotificacionesGlobales(token: string): Promise<void> {
+    async function cargarNotificacionesGlobales(_token?: string): Promise<void> {
         isLoading.value = true
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'
-            const response = await fetch(`${backendUrl}/api/notificaciones/globales`, {
-                headers: { Authorization: `Bearer ${token}` }
-            })
-
-            if (!response.ok) {
-                console.error('[Store Notificaciones] Error HTTP al cargar globales:', response.status)
-                return
-            }
-
-            const result = await response.json()
-            if (result.status === 'ok' && Array.isArray(result.data)) {
-                globalNotifications.value = result.data as Notification[]
+            const { data } = await api.get('/notificaciones/globales')
+            if (data.status === 'ok' && Array.isArray(data.data)) {
+                globalNotifications.value = data.data as Notification[]
             }
         } catch (error) {
             console.error('[Store Notificaciones] Error al cargar notificaciones globales:', error)
@@ -97,11 +78,11 @@ export const useNotificationStore = defineStore('notification', () => {
     function conectarWebSocket(token: string): void {
         if (socket.value?.connected) return
 
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || (typeof window !== 'undefined' ? window.location.origin : '')
 
         socket.value = io(backendUrl, {
             auth: { token },
-            transports: ['websocket'],
+            transports: ['websocket', 'polling']
         })
 
         socket.value.off('connect')
@@ -136,7 +117,7 @@ export const useNotificationStore = defineStore('notification', () => {
         })
     }
 
-    async function marcarComoLeida(id: string, token: string): Promise<void> {
+    async function marcarComoLeida(id: string, _token?: string): Promise<void> {
         const target = notifications.value.find((n) => n.id === id)
         const targetGlobal = globalNotifications.value.find((n) => n.id === id)
 
@@ -144,15 +125,7 @@ export const useNotificationStore = defineStore('notification', () => {
         if (targetGlobal) targetGlobal.leido = true
 
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'
-            const response = await fetch(`${backendUrl}/api/notificaciones/${id}/leer`, {
-                method: 'PATCH',
-                headers: { Authorization: `Bearer ${token}` }
-            })
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`)
-            }
+            await api.patch(`/notificaciones/${id}/leer`)
         } catch (error) {
             if (target) target.leido = false
             if (targetGlobal) targetGlobal.leido = false
@@ -160,31 +133,23 @@ export const useNotificationStore = defineStore('notification', () => {
         }
     }
 
-    async function marcarTodasComoLeidas(token: string): Promise<void> {
+    async function marcarTodasComoLeidas(_token?: string): Promise<void> {
         notifications.value.forEach(n => n.leido = true)
         globalNotifications.value.forEach(n => n.leido = true)
 
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'
-            await fetch(`${backendUrl}/api/notificaciones/marcar-todas-leidas`, {
-                method: 'PATCH',
-                headers: { Authorization: `Bearer ${token}` }
-            })
+            await api.patch('/notificaciones/marcar-todas-leidas')
         } catch (error) {
             console.error('[Store Notificaciones] Error marcando todas leídas:', error)
         }
     }
 
-    async function eliminarNotificacion(id: string, token: string): Promise<void> {
+    async function eliminarNotificacion(id: string, _token?: string): Promise<void> {
         notifications.value = notifications.value.filter(n => n.id !== id)
         globalNotifications.value = globalNotifications.value.filter(n => n.id !== id)
 
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'
-            await fetch(`${backendUrl}/api/notificaciones/${id}`, {
-                method: 'DELETE',
-                headers: { Authorization: `Bearer ${token}` }
-            })
+            await api.delete(`/notificaciones/${id}`)
         } catch (error) {
             console.error('[Store Notificaciones] Error al eliminar notificación:', error)
         }

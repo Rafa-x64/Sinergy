@@ -119,11 +119,15 @@ Prisma parametriza todas las consultas automáticamente. **Regla:** nunca usar `
 
 ---
 
-## 5. Cabeceras HTTP
+## 5. Cabeceras HTTP y Política de CORS
 
-- **`helmet`** configura cabeceras de seguridad (HSTS, X-Content-Type-Options, X-Frame-Options).
-- **`cors`** con `credentials: true` y lista blanca de orígenes. Nunca usar `*` en producción.
-- **`cookieParser`** habilita lectura de la cookie HttpOnly de refresh token.
+- **`helmet`**: Configura cabeceras de seguridad (`crossOriginResourcePolicy: { policy: 'cross-origin' }`, HSTS, X-Content-Type-Options, X-Frame-Options) permitiendo recursos cruzados controlados.
+- **`cors`** (`apps/backend/src/core/security/cors.ts`):
+  - **Desarrollo (`NODE_ENV !== 'production'`):** Permite automáticamente `localhost`, `127.0.0.1` y redes privadas locales (LAN: `192.168.x.x`, `10.x.x.x`, `172.16-31.x.x`) en cualquier puerto para pruebas multi-dispositivo y móviles sin reconfiguraciones manuales.
+  - **Producción:** Valida estrictamente contra la lista blanca definida en `process.env.ALLOWED_ORIGINS` (separada por comas) y solicitudes internas del mismo origen o proxy inverso.
+  - Soporte de **`credentials: true`** para el intercambio seguro de la cookie HttpOnly de refresh token.
+- **Socket.io WebSockets:** Comparte la misma función validadora de orígenes `esOrigenPermitido` para asegurar sincronía entre HTTP y WebSockets.
+- **`cookieParser`**: Habilita lectura y parsing seguro de la cookie HttpOnly `refreshToken`.
 
 ---
 

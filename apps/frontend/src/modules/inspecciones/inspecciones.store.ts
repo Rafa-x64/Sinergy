@@ -40,8 +40,21 @@ export interface EquipoElegible {
   id: number
   codigo: string
   nombre: string
+  serial?: string | null
+  marca?: string | null
+  modelo?: string | null
   estadoOperativo: string
   tieneEsquemaDePlantilla: boolean
+  montacargasDetalle?: {
+    id: number
+    denominacion: string
+    tipoMontacarga: string
+    marca: string
+    modelo: string
+    identificacionAbreviada: string
+    ubicacionTecnicaTexto: string
+    denominacion2?: string | null
+  } | null
   ubicacionTecnica: {
     id: number
     codigo: string
@@ -140,14 +153,45 @@ export const useInspeccionesStore = defineStore('inspecciones', () => {
     return total
   })
 
+  // IDs de todas las variables del equipo actual (se actualiza desde el componente)
+  const idsVariablesEquipoActual = ref<Set<number>>(new Set())
+
+  // Cuenta solo las respuestas de las variables que pertenecen al equipo actualmente visible
+  const variablesRespondidasEquipoActual = computed(() => {
+    return [...idsVariablesEquipoActual.value].filter(
+      (id) => respuestasWizard.value[id] !== undefined
+    ).length
+  })
+
+  // Total de variables del equipo actual (alimentado desde el wizard)
+  const totalVariablesEquipoActual = computed(() => idsVariablesEquipoActual.value.size)
+
+  // Porcentaje del equipo actual (para el chip de la barra de progreso del wizard)
+  const porcentajeEquipoActual = computed(() => {
+    if (totalVariablesEquipoActual.value === 0) return 0
+    return Math.round((variablesRespondidasEquipoActual.value / totalVariablesEquipoActual.value) * 100)
+  })
+
+  // Totales globales de la línea (para el resumen final antes de enviar)
   const variablesRespondidasCount = computed(() => {
-    return Object.keys(respuestasWizard.value).length
+    // Solo cuenta respuestas de variables que pertenecen a esta sesión de equipos
+    const todosLosIds = new Set<number>()
+    equiposElegibles.value.forEach((e) => {
+      e.componentes.forEach((c) => {
+        c.variables.forEach((v) => todosLosIds.add(v.id))
+      })
+    })
+    return [...todosLosIds].filter((id) => respuestasWizard.value[id] !== undefined).length
   })
 
   const porcentajeAvanceWizard = computed(() => {
     if (totalVariablesWizard.value === 0) return 0
     return Math.round((variablesRespondidasCount.value / totalVariablesWizard.value) * 100)
   })
+
+  function actualizarIdsEquipoActual(ids: number[]) {
+    idsVariablesEquipoActual.value = new Set(ids)
+  }
 
   // ─── ACCIONES DE CAPTURA (TÉCNICO) ──────────────────────────────────────────
 
@@ -353,8 +397,12 @@ export const useInspeccionesStore = defineStore('inspecciones', () => {
     cargandoDetalle,
     totalEquiposWizard,
     totalVariablesWizard,
+    totalVariablesEquipoActual,
     variablesRespondidasCount,
+    variablesRespondidasEquipoActual,
     porcentajeAvanceWizard,
+    porcentajeEquipoActual,
+    actualizarIdsEquipoActual,
     cargarEquiposElegibles,
     guardarRespuestaVariable,
     guardarBorradorLocal,

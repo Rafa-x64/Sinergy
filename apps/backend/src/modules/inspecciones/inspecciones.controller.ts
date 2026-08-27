@@ -16,7 +16,7 @@ export const inspeccionesController = {
       const referenciaId = req.query.referenciaId ? Number(req.query.referenciaId) : undefined
       const referenciaCodigo = req.query.referenciaCodigo ? String(req.query.referenciaCodigo) : undefined
 
-      if (!plantaId || isNaN(plantaId)) {
+      if (req.query.plantaId === undefined || req.query.plantaId === null || isNaN(plantaId)) {
         return res.status(400).json({ status: 'error', message: 'El ID de la planta es requerido' })
       }
 
