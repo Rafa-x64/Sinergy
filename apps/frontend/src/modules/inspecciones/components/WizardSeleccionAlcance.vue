@@ -26,12 +26,83 @@ onMounted(async () => {
   }
 })
 
+// Lista de Plantas combinando las plantas registradas con la opción "Ninguna" para maquinarias móviles
+const opcionesPlantas = computed(() => {
+  const lista = variablesStore.arbolJerarquico.map((p) => ({
+    id: p.id,
+    nombre: p.nombre,
+    codigo: p.codigo
+  }))
+
+  const yaExisteNinguna = lista.some(
+    (p) => (p.nombre || '').toLowerCase().includes('ninguna') || (p.codigo || '').toLowerCase().includes('ninguna')
+  )
+
+  if (!yaExisteNinguna) {
+    lista.push({
+      id: 0,
+      nombre: 'Ninguna',
+      codigo: 'NINGUNA'
+    })
+  }
+
+  return lista
+})
+
+// Detecta si la planta seleccionada corresponde a "Ninguna" (equipos móviles / sin ubicación fija)
+const esPlantaNinguna = computed(() => {
+  if (plantaId.value === null || plantaId.value === undefined) return false
+  if (plantaId.value === 0) return true
+  const p = variablesStore.arbolJerarquico.find((p) => p.id === plantaId.value)
+  if (!p) return false
+  const nom = (p.nombre || '').toLowerCase()
+  const cod = (p.codigo || '').toLowerCase()
+  return nom.includes('ninguna') || cod.includes('ninguna')
+})
+
+const labelUbicacion = computed(() => {
+  return esPlantaNinguna.value ? 'Ubicación / Área (Opcional)' : 'Línea / Ubicación (Opcional)'
+})
+
+const placeholderUbicacion = computed(() => {
+  return esPlantaNinguna.value
+    ? 'Todos los equipos sin ubicación fija / Montacargas'
+    : 'Todas las líneas de la planta'
+})
+
 // Opciones de Ubicaciones para la Planta elegida
 const ubicacionesDisponibles = ref<{ id: number; nombre: string; codigo: string }[]>([])
 
 // Opciones de Equipos individuales para la Planta elegida
 const equiposDisponibles = computed(() => {
-  if (!plantaId.value) return []
+  if (plantaId.value === null || plantaId.value === undefined) return []
+
+  if (plantaId.value === 0) {
+    // Si la planta elegida es "Ninguna", recopilamos todos los equipos de tipo Montacargas o sin ubicación fija
+    const listado: { id: number; codigo: string; nombre: string; etiqueta: string }[] = []
+    const idsAgregados = new Set<number>()
+
+    variablesStore.arbolJerarquico.forEach((p) => {
+      p.ubicacionesTecnicas?.forEach((u) => {
+        u.equipos?.forEach((e) => {
+          const esMontacarga = (e.tipoEquipo?.nombre || '').toLowerCase().includes('montacarg') ||
+                               (u.nombre || '').toLowerCase().includes('ninguna') ||
+                               (u.codigo || '').toLowerCase().includes('ninguna')
+          if (esMontacarga && !idsAgregados.has(e.id)) {
+            idsAgregados.add(e.id)
+            listado.push({
+              id: e.id,
+              codigo: e.codigo,
+              nombre: e.nombre,
+              etiqueta: `${e.codigo} — ${e.nombre}`
+            })
+          }
+        })
+      })
+    })
+    return listado
+  }
+
   const plantaEncontrada = variablesStore.arbolJerarquico.find((p) => p.id === plantaId.value)
   if (!plantaEncontrada || !plantaEncontrada.ubicacionesTecnicas) return []
 
@@ -55,7 +126,7 @@ watch(
   [plantaId, alcance],
   () => {
     referenciaId.value = null
-    if (!plantaId.value) {
+    if (plantaId.value === null || plantaId.value === undefined || plantaId.value === 0) {
       ubicacionesDisponibles.value = []
       return
     }
@@ -75,7 +146,7 @@ watch(
 )
 
 const ejecutarBusquedaEquipos = async () => {
-  if (!plantaId.value) return
+  if (plantaId.value === null || plantaId.value === undefined) return
   const res = await inspeccionesStore.cargarEquiposElegibles(
     plantaId.value,
     alcance.value,
@@ -108,7 +179,7 @@ const ejecutarBusquedaEquipos = async () => {
       <v-col cols="12" md="4">
         <v-select
           v-model="plantaId"
-          :items="variablesStore.arbolJerarquico"
+          :items="opcionesPlantas"
           item-title="nombre"
           item-value="id"
           label="Planta Industrial *"
@@ -124,7 +195,7 @@ const ejecutarBusquedaEquipos = async () => {
         <v-select
           v-model="alcance"
           :items="[
-            { title: 'Por Línea / Ubicación Técnica', value: 'POR_LINEA' },
+            { title: esPlantaNinguna ? 'Cobertura General (Sin Línea Fija)' : 'Por Línea / Ubicación Técnica', value: 'POR_LINEA' },
             { title: 'Por Tipo de Maquinaria', value: 'POR_TIPO_EQUIPO' },
             { title: 'Por Maquinaria Específica', value: 'POR_EQUIPO' }
           ]"
@@ -145,8 +216,8 @@ const ejecutarBusquedaEquipos = async () => {
           :items="ubicacionesDisponibles"
           item-title="nombre"
           item-value="id"
-          label="Línea / Ubicación (Opcional)"
-          placeholder="Todas las líneas de la planta"
+          :label="labelUbicacion"
+          :placeholder="placeholderUbicacion"
           prepend-inner-icon="mdi-map-marker-path"
           variant="outlined"
           density="compact"
@@ -205,7 +276,7 @@ const ejecutarBusquedaEquipos = async () => {
         color="#5cb85c"
         size="comfortable"
         prepend-icon="mdi-play-circle-outline"
-        :disabled="!plantaId"
+        :disabled="plantaId === null || plantaId === undefined"
         :loading="inspeccionesStore.cargandoEquipos"
         @click="ejecutarBusquedaEquipos"
       >

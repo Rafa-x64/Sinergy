@@ -30,24 +30,94 @@ export class InspeccionesService {
     referenciaId?: number,
     referenciaCodigo?: string
   ) {
-    const whereCondition: any = {
-      ubicacionTecnica: { plantaId, activa: true },
+    // 1. Identificar si la planta seleccionada es la planta "NINGUNA" (equipos móviles / sin ubicación fija)
+    const planta = plantaId > 0
+      ? await prisma.planta.findUnique({
+          where: { id: plantaId },
+          select: { id: true, codigo: true, nombre: true }
+        })
+      : null
+
+    const esPlantaNinguna = plantaId === 0 || Boolean(
+      planta && (
+        planta.nombre.trim().toLowerCase().includes('ninguna') ||
+        planta.codigo.trim().toLowerCase().includes('ninguna')
+      )
+    )
+
+    let whereCondition: any = {
       estadoOperativo: 'OPERATIVO'
     }
 
+    if (esPlantaNinguna) {
+      // Si la planta es "Ninguna", incluye equipos con ubicación "Ninguna", con montacargasDetalle o de tipo Montacargas
+      whereCondition.OR = [
+        ...(plantaId > 0 ? [{ ubicacionTecnica: { plantaId, activa: true } }] : []),
+        { ubicacionTecnica: { nombre: { contains: 'ninguna', mode: 'insensitive' } } },
+        { ubicacionTecnica: { codigo: { contains: 'ninguna', mode: 'insensitive' } } },
+        { montacargasDetalle: { isNot: null } },
+        { tipoEquipo: { nombre: { contains: 'montacarg', mode: 'insensitive' } } }
+      ]
+    } else {
+      whereCondition.ubicacionTecnica = { plantaId, activa: true }
+    }
+
     if (alcance === 'POR_LINEA' && referenciaId) {
-      whereCondition.ubicacionTecnicaId = referenciaId
+      if (whereCondition.OR) {
+        whereCondition = {
+          AND: [
+            { OR: whereCondition.OR },
+            { ubicacionTecnicaId: referenciaId }
+          ],
+          estadoOperativo: 'OPERATIVO'
+        }
+      } else {
+        whereCondition.ubicacionTecnicaId = referenciaId
+      }
     } else if (alcance === 'POR_TIPO_EQUIPO' && referenciaId) {
-      whereCondition.tipoEquipoId = referenciaId
+      if (whereCondition.OR) {
+        whereCondition = {
+          AND: [
+            { OR: whereCondition.OR },
+            { tipoEquipoId: referenciaId }
+          ],
+          estadoOperativo: 'OPERATIVO'
+        }
+      } else {
+        whereCondition.tipoEquipoId = referenciaId
+      }
     } else if (alcance === 'POR_EQUIPO') {
       if (referenciaId) {
-        whereCondition.id = referenciaId
+        if (whereCondition.OR) {
+          whereCondition = {
+            AND: [
+              { OR: whereCondition.OR },
+              { id: referenciaId }
+            ],
+            estadoOperativo: 'OPERATIVO'
+          }
+        } else {
+          whereCondition.id = referenciaId
+        }
       } else if (referenciaCodigo && referenciaCodigo.trim()) {
         const codigoBuscado = referenciaCodigo.trim()
-        whereCondition.OR = [
+        const orBusqueda = [
           { codigo: { contains: codigoBuscado, mode: 'insensitive' } },
-          { nombre: { contains: codigoBuscado, mode: 'insensitive' } }
+          { nombre: { contains: codigoBuscado, mode: 'insensitive' } },
+          { montacargasDetalle: { identificacionAbreviada: { contains: codigoBuscado, mode: 'insensitive' } } },
+          { montacargasDetalle: { denominacion: { contains: codigoBuscado, mode: 'insensitive' } } }
         ]
+        if (whereCondition.OR) {
+          whereCondition = {
+            AND: [
+              { OR: whereCondition.OR },
+              { OR: orBusqueda }
+            ],
+            estadoOperativo: 'OPERATIVO'
+          }
+        } else {
+          whereCondition.OR = orBusqueda
+        }
       }
     }
 
@@ -64,6 +134,7 @@ export class InspeccionesService {
         tipoEquipo: {
           select: { id: true, nombre: true },
         },
+        montacargasDetalle: true,
         componentes: {
           where: { activo: true },
           orderBy: { ordenPosicion: 'asc' },
@@ -172,9 +243,13 @@ export class InspeccionesService {
         id: equipo.id,
         codigo: equipo.codigo,
         nombre: equipo.nombre,
+        serial: equipo.serial,
+        marca: equipo.marca,
+        modelo: equipo.modelo,
         estadoOperativo: equipo.estadoOperativo,
         ubicacionTecnica: equipo.ubicacionTecnica,
         tipoEquipo: equipo.tipoEquipo,
+        montacargasDetalle: equipo.montacargasDetalle,
         tieneEsquemaDePlantilla,
         componentes: componentesResueltos
       }

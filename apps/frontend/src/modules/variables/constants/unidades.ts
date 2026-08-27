@@ -17,6 +17,7 @@ export const UNIDADES_MEDIDA_PREDETERMINADAS: string[] = [
   // Eléctrico
   "V",
   "A",
+  "Amp",
   "mA",
   "kW",
   "kVA",

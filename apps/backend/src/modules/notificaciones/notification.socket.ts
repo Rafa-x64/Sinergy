@@ -1,14 +1,22 @@
 import { Server as HttpServer } from 'http'
 import { Server, Socket } from 'socket.io'
 import { verificarAccessToken } from '../../core/security/jwt'
+import { esOrigenPermitido } from '../../core/security/cors'
 
 let io: Server
 
 export function inicializarWebSockets(server: HttpServer): void {
     io = new Server(server, {
         cors: {
-            origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-            methods: ['GET, POST']
+            origin: (origin, callback) => {
+                if (esOrigenPermitido(origin)) {
+                    callback(null, true)
+                } else {
+                    callback(new Error(`WebSocket bloqueado por CORS: ${origin}`))
+                }
+            },
+            methods: ['GET', 'POST'],
+            credentials: true
         }
     })
 

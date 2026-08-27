@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick, watch } from 'vue'
 import { useToast } from 'vue-toastification'
 import {
   useInspeccionesStore,
@@ -16,6 +16,7 @@ const toast = useToast()
 const store = useInspeccionesStore()
 
 const equipoIndice = ref(0)
+const contenedorRef = ref<HTMLElement | null>(null)
 
 const equipoActual = computed<EquipoElegible | null>(() => {
   if (store.equiposElegibles.length === 0) return null
@@ -25,10 +26,31 @@ const equipoActual = computed<EquipoElegible | null>(() => {
 const esPrimerEquipo = computed(() => equipoIndice.value === 0)
 const esUltimoEquipo = computed(() => equipoIndice.value === store.equiposElegibles.length - 1)
 
-const cambiarEquipo = (delta: number) => {
+// Notifica al store qué IDs de variables pertenecen al equipo actualmente en pantalla
+// para que el cálculo de avance sea correcto y no use el acumulado global
+watch(
+  equipoActual,
+  (equipo) => {
+    if (!equipo) {
+      store.actualizarIdsEquipoActual([])
+      return
+    }
+    const ids: number[] = []
+    equipo.componentes.forEach((c) => c.variables.forEach((v) => ids.push(v.id)))
+    store.actualizarIdsEquipoActual(ids)
+  },
+  { immediate: true }
+)
+
+const cambiarEquipo = async (delta: number) => {
   const nuevo = equipoIndice.value + delta
   if (nuevo >= 0 && nuevo < store.equiposElegibles.length) {
     equipoIndice.value = nuevo
+    await nextTick()
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    if (contenedorRef.value) {
+      contenedorRef.value.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
   }
 }
 
@@ -55,7 +77,7 @@ const formatearRangoNormativo = (v: VariableElegible): string => {
   if (tieneMin && tieneMax) return `${v.valorMinimo} a ${v.valorMaximo} ${v.unidad || ''}`.trim()
   if (tieneMin) return `Mínimo ${v.valorMinimo} ${v.unidad || ''}`.trim()
   if (tieneMax) return `Máximo ${v.valorMaximo} ${v.unidad || ''}`.trim()
-  return 'Sin rango normativo (Ingreso libre)'
+  return 'Sin rango'
 }
 
 const guardarPaso = () => {
@@ -65,7 +87,7 @@ const guardarPaso = () => {
 </script>
 
 <template>
-  <div class="form-wizard-container">
+  <div ref="contenedorRef" class="form-wizard-container">
     <!-- Indicador de Carga o Sin Equipos -->
     <v-card v-if="!equipoActual" class="pa-8 text-center border rounded-lg">
       <v-icon size="48" color="grey">mdi-alert-circle-outline</v-icon>
@@ -80,50 +102,57 @@ const guardarPaso = () => {
 
     <div v-else>
       <!-- Barra Superior de Progreso del Wizard -->
-      <v-card class="elevation-2 rounded-lg pa-4 mb-3 bg-surface border">
-        <div class="d-flex align-center justify-space-between flex-wrap gap-2 mb-2">
-          <div class="d-flex align-center gap-2">
-            <v-chip color="#5cb85c" variant="flat" class="font-weight-bold">
-              Equipo {{ equipoIndice + 1 }} de {{ store.totalEquiposWizard }}
-            </v-chip>
-            <span class="text-subtitle-1 font-weight-bold text-high-emphasis">
-              {{ equipoActual.codigo }} — {{ equipoActual.nombre }}
-            </span>
-            <!-- Indicador del esquema normativo aplicado al equipo actual -->
-            <v-chip
-              v-if="equipoActual.tieneEsquemaDePlantilla"
-              size="x-small"
-              color="deep-purple"
-              variant="tonal"
-              prepend-icon="mdi-clipboard-list-outline"
-            >
-              Variables según Plantilla
-            </v-chip>
-            <v-chip
-              v-else
-              size="x-small"
-              color="blue-grey"
-              variant="tonal"
-              prepend-icon="mdi-tune"
-            >
-              Variables Directas
-            </v-chip>
-          </div>
+      <v-card class="elevation-2 rounded-lg pa-3 mb-3 bg-surface border">
+        <!-- Fila 1: Identificador de equipo + badges de plantilla -->
+        <div class="d-flex align-center flex-wrap gap-2 mb-2">
+          <v-chip color="#5cb85c" variant="flat" class="font-weight-bold chip-equipo" size="small">
+            Equipo {{ equipoIndice + 1 }} de {{ store.totalEquiposWizard }}
+          </v-chip>
+          <span class="text-subtitle-2 font-weight-bold text-high-emphasis equipo-titulo">
+            {{ equipoActual.codigo }} — {{ equipoActual.nombre }}
+          </span>
+          <!-- Indicador del esquema normativo aplicado al equipo actual -->
+          <v-chip
+            v-if="equipoActual.tieneEsquemaDePlantilla"
+            size="x-small"
+            color="deep-purple"
+            variant="tonal"
+            prepend-icon="mdi-clipboard-list-outline"
+          >
+            Plantilla
+          </v-chip>
+          <v-chip
+            v-else
+            size="x-small"
+            color="blue-grey"
+            variant="tonal"
+            prepend-icon="mdi-tune"
+          >
+            Directas
+          </v-chip>
+        </div>
 
-          <div class="d-flex align-center gap-2">
-            <v-chip size="small" variant="tonal" color="#5cb85c">
-              Avance: {{ store.porcentajeAvanceWizard }}% ({{ store.variablesRespondidasCount }} / {{ store.totalVariablesWizard }} variables)
-            </v-chip>
-            <v-btn size="small" variant="tonal" color="#5cb85c" prepend-icon="mdi-content-save-outline" @click="guardarPaso">
-              Guardar Borrador
-            </v-btn>
-          </div>
+        <!-- Fila 2: Avance del equipo actual + botón guardar -->
+        <div class="d-flex align-center justify-space-between flex-wrap gap-2 mb-2">
+          <v-chip size="small" variant="tonal" color="#5cb85c">
+            Equipo: {{ store.porcentajeEquipoActual }}%
+            ({{ store.variablesRespondidasEquipoActual }}/{{ store.totalVariablesEquipoActual }} vars)
+          </v-chip>
+          <v-btn
+            size="small"
+            variant="tonal"
+            color="#5cb85c"
+            prepend-icon="mdi-content-save-outline"
+            @click="guardarPaso"
+          >
+            Borrador
+          </v-btn>
         </div>
 
         <v-progress-linear
-          :model-value="store.porcentajeAvanceWizard"
+          :model-value="store.porcentajeEquipoActual"
           color="#5cb85c"
-          height="8"
+          height="6"
           rounded
         />
       </v-card>
@@ -132,15 +161,15 @@ const guardarPaso = () => {
       <v-card
         v-for="componente in equipoActual.componentes"
         :key="componente.id"
-        class="elevation-1 rounded-lg pa-4 mb-3 bg-surface border"
+        class="elevation-1 rounded-lg pa-3 mb-3 bg-surface border"
       >
         <!-- Encabezado del Componente -->
         <div class="d-flex align-center mb-3 border-b pb-2">
-          <v-avatar size="30" color="#5cb85c" variant="tonal" class="mr-2">
-            <v-icon size="18" color="#5cb85c">mdi-puzzle</v-icon>
+          <v-avatar size="28" color="#5cb85c" variant="tonal" class="mr-2 flex-shrink-0">
+            <v-icon size="16" color="#5cb85c">mdi-puzzle</v-icon>
           </v-avatar>
           <div>
-            <h3 class="text-subtitle-1 font-weight-bold text-high-emphasis mb-0">
+            <h3 class="text-subtitle-2 font-weight-bold text-high-emphasis mb-0">
               {{ componente.nombre }}
             </h3>
             <span v-if="componente.descripcion" class="text-caption text-medium-emphasis">
@@ -155,32 +184,36 @@ const guardarPaso = () => {
         </div>
 
         <div v-else class="variables-list">
-          <v-row v-for="v in componente.variables" :key="v.id" dense class="align-center py-2 border-b-dashed">
-            <!-- Columna 1: Nombre de la Variable y Rango Normativo -->
-            <v-col cols="12" md="4">
-              <div class="font-weight-medium text-high-emphasis text-body-2 d-flex align-center gap-1">
-                {{ v.nombre }}
-                <v-tooltip :text="v.origenNormativo === 'PLANTILLA' ? 'Definición normativa de plantilla' : 'Variable propia del equipo'" location="top">
-                  <template #activator="{ props: tooltipProps }">
-                    <v-icon
-                      v-bind="tooltipProps"
-                      :color="v.origenNormativo === 'PLANTILLA' ? 'deep-purple' : 'blue-grey'"
-                      size="14"
-                    >
-                      {{ v.origenNormativo === 'PLANTILLA' ? 'mdi-clipboard-check' : 'mdi-tune' }}
-                    </v-icon>
-                  </template>
-                </v-tooltip>
-              </div>
-              <div class="text-caption text-medium-emphasis">
-                {{ formatearRangoNormativo(v) }}
-              </div>
-            </v-col>
+          <div
+            v-for="v in componente.variables"
+            :key="v.id"
+            class="variable-row py-2 border-b-dashed"
+          >
+            <!-- Nombre de la Variable y Rango Normativo -->
+            <div class="variable-label mb-1">
+              <span class="font-weight-medium text-high-emphasis text-body-2">{{ v.nombre }}</span>
+              <v-tooltip
+                :text="v.origenNormativo === 'PLANTILLA' ? 'Definición normativa de plantilla' : 'Variable propia del equipo'"
+                location="top"
+              >
+                <template #activator="{ props: tooltipProps }">
+                  <v-icon
+                    v-bind="tooltipProps"
+                    :color="v.origenNormativo === 'PLANTILLA' ? 'deep-purple' : 'blue-grey'"
+                    size="13"
+                    class="ml-1"
+                  >
+                    {{ v.origenNormativo === 'PLANTILLA' ? 'mdi-clipboard-check' : 'mdi-tune' }}
+                  </v-icon>
+                </template>
+              </v-tooltip>
+              <span class="text-caption text-medium-emphasis ml-2">{{ formatearRangoNormativo(v) }}</span>
+            </div>
 
-            <!-- Columna 2: Input de Entrada según TipoEvaluacion -->
-            <v-col cols="12" md="5">
-              <!-- Variables Numéricas / Decimales / Temperatura -->
-              <div v-if="v.tipoEvaluacion !== 'SELECCION'" class="d-flex align-center gap-2">
+            <!-- Inputs: valor + observación en una fila adaptable -->
+            <div class="variable-inputs">
+              <!-- Variables Numéricas -->
+              <div v-if="v.tipoEvaluacion !== 'SELECCION'" class="input-group">
                 <v-text-field
                   :model-value="store.respuestasWizard[v.id]?.valorNumerico ?? null"
                   type="number"
@@ -189,27 +222,27 @@ const guardarPaso = () => {
                   variant="outlined"
                   hide-details
                   :placeholder="v.unidad ? `Valor (${v.unidad})` : 'Ingrese valor'"
+                  class="input-valor"
                   @update:model-value="
                     store.guardarRespuestaVariable(v.id, {
                       valorNumerico: $event !== '' && $event !== null ? Number($event) : null
                     })
                   "
                 />
-                <!-- Indicator de Alerta si sale del Rango Normativo -->
                 <v-chip
                   v-if="estaFueraDeRango(v, store.respuestasWizard[v.id]?.valorNumerico)"
                   size="x-small"
                   color="error"
                   variant="flat"
-                  class="font-weight-bold"
+                  class="font-weight-bold flex-shrink-0"
                 >
-                  <v-icon start size="12">mdi-alert</v-icon>
+                  <v-icon start size="11">mdi-alert</v-icon>
                   Fuera de Rango
                 </v-chip>
               </div>
 
               <!-- Variables de Selección -->
-              <div v-else class="d-flex flex-wrap gap-1">
+              <div v-else class="d-flex flex-wrap gap-1 mb-2">
                 <v-btn-toggle
                   :model-value="store.respuestasWizard[v.id]?.valorSeleccion ?? null"
                   color="#5cb85c"
@@ -230,16 +263,15 @@ const guardarPaso = () => {
                   </v-btn>
                 </v-btn-toggle>
               </div>
-            </v-col>
 
-            <!-- Columna 3: Campo de Observaciones adicionales -->
-            <v-col cols="12" md="3">
+              <!-- Observaciones -->
               <v-text-field
                 :model-value="store.respuestasWizard[v.id]?.observaciones ?? ''"
                 placeholder="Observación (opcional)"
                 density="compact"
                 variant="outlined"
                 hide-details
+                class="input-observacion"
                 @update:model-value="
                   store.guardarRespuestaVariable(v.id, {
                     valorNumerico: store.respuestasWizard[v.id]?.valorNumerico,
@@ -248,44 +280,49 @@ const guardarPaso = () => {
                   })
                 "
               />
-            </v-col>
-          </v-row>
+            </div>
+          </div>
         </div>
       </v-card>
 
       <!-- Botones de Navegación del Wizard -->
-      <v-card class="elevation-2 rounded-lg pa-4 d-flex justify-space-between align-center flex-wrap gap-2 bg-surface border">
-        <v-btn
-          variant="tonal"
-          prepend-icon="mdi-arrow-left"
-          :disabled="esPrimerEquipo"
-          @click="cambiarEquipo(-1)"
-        >
-          Equipo Anterior
-        </v-btn>
-
-        <div class="d-flex align-center gap-2">
-          <v-btn variant="text" color="error" @click="emit('cancelar')">
-            Cancelar
-          </v-btn>
-
+      <v-card class="elevation-2 rounded-lg pa-3 bg-surface border">
+        <div class="nav-buttons">
           <v-btn
-            v-if="!esUltimoEquipo"
-            color="#5cb85c"
-            append-icon="mdi-arrow-right"
-            @click="cambiarEquipo(1)"
+            variant="tonal"
+            prepend-icon="mdi-arrow-left"
+            :disabled="esPrimerEquipo"
+            size="small"
+            @click="cambiarEquipo(-1)"
           >
-            Siguiente Equipo
+            Anterior
           </v-btn>
 
-          <v-btn
-            v-else
-            color="#5cb85c"
-            prepend-icon="mdi-check-circle"
-            @click="emit('finalizar')"
-          >
-            Finalizar e Inspeccionar
-          </v-btn>
+          <div class="d-flex align-center gap-2">
+            <v-btn variant="text" color="error" size="small" @click="emit('cancelar')">
+              Cancelar
+            </v-btn>
+
+            <v-btn
+              v-if="!esUltimoEquipo"
+              color="#5cb85c"
+              append-icon="mdi-arrow-right"
+              size="small"
+              @click="cambiarEquipo(1)"
+            >
+              Siguiente
+            </v-btn>
+
+            <v-btn
+              v-else
+              color="#5cb85c"
+              prepend-icon="mdi-check-circle"
+              size="small"
+              @click="emit('finalizar')"
+            >
+              Finalizar
+            </v-btn>
+          </div>
         </div>
       </v-card>
     </div>
@@ -295,6 +332,96 @@ const guardarPaso = () => {
 <style scoped>
 .form-wizard-container {
   width: 100%;
+}
+
+/* Título del equipo: trunca si no cabe en móvil */
+.equipo-titulo {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ─── Variable Row: diseño flexbox adaptable ─── */
+.variable-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.variable-label {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* En desktop: inputs en una sola fila */
+.variable-inputs {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.input-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.input-valor {
+  flex: 1;
+  min-width: 120px;
+  max-width: 220px;
+}
+
+.input-observacion {
+  flex: 1;
+  min-width: 140px;
+}
+
+/* ─── Botones de navegación ─── */
+.nav-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ─── Mobile: stack full width ─── */
+@media (max-width: 599px) {
+  .input-valor {
+    max-width: 100%;
+  }
+
+  .variable-inputs {
+    flex-direction: column;
+  }
+
+  .input-group {
+    width: 100%;
+  }
+
+  .input-observacion {
+    width: 100%;
+  }
+
+  .equipo-titulo {
+    font-size: 0.8rem;
+  }
+
+  .nav-buttons {
+    flex-direction: column;
+  }
+
+  .nav-buttons > div {
+    width: 100%;
+    justify-content: flex-end;
+  }
 }
 
 .border-b-dashed {
