@@ -7,10 +7,14 @@ import FormularioUsuario from '../components/FormularioUsuario.vue'
 import { useUsuarioStore, type RegistrarUsuarioDTO, type Usuario } from '../usuarios.store.ts'
 import type { TabItem } from '../../../core/types/tabs'
 import { useRolesStore } from '../../auth/roles.store.ts'
+import { usePlantasStore } from '../../plantas/plantas.store.ts'
 import HeaderViews from '../../../components/HeaderViews.vue'
 
 const rolesStore = useRolesStore()
 const { roles } = storeToRefs(rolesStore)
+
+const plantasStore = usePlantasStore()
+const { plantas } = storeToRefs(plantasStore)
 
 const toast = useToast()
 const usuarioStore = useUsuarioStore()
@@ -28,6 +32,7 @@ const usuarioVacio: Partial<RegistrarUsuarioDTO> = {
     nombreUsuario: '',
     activo: true,
     rolId: undefined,
+    plantaId: undefined,
     supervisorId: null
 }
 const datosFormulario = ref<Partial<RegistrarUsuarioDTO>>({ ...usuarioVacio })
@@ -54,6 +59,7 @@ const headersTabla = [
     { title: 'Correo', key: 'email', align: 'center' as const },
     { title: 'Nombre de Usuario', key: 'nombreUsuario', align: 'center' as const },
     { title: 'Rol', key: 'rol', align: 'center' as const },
+    { title: 'Planta', key: 'planta', align: 'center' as const },
     { title: 'Supervisor', key: 'supervisor', align: 'center' as const },
     { title: 'Estado', key: 'activo', align: 'center' as const },
     { title: 'Ultimo Acceso', key: 'ultimoAcceso', align: 'center' as const },
@@ -80,13 +86,15 @@ const formatearFecha = (fecha: Date | string | null | undefined): string => {
 }
 
 const inicializarDatos = async (): Promise<void> => {
-    const [resUsuarios, resRoles] = await Promise.all([
+    const [resUsuarios, resRoles, resPlantas] = await Promise.all([
         usuarioStore.listarUsuarios(),
-        rolesStore.listarRoles()
+        rolesStore.listarRoles(),
+        plantasStore.listarPlantas()
     ])
 
     if (resUsuarios.status === 'error') toast.error(resUsuarios.message ?? 'Error al listar los usuarios')
     if (resRoles.status === 'error') toast.error(resRoles.message ?? 'Error al listar los roles')
+    if (resPlantas.status === 'error') toast.error(resPlantas.message ?? 'Error al listar las plantas')
 }
 inicializarDatos()
 
@@ -99,6 +107,7 @@ const prepararEdicion = (usuario: Usuario): void => {
         nombreUsuario: usuario.nombreUsuario,
         activo: usuario.activo,
         rolId: usuario.rolesUsuario?.[0]?.rolId,
+        plantaId: usuario.plantaId,
         supervisorId: usuario.supervisorId ?? null
     }
     pestañaActiva.value = 'editar'
@@ -183,6 +192,15 @@ watch(pestañaActiva, (nuevaPestana) => {
                         </span>
                     </template>
 
+                    <template #item.planta="{ item }">
+                        <v-chip color="info" size="small" variant="tonal" v-if="item.planta">
+                            {{ item.planta.nombre }}
+                        </v-chip>
+                        <v-chip color="purple" size="small" variant="tonal" v-else>
+                            Todas (Global)
+                        </v-chip>
+                    </template>
+
                     <template #item.supervisor="{ item }">
                         <span v-if="item.supervisor">
                             {{ item.supervisor.nombre }} {{ item.supervisor.apellido }}
@@ -224,7 +242,7 @@ watch(pestañaActiva, (nuevaPestana) => {
             <template #tab-registrar>
                 <v-card class="pa-4" elevation="0">
                     <v-card-title class="px-0 mb-4 text-h5 font-weight-bold">Registrar Nuevo Usuario</v-card-title>
-                    <FormularioUsuario :roles="roles" :supervisores="supervisoresDisponibles"
+                    <FormularioUsuario :roles="roles" :plantas="plantas" :supervisores="supervisoresDisponibles"
                         :datos-iniciales="usuarioVacio" :cargando="cargando" texto-boton="Guardar Usuario"
                         @submit="manejarGuardado" @cancelar="cancelarEdicion" />
                 </v-card>
@@ -234,7 +252,7 @@ watch(pestañaActiva, (nuevaPestana) => {
                 <v-card class="pa-4" elevation="0" v-if="idUsuarioEditar !== null">
                     <v-card-title class="px-0 mb-4 text-h5 font-weight-bold">Editar Usuario</v-card-title>
 
-                    <FormularioUsuario :roles="roles" :supervisores="supervisoresDisponibles"
+                    <FormularioUsuario :roles="roles" :plantas="plantas" :supervisores="supervisoresDisponibles"
                         :datos-iniciales="datosFormulario" :cargando="cargando" :es-edicion="true"
                         texto-boton="Actualizar Usuario" @submit="manejarGuardado" @cancelar="cancelarEdicion" />
                 </v-card>

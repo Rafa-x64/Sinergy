@@ -45,6 +45,7 @@ export class AuthService {
       sub: usuario.id,
       email: usuario.email,
       roles,
+      plantaId: usuario.plantaId,
     }
 
     const [accessToken, refreshToken] = await Promise.all([
@@ -67,6 +68,7 @@ export class AuthService {
         rolesUsuario: {
           include: { rol: true },
         },
+        planta: { select: { id: true, codigo: true, nombre: true } },
         supervisor: {
           select: { id: true, nombre: true, apellido: true }
         }
@@ -83,6 +85,7 @@ export class AuthService {
         rolesUsuario: {
           include: { rol: true },
         },
+        planta: { select: { id: true, codigo: true, nombre: true } },
         supervisor: {
           select: { id: true, nombre: true, apellido: true }
         }
@@ -117,6 +120,16 @@ export class AuthService {
       throw new AppError(`El rol con ID ${datos.rolId} no existe en el sistema`, 400)
     }
 
+    if (datos.plantaId !== undefined && datos.plantaId !== null) {
+      const plantaExiste = await prisma.planta.findUnique({
+        where: { id: datos.plantaId },
+        select: { id: true },
+      })
+      if (!plantaExiste) {
+        throw new AppError(`La planta con ID ${datos.plantaId} no existe`, 400)
+      }
+    }
+
     const supervisorId = await this.resolverSupervisorId(rol, datos.supervisorId)
 
     return prisma.usuario.create({
@@ -127,6 +140,7 @@ export class AuthService {
         nombreUsuario: datos.nombreUsuario,
         passwordHash,
         activo: datos.activo ?? true,
+        plantaId: datos.plantaId ?? null,
         supervisorId,
         ultimoAcceso: ahora,
         creadoEn: ahora,
@@ -136,6 +150,7 @@ export class AuthService {
       omit: { passwordHash: true },
       include: {
         rolesUsuario: { include: { rol: true } },
+        planta: { select: { id: true, codigo: true, nombre: true } },
         supervisor: { select: { id: true, nombre: true, apellido: true } },
       },
     })
@@ -183,6 +198,7 @@ export class AuthService {
           activo: datos.activo,
           ...(supervisorId !== undefined && { supervisorId }),
           ...(passwordHash !== undefined && { passwordHash }),
+          ...(datos.plantaId !== undefined && { plantaId: datos.plantaId }),
           actualizadoEn: new Date(),
         },
       })
@@ -197,6 +213,7 @@ export class AuthService {
         omit: { passwordHash: true },
         include: {
           rolesUsuario: { include: { rol: true } },
+          planta: { select: { id: true, codigo: true, nombre: true } },
           supervisor: { select: { id: true, nombre: true, apellido: true } },
         },
       })

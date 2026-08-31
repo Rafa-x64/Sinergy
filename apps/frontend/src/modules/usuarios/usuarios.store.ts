@@ -20,6 +20,12 @@ export interface Usuario {
     password?: string
     nombreUsuario: string
     activo: boolean
+    plantaId?: number | null
+    planta: {
+        id: number
+        codigo: string
+        nombre: string
+    } | null
     rolesUsuario: RolUsuario[]
     supervisorId: number | null
     supervisor: {
@@ -40,6 +46,7 @@ export interface RegistrarUsuarioDTO {
     nombreUsuario: string
     activo: boolean
     rolId: number
+    plantaId?: number | null
     supervisorId?: number | null
 }
 
@@ -50,6 +57,7 @@ export interface ActualizarUsuarioDTO {
     nombreUsuario?: string
     activo?: boolean
     rolId?: number
+    plantaId?: number | null
     supervisorId?: number | null
 }
 

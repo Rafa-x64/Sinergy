@@ -35,6 +35,7 @@ export async function manejarRefreshToken(
       sub: usuario.id,
       email: usuario.email,
       roles,
+      plantaId: usuario.plantaId,
     })
 
     res.status(200).json({

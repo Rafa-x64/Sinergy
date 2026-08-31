@@ -19,16 +19,24 @@ import {
   type VariableInstancia
 } from '../variables.store'
 
+import { useAuthStore } from '../../auth/auth.store'
+
 const toast = useToast()
+const authStore = useAuthStore()
 const variablesStore = useVariablesStore()
 const refDialogos = ref<InstanceType<typeof DialogosJerarquia> | null>(null)
 
 const pestañaActiva = ref<string | number>('navegacion')
 
-const pestañas = computed<TabItem[]>(() => [
-  { id: 'navegacion', name: 'Estructura y Variables por Componente', color: 'primary' },
-  { id: 'plantillas', name: 'Plantillas por Tipo de Equipo', color: 'indigo' }
-])
+const pestañas = computed<TabItem[]>(() => {
+  const items: TabItem[] = [
+    { id: 'navegacion', name: 'Estructura y Variables por Componente', color: 'primary' }
+  ]
+  if (authStore.puedeGestionarMaquinas) {
+    items.push({ id: 'plantillas', name: 'Plantillas por Tipo de Equipo', color: 'indigo' })
+  }
+  return items
+})
 
 const {
   arbolJerarquico,

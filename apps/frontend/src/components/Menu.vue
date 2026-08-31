@@ -44,18 +44,18 @@ const ROLES_TODOS = ['Administrador del Sistema', 'Supervisor / Gerente de Mante
 
 const modulos: ModuloItem[] = [
     { title: 'Principal', icon: 'mdi-view-dashboard', color: 'info', to: '/dashboard' },
-    { title: 'Equipos', icon: 'mdi-engine', color: 'safety-orange', to: '/equipos', roles: ROLES_ADMIN_SUPERVISOR },
+    { title: 'Equipos', icon: 'mdi-engine', color: 'safety-orange', to: '/equipos', roles: ROLES_TODOS },
     { title: 'Montacargas', icon: 'mdi-forklift', color: 'safety-orange-light', to: '/montacargas', roles: ROLES_TODOS },
     { title: 'Compresor', icon: 'mdi-car-turbocharger', color: 'safety-orange-light', to: '/compresor', roles: ROLES_TODOS },
     { title: 'Generador', icon: 'mdi-generator-mobile', color: 'safety-orange-light', to: '/generador', roles: ROLES_TODOS },
     { title: 'Chiller', icon: 'mdi-snowflake', color: 'safety-orange-light', to: '/chiller', roles: ROLES_TODOS },
-    { title: 'Componentes', icon: 'mdi-view-grid', color: 'success', to: '/componentes', roles: ROLES_ADMIN_SUPERVISOR },
-    { title: 'Variables', icon: 'mdi-variable-box', color: 'primary', to: '/variables', roles: ROLES_ADMIN_SUPERVISOR },
+    { title: 'Componentes', icon: 'mdi-view-grid', color: 'success', to: '/componentes', roles: ROLES_TODOS },
+    { title: 'Variables', icon: 'mdi-variable-box', color: 'primary', to: '/variables', roles: ROLES_TODOS },
     { title: 'Inspecciones', icon: 'mdi-clipboard-check', color: '#5cb85c', to: '/inspecciones', roles: ROLES_TODOS },
     { title: 'Auditoría Global', icon: 'mdi-shield-account', color: 'primary-dark', to: '/notificaciones-globales', roles: ROLES_ADMIN },
     { title: 'Plantas', icon: 'mdi-factory', color: 'text-principal', to: '/plantas', roles: ROLES_ADMIN_SUPERVISOR },
     { title: 'Ubicaciones Técnicas', icon: 'mdi-map-marker-radius', color: '#f7474a', to: '/ubicaciones', roles: ROLES_ADMIN_SUPERVISOR },
-    { title: 'Usuarios', icon: 'mdi-account-group', color: 'purple', to: '/usuarios', roles: ROLES_ADMIN_SUPERVISOR },
+    { title: 'Usuarios', icon: 'mdi-account-group', color: 'purple', to: '/usuarios', roles: ROLES_ADMIN },
     { title: 'Roles', icon: 'mdi-account-key', color: 'purple-light', to: '/roles', roles: ROLES_ADMIN },
 ]
 

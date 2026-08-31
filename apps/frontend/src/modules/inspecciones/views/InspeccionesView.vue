@@ -8,18 +8,30 @@ import FormWizardInspeccion from '../components/FormWizardInspeccion.vue'
 import ResumenInspeccionDialog from '../components/ResumenInspeccionDialog.vue'
 import BandejaSupervisionPanel from '../components/BandejaSupervisionPanel.vue'
 import { useInspeccionesStore } from '../inspecciones.store'
+import { useAuthStore } from '../../auth/auth.store'
 
 const store = useInspeccionesStore()
+const authStore = useAuthStore()
 const refResumenDialog = ref<InstanceType<typeof ResumenInspeccionDialog> | null>(null)
 
 const pestañaActiva = ref<string | number>('captura')
 const modoWizardActivo = ref(false)
 
-const pestañas = computed<TabItem[]>(() => [
-  { id: 'captura', name: 'Nueva Inspección (Técnicos)', color: '#5cb85c' },
-  { id: 'supervision', name: 'Bandeja de Aprobaciones (Supervisores)', color: '#5cb85c' },
-  { id: 'historial', name: 'Historial General', color: '#5cb85c' }
-])
+const pestañas = computed<TabItem[]>(() => {
+  const items: TabItem[] = []
+
+  if (authStore.puedeRegistrarInspecciones) {
+    items.push({ id: 'captura', name: 'Nueva Inspección', color: '#5cb85c' })
+  }
+
+  if (authStore.puedeEvaluarInspecciones) {
+    items.push({ id: 'supervision', name: 'Bandeja de Aprobaciones', color: '#5cb85c' })
+  }
+
+  items.push({ id: 'historial', name: 'Historial de Inspecciones', color: '#5cb85c' })
+
+  return items
+})
 
 const iniciarWizard = () => {
   modoWizardActivo.value = true
@@ -35,12 +47,17 @@ const solicitarFinalizar = () => {
 
 const manejarEnviadoExito = () => {
   modoWizardActivo.value = false
-  pestañaActiva.value = 'supervision'
+  pestañaActiva.value = authStore.puedeEvaluarInspecciones ? 'supervision' : 'historial'
 }
 
 onMounted(() => {
-  // Intentar restaurar borrador previo si existía
-  if (store.cargarBorradorLocal()) {
+  if (!authStore.puedeRegistrarInspecciones && authStore.puedeEvaluarInspecciones) {
+    pestañaActiva.value = 'supervision'
+  } else if (!authStore.puedeRegistrarInspecciones) {
+    pestañaActiva.value = 'historial'
+  }
+
+  if (authStore.puedeRegistrarInspecciones && store.cargarBorradorLocal()) {
     console.log('Borrador de inspección restaurado desde almacenamiento local')
   }
 })

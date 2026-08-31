@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, nextTick, watch } from 'vue'
+import { ref, computed, nextTick, watch, onMounted } from 'vue'
 import { useToast } from 'vue-toastification'
 import {
   useInspeccionesStore,
@@ -41,6 +41,25 @@ watch(
   },
   { immediate: true }
 )
+
+// Al montar el wizard, sanitizar el borrador en memoria descartando IDs de variables
+// que ya no existen en los equipos cargados (protección contra borradores obsoletos).
+onMounted(() => {
+  const idsValidos = new Set<number>()
+  store.equiposElegibles.forEach((e) => {
+    e.componentes.forEach((c) => c.variables.forEach((v) => idsValidos.add(v.id)))
+  })
+  if (idsValidos.size === 0) return
+
+  const respuestasActuales = store.respuestasWizard
+  const saneadas: typeof respuestasActuales = {}
+  for (const [idStr, valor] of Object.entries(respuestasActuales)) {
+    if (idsValidos.has(Number(idStr))) {
+      saneadas[Number(idStr)] = valor
+    }
+  }
+  store.respuestasWizard = saneadas
+})
 
 const cambiarEquipo = async (delta: number) => {
   const nuevo = equipoIndice.value + delta

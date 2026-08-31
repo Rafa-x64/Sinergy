@@ -140,9 +140,12 @@ class VariableCriticaService {
     return conteo > 0
   }
 
-  async obtenerArbolJerarquico() {
+  async obtenerArbolJerarquico(plantaId?: number) {
     return prisma.planta.findMany({
-      where: { activa: true },
+      where: {
+        activa: true,
+        ...(plantaId ? { id: plantaId } : {})
+      },
       orderBy: { nombre: 'asc' },
       select: {
         id: true,

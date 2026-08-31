@@ -441,6 +441,20 @@ La arquitectura Feature-Based agrupa el código por contexto de negocio en lugar
 
 ---
 
+### ADR-009 — Control de Acceso por Planta (PBAC — Plant-Based Access Control)
+
+**Decisión:** Implementar aislamiento multi-planta forzado desde el backend mediante `req.usuario.plantaId` firmado en el JWT, restringiendo la visualización y registro de datos a la planta asignada a cada usuario, con excepción global para el rol `ADMINISTRADOR`.
+
+**Razón:** Para garantizar la integridad operativa y seguridad de la información entre las distintas plantas físicas, cada usuario debe operar estrictamente dentro de su propia planta sin posibilidad de consultar o registrar datos en plantas ajenas mediante manipulación de parámetros HTTP.
+
+**Alternativas descartadas:**
+- Filtrado dependiente del frontend vía query parameters libres `?plantaId=X` (vulnerable a manipulación/inyección de datos cruzados).
+- Bases de datos o esquemas PostgreSQL separados por planta (sobreingeniería y dificultad para reportes consolidados corporativos).
+
+**Trade-off asumido:** Los administradores corporativos requieren una condición de excepción (`req.plantaId === undefined`) en la capa de controladores y servicios para poder monitorear y gestionar todas las plantas simultáneamente.
+
+---
+
 ## Módulo: Variables Críticas (Tubrica)
 
 Esta sección documenta la arquitectura específica de este módulo dentro del sistema Sinergy.

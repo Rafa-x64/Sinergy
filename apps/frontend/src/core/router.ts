@@ -51,7 +51,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       hideLayout: false,
-      roles: ['Administrador del Sistema', 'Supervisor / Gerente de Mantenimiento']
+      roles: ['Administrador del Sistema']
     },
   },
   {
@@ -61,7 +61,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       hideLayout: false,
-      roles: ['Administrador del Sistema', 'Supervisor / Gerente de Mantenimiento']
+      roles: ['Administrador del Sistema', 'Supervisor / Gerente de Mantenimiento', 'Técnico de Mantenimiento']
     },
   },
   {
@@ -95,7 +95,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       hideLayout: false,
-      roles: ['Administrador del Sistema', 'Supervisor / Gerente de Mantenimiento']
+      roles: ['Administrador del Sistema', 'Supervisor / Gerente de Mantenimiento', 'Técnico de Mantenimiento']
     },
   },
   {
@@ -105,7 +105,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       hideLayout: false,
-      roles: ['Administrador del Sistema', 'Supervisor / Gerente de Mantenimiento']
+      roles: ['Administrador del Sistema', 'Supervisor / Gerente de Mantenimiento', 'Técnico de Mantenimiento']
     },
   },
   {

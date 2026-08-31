@@ -395,12 +395,13 @@ export const variableCriticaController = {
 
   //---------------------------------------------JERARQUIA ARBOL-------------------------------------------------
   async obtenerJerarquia(
-    _req: Request,
+    req: Request,
     res: Response<ResponseDTO>,
     next: NextFunction
   ) {
     try {
-      const arbol = await variableCriticaService.obtenerArbolJerarquico()
+      const usuarioPlantaId: number | undefined = req.usuario?.plantaId ? Number(req.usuario.plantaId) : undefined
+      const arbol = await variableCriticaService.obtenerArbolJerarquico(usuarioPlantaId)
 
       return res.status(200).json({
         status: 'ok',

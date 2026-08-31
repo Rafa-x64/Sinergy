@@ -7,9 +7,11 @@ import { useToast } from 'vue-toastification'
 import AppTabs from '../../../components/AppTabs.vue'
 import type { TabItem } from '../../../core/types/tabs.ts'
 import ComponenteForm from '../components/ComponenteForm.vue'
+import { useAuthStore } from '../../auth/auth.store'
 import HeaderViews from '../../../components/HeaderViews.vue'
 
 const toast = useToast()
+const authStore = useAuthStore()
 const componenteStore = useComponenteStore()
 const equipoStore = useEquipoStore()
 
@@ -37,25 +39,32 @@ const cargandoEliminacion = ref(false)
 
 const pestañas = computed<TabItem[]>(() => {
     const items: TabItem[] = [
-        { id: 'lista', name: 'Lista de Componentes', color:'success' },
-        { id: 'registrar', name: 'Registrar componente', color:'success' }
+        { id: 'lista', name: 'Lista de Componentes', color:'success' }
     ]
-    if (idComponenteAEditar.value !== null) {
-        items.push({ id: 'editar', name: 'Editar componente', color:'success' })
+    if (authStore.puedeGestionarMaquinas) {
+        items.push({ id: 'registrar', name: 'Registrar componente', color:'success' })
+        if (idComponenteAEditar.value !== null) {
+            items.push({ id: 'editar', name: 'Editar componente', color:'success' })
+        }
     }
     return items
 })
 
-const headersTabla = [
-    { title: 'Equipo', key: 'equipo', align: 'center' as const },
-    { title: 'Nombre', key: 'nombre', align: 'center' as const },
-    { title: 'Descripción', key: 'descripcion', align: 'center' as const },
-    { title: 'Activo', key: 'activo', align: 'center' as const },
-    { title: 'Orden de Posición', key: 'ordenPosicion', align: 'center' as const },
-    { title: 'Fecha de Creación', key: 'creadoEn', align: 'center' as const },
-    { title: 'Última Modificación', key: 'actualizadoEn', align: 'center' as const },
-    { title: 'Acciones', key: 'acciones', sortable: false, align: 'center' as const }
-]
+const headersTabla = computed(() => {
+    const h: { title: string; key: string; align: 'center'; sortable?: boolean }[] = [
+        { title: 'Equipo', key: 'equipo', align: 'center' },
+        { title: 'Nombre', key: 'nombre', align: 'center' },
+        { title: 'Descripción', key: 'descripcion', align: 'center' },
+        { title: 'Activo', key: 'activo', align: 'center' },
+        { title: 'Orden de Posición', key: 'ordenPosicion', align: 'center' },
+        { title: 'Fecha de Creación', key: 'creadoEn', align: 'center' },
+        { title: 'Última Modificación', key: 'actualizadoEn', align: 'center' }
+    ]
+    if (authStore.puedeGestionarMaquinas) {
+        h.push({ title: 'Acciones', key: 'acciones', sortable: false, align: 'center' })
+    }
+    return h
+})
 
 const formatearFecha = (fecha: Date | string | null | undefined): string => {
     if (!fecha) return '—'

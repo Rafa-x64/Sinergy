@@ -12,11 +12,13 @@ import {
   type RegistrarEquipoDTO,
   type RegistrarTipoEquipoDTO
 } from '../equipo.store'
+import { useAuthStore } from '../../auth/auth.store'
 import { useUbicacionStore } from '../../ubicaciones/ubicacion.store'
 import type { TabItem } from '../../../core/types/tabs'
 import HeaderViews from '../../../components/HeaderViews.vue'
 
 const toast = useToast()
+const authStore = useAuthStore()
 const equipoStore = useEquipoStore()
 const ubicacionStore = useUbicacionStore()
 
@@ -67,22 +69,26 @@ const pestañasPrincipales: TabItem[] = [
 
 const pestañasEquipo = computed<TabItem[]>(() => {
   const items: TabItem[] = [
-    { id: 'lista-equipos', name: 'Lista de Equipos', color: 'safety-orange' },
-    { id: 'registrar-equipo', name: 'Añadir Equipo', color: 'safety-orange' }
+    { id: 'lista-equipos', name: 'Lista de Equipos', color: 'safety-orange' }
   ]
-  if (idEquipoEditar.value !== null) {
-    items.push({ id: 'editar-equipo', name: 'Editar Equipo', color: 'safety-orange' })
+  if (authStore.puedeGestionarMaquinas) {
+    items.push({ id: 'registrar-equipo', name: 'Añadir Equipo', color: 'safety-orange' })
+    if (idEquipoEditar.value !== null) {
+      items.push({ id: 'editar-equipo', name: 'Editar Equipo', color: 'safety-orange' })
+    }
   }
   return items
 })
 
 const pestañasTipo = computed<TabItem[]>(() => {
   const items: TabItem[] = [
-    { id: 'lista-tipos', name: 'Lista de Tipos', color: 'warning' },
-    { id: 'registrar-tipo', name: 'Añadir Tipo', color: 'warning' }
+    { id: 'lista-tipos', name: 'Lista de Tipos', color: 'warning' }
   ]
-  if (idTipoEditar.value !== null) {
-    items.push({ id: 'editar-tipo', name: 'Editar Tipo', color: 'safety-orange' })
+  if (authStore.puedeGestionarMaquinas) {
+    items.push({ id: 'registrar-tipo', name: 'Añadir Tipo', color: 'warning' })
+    if (idTipoEditar.value !== null) {
+      items.push({ id: 'editar-tipo', name: 'Editar Tipo', color: 'safety-orange' })
+    }
   }
   return items
 })
@@ -92,23 +98,33 @@ const pestañaTipo = ref<string | number>('lista-tipos')
 
 // ─── Headers de tablas ────────────────────────────────────────────────────────
 
-const headersEquipos = [
-  { title: 'Código', key: 'codigo', align: 'center' as const },
-  { title: 'Nombre', key: 'nombre', align: 'center' as const },
-  { title: 'Tipo', key: 'tipo', align: 'center' as const },
-  { title: 'Ubicación Técnica', key: 'ubicacionTecnica', align: 'center' as const },
-  { title: 'Marca / Modelo', key: 'marcaModelo', align: 'center' as const },
-  { title: 'Serial', key: 'serial', align: 'center' as const },
-  { title: 'Estado', key: 'estadoOperativo', align: 'center' as const },
-  { title: 'Acciones', key: 'acciones', sortable: false, align: 'center' as const }
-]
+const headersEquipos = computed(() => {
+  const h: { title: string; key: string; align: 'center'; sortable?: boolean }[] = [
+    { title: 'Código', key: 'codigo', align: 'center' },
+    { title: 'Nombre', key: 'nombre', align: 'center' },
+    { title: 'Tipo', key: 'tipo', align: 'center' },
+    { title: 'Ubicación Técnica', key: 'ubicacionTecnica', align: 'center' },
+    { title: 'Marca / Modelo', key: 'marcaModelo', align: 'center' },
+    { title: 'Serial', key: 'serial', align: 'center' },
+    { title: 'Estado', key: 'estadoOperativo', align: 'center' }
+  ]
+  if (authStore.puedeGestionarMaquinas) {
+    h.push({ title: 'Acciones', key: 'acciones', sortable: false, align: 'center' })
+  }
+  return h
+})
 
-const headersTipos = [
-  { title: 'ID', key: 'id', align: 'center' as const },
-  { title: 'Nombre', key: 'nombre', align: 'center' as const },
-  { title: 'Descripción', key: 'descripcion', align: 'center' as const },
-  { title: 'Acciones', key: 'acciones', sortable: false, align: 'center' as const }
-]
+const headersTipos = computed(() => {
+  const h: { title: string; key: string; align: 'center'; sortable?: boolean }[] = [
+    { title: 'ID', key: 'id', align: 'center' },
+    { title: 'Nombre', key: 'nombre', align: 'center' },
+    { title: 'Descripción', key: 'descripcion', align: 'center' }
+  ]
+  if (authStore.puedeGestionarMaquinas) {
+    h.push({ title: 'Acciones', key: 'acciones', sortable: false, align: 'center' })
+  }
+  return h
+})
 
 // ─── Colores por estado operativo ────────────────────────────────────────────
 
@@ -127,14 +143,19 @@ const labelEstado = (estado: string): string => {
 // ─── Inicialización ───────────────────────────────────────────────────────────
 
 const inicializarDatos = async (): Promise<void> => {
-  const [resEquipos, resTipos, resUbicaciones] = await Promise.all([
+  const promesas: Promise<{ status: string; message?: string | null }>[] = [
     equipoStore.listarEquipos(),
-    equipoStore.listarTiposEquipo(),
-    ubicacionStore.listarUbicaciones()
-  ])
+    equipoStore.listarTiposEquipo()
+  ]
+  // Las ubicaciones solo se necesitan en el formulario de creación/edición (solo Admins)
+  if (authStore.puedeGestionarMaquinas) {
+    promesas.push(ubicacionStore.listarUbicaciones())
+  }
+
+  const [resEquipos, resTipos, resUbicaciones] = await Promise.all(promesas)
   if (resEquipos.status === 'error') toast.error(resEquipos.message ?? 'Error al listar equipos')
   if (resTipos.status === 'error') toast.error(resTipos.message ?? 'Error al listar tipos de equipo')
-  if (resUbicaciones.status === 'error') toast.error(resUbicaciones.message ?? 'Error al listar ubicaciones')
+  if (resUbicaciones && resUbicaciones.status === 'error') toast.error(resUbicaciones.message ?? 'Error al listar ubicaciones')
 }
 inicializarDatos()
 
