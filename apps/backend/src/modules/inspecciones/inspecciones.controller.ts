@@ -4,19 +4,27 @@ import { ResponseDTO } from '../../core/types/response.dto'
 import type { AlcanceInspeccion, CrearInspeccionDTO, EvaluarInspeccionDTO } from './inspecciones.schemas'
 
 export const inspeccionesController = {
-  // GET /api/inspecciones/equipos-elegibles?plantaId=X&alcance=Y&referenciaId=Z
+  // GET /api/inspecciones/equipos-elegibles?alcance=Y&referenciaId=Z
   async obtenerEquiposElegibles(
     req: Request,
     res: Response<ResponseDTO>,
     next: NextFunction
   ) {
     try {
-      const plantaId = Number(req.query.plantaId)
+      const usuarioPlantaId: number | undefined = req.usuario?.plantaId ? Number(req.usuario.plantaId) : undefined
+      const esAdmin = !usuarioPlantaId
+
+      // Admins pueden filtrar por cualquier planta vía query param;
+      // usuarios normales siempre ven la suya.
+      const plantaId = esAdmin
+        ? (req.query.plantaId !== undefined ? Number(req.query.plantaId) : NaN)
+        : usuarioPlantaId
+
       const alcance = (req.query.alcance as AlcanceInspeccion) || 'POR_LINEA'
       const referenciaId = req.query.referenciaId ? Number(req.query.referenciaId) : undefined
       const referenciaCodigo = req.query.referenciaCodigo ? String(req.query.referenciaCodigo) : undefined
 
-      if (req.query.plantaId === undefined || req.query.plantaId === null || isNaN(plantaId)) {
+      if (isNaN(plantaId)) {
         return res.status(400).json({ status: 'error', message: 'El ID de la planta es requerido' })
       }
 
@@ -44,11 +52,19 @@ export const inspeccionesController = {
   ) {
     try {
       const usuarioId = (req as any).usuario?.sub
+      const usuarioPlantaId: number | undefined = req.usuario?.plantaId ? Number(req.usuario.plantaId) : undefined
       if (!usuarioId) {
         return res.status(401).json({ status: 'error', message: 'Usuario no autenticado' })
       }
 
-      const resultado = await inspeccionesService.crearInspeccion(usuarioId, req.body)
+      // Forzar la planta del usuario autenticado sobre cualquier valor que venga en el body.
+      // Los admins (plantaId=undefined) pueden usar el plantaId del body.
+      const body: CrearInspeccionDTO = {
+        ...req.body,
+        plantaId: usuarioPlantaId ?? req.body.plantaId ?? null,
+      }
+
+      const resultado = await inspeccionesService.crearInspeccion(usuarioId, body)
       return res.status(201).json({
         status: 'ok',
         message: `Inspección ${resultado.codigoInspeccion} registrada correctamente`,
@@ -66,7 +82,8 @@ export const inspeccionesController = {
     next: NextFunction
   ) {
     try {
-      const plantaId = req.query.plantaId ? Number(req.query.plantaId) : undefined
+      // PBAC: forzar la planta del usuario. Los admins (plantaId=undefined) ven todo.
+      const plantaId: number | undefined = req.usuario?.plantaId ? Number(req.usuario.plantaId) : undefined
       const pendientes = await inspeccionesService.obtenerPendientesRevision(plantaId)
       return res.status(200).json({
         status: 'ok',
@@ -128,8 +145,12 @@ export const inspeccionesController = {
     next: NextFunction
   ) {
     try {
+      // PBAC: los usuarios normales solo ven su planta, sin importar qué envíen como query param.
+      // Los admins (plantaId=undefined) pueden filtrar por cualquier planta.
+      const usuarioPlantaId: number | undefined = req.usuario?.plantaId ? Number(req.usuario.plantaId) : undefined
+
       const filtros = {
-        plantaId: req.query.plantaId ? Number(req.query.plantaId) : undefined,
+        plantaId: usuarioPlantaId ?? (req.query.plantaId ? Number(req.query.plantaId) : undefined),
         estado: req.query.estado as any,
         tipoInspeccion: req.query.tipoInspeccion as any,
         fechaInicio: req.query.fechaInicio as string,

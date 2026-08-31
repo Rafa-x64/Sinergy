@@ -9,6 +9,7 @@ export interface UsuarioRules {
     nombreUsuario: ValidationRule[]
     password: (esEdicion?: boolean) => ValidationRule[]
     rolId: ValidationRule[]
+    plantaId: (esAdmin?: boolean) => ValidationRule[]
 }
 
 export const usuarioRules: UsuarioRules = {
@@ -38,5 +39,13 @@ export const usuarioRules: UsuarioRules = {
     ],
     rolId: [
         (v) => (typeof v === 'number' && Number.isInteger(v) && v > 0) || 'El campo rol es requerido'
+    ],
+    plantaId: (esAdmin = false) => [
+        (v) => {
+            if (esAdmin || v === null || v === undefined) {
+                return true
+            }
+            return (typeof v === 'number' && Number.isInteger(v) && v > 0) || 'El campo planta es requerido'
+        }
     ]
 }

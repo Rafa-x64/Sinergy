@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useVariablesStore } from '@/modules/variables/variables.store'
 import { useInspeccionesStore, type AlcanceInspeccion } from '../inspecciones.store'
+import { useAuthStore } from '@/modules/auth/auth.store'
 
 const emit = defineEmits<{
   (e: 'iniciar-wizard'): void
@@ -9,10 +10,14 @@ const emit = defineEmits<{
 
 const variablesStore = useVariablesStore()
 const inspeccionesStore = useInspeccionesStore()
+const authStore = useAuthStore()
 
 const plantaId = ref<number | null>(null)
 const alcance = ref<AlcanceInspeccion>('POR_LINEA')
 const referenciaId = ref<number | null>(null)
+
+/** Si el usuario tiene una planta asignada en su perfil, el selector se bloquea */
+const selectPlantaBloqueado = computed(() => !!authStore.plantaId)
 
 onMounted(async () => {
   if (variablesStore.arbolJerarquico.length === 0) {
@@ -21,32 +26,49 @@ onMounted(async () => {
   if (variablesStore.tiposEquipo.length === 0) {
     await variablesStore.cargarTiposEquipo()
   }
-  if (variablesStore.arbolJerarquico.length > 0) {
+
+  if (authStore.plantaId) {
+    // Usuario con planta asignada: forzar su planta
+    plantaId.value = authStore.plantaId
+  } else if (variablesStore.arbolJerarquico.length > 0 && !plantaId.value) {
+    // Usuario sin planta (global): preseleccionar la primera
     plantaId.value = variablesStore.arbolJerarquico[0].id
   }
 })
 
-// Lista de Plantas combinando las plantas registradas con la opción "Ninguna" para maquinarias móviles
+watch(
+  () => authStore.plantaId,
+  (nuevoId) => {
+    if (nuevoId) {
+      plantaId.value = nuevoId
+    }
+  },
+  { immediate: true }
+)
+
+// Si el usuario tiene planta asignada, solo se expone esa planta; si no, todas.
 const opcionesPlantas = computed(() => {
-  const lista = variablesStore.arbolJerarquico.map((p) => ({
+  const todasLasPlantas = variablesStore.arbolJerarquico.map((p) => ({
     id: p.id,
     nombre: p.nombre,
     codigo: p.codigo
   }))
 
-  const yaExisteNinguna = lista.some(
+  // Usuarios con planta asignada: restringir la lista a su única planta
+  if (authStore.plantaId) {
+    return todasLasPlantas.filter((p) => p.id === authStore.plantaId)
+  }
+
+  // Usuarios sin planta (accesoGlobal): ver todas las plantas + opción "Ninguna"
+  const yaExisteNinguna = todasLasPlantas.some(
     (p) => (p.nombre || '').toLowerCase().includes('ninguna') || (p.codigo || '').toLowerCase().includes('ninguna')
   )
 
   if (!yaExisteNinguna) {
-    lista.push({
-      id: 0,
-      nombre: 'Ninguna',
-      codigo: 'NINGUNA'
-    })
+    todasLasPlantas.push({ id: 0, nombre: 'Ninguna', codigo: 'NINGUNA' })
   }
 
-  return lista
+  return todasLasPlantas
 })
 
 // Detecta si la planta seleccionada corresponde a "Ninguna" (equipos móviles / sin ubicación fija)
@@ -187,6 +209,9 @@ const ejecutarBusquedaEquipos = async () => {
           variant="outlined"
           density="compact"
           hide-details
+          :disabled="selectPlantaBloqueado"
+          :hint="selectPlantaBloqueado ? 'Planta asignada a tu perfil' : ''"
+          :persistent-hint="selectPlantaBloqueado"
         />
       </v-col>
 

@@ -78,6 +78,14 @@ El endpoint de login devuelve el mismo mensaje `"Credenciales inválidas"` tanto
 - Los roles se refrescan automáticamente al rotar el access token.
 - **Regla:** La autorización por rol **siempre** se valida en el backend. El frontend solo usa los roles para ocultar/mostrar UI.
 
+### 1.5 Control de Acceso por Planta (PBAC — Plant-Based Access Control)
+
+- **Asociación obligatoria:** Cada usuario pertenece a exactamente una planta (`Usuario.plantaId`).
+- **Inclusión en JWT:** El `plantaId` viaja firmado en el `accessToken` (`TokenPayload.plantaId`) y se renueva en cada refresh de sesión.
+- **Aislamiento por backend:** Las consultas y transacciones en módulos operativos (`inspecciones`, `equipos`, `ubicaciones`, `plantas`, `variables-críticas`) extraen el `plantaId` directamente de `req.usuario.plantaId`.
+- **Excepción para ADMINISTRADOR:** Si el usuario posee el rol `ADMINISTRADOR`, `req.plantaId` queda `undefined`, permitiendo listar o filtrar a través de todas las plantas de forma global.
+- **Seguridad en creación de registros:** Al registrar inspecciones u operaciones, el backend fuerza la asociación a la planta del usuario autenticado, imposibilitando la inyección de datos cruzados entre plantas desde el frontend.
+
 ---
 
 ## 2. Validación y Sanitización de Datos

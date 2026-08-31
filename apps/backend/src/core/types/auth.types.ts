@@ -9,4 +9,6 @@ export interface TokenPayload {
   sub: number
   email: string
   roles: string[]
+  /** ID de la planta a la que pertenece el usuario. Si es null/undefined (Admin/Global), ve todas las plantas. */
+  plantaId?: number | null
 }

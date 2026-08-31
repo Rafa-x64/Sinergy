@@ -7,8 +7,10 @@ import PlantaForm from '../components/PlantaForm.vue'
 import { usePlantasStore, type RegistrarPlantaDTO, type Planta } from '../plantas.store'
 import type { TabItem } from '../../../core/types/tabs'
 import HeaderViews from '../../../components/HeaderViews.vue'
+import { useAuthStore } from '../../auth/auth.store'
 
 const toast = useToast()
+const authStore = useAuthStore()
 const plantaStore = usePlantasStore()
 const { plantas } = storeToRefs(plantaStore)
 
@@ -20,22 +22,29 @@ const mostrarDialogoEliminar = ref<boolean>(false)
 const idPlantaAEliminar = ref<number | null>(null)
 const cargandoEliminacion = ref<boolean>(false)
 
-const headersTabla = [
-    { title: 'Código', key: 'codigo', align: 'center' as const },
-    { title: 'Nombre', key: 'nombre', align: 'center' as const },
-    { title: 'Estado', key: 'activa', align: 'center' as const },
-    { title: 'Fecha Creación', key: 'creadoEn', align: 'center' as const },
-    { title: 'Última Actualización', key: 'actualizadoEn', align: 'center' as const },
-    { title: 'Acciones', key: 'acciones', sortable: false, align: 'center' as const }
-]
+const headersTabla = computed(() => {
+    const h: { title: string; key: string; align: 'center'; sortable?: boolean }[] = [
+        { title: 'Código', key: 'codigo', align: 'center' },
+        { title: 'Nombre', key: 'nombre', align: 'center' },
+        { title: 'Estado', key: 'activa', align: 'center' },
+        { title: 'Fecha Creación', key: 'creadoEn', align: 'center' },
+        { title: 'Última Actualización', key: 'actualizadoEn', align: 'center' }
+    ]
+    if (authStore.puedeGestionarUsuarios) {
+        h.push({ title: 'Acciones', key: 'acciones', sortable: false, align: 'center' })
+    }
+    return h
+})
 
 const pestañasPlantas = computed<TabItem[]>(() => {
     const items: TabItem[] = [
-        { id: 'lista', name: 'Lista de Plantas', color:'text-principal' },
-        { id: 'registrar', name: 'Añadir Planta', color:'text-principal' }
+        { id: 'lista', name: 'Lista de Plantas', color:'text-principal' }
     ]
-    if (idPlantaEditar.value !== null) {
-        items.push({ id: 'editar', name: 'Editar Planta', color:'text-principal' })
+    if (authStore.puedeGestionarUsuarios) {
+        items.push({ id: 'registrar', name: 'Añadir Planta', color:'text-principal' })
+        if (idPlantaEditar.value !== null) {
+            items.push({ id: 'editar', name: 'Editar Planta', color:'text-principal' })
+        }
     }
     return items
 })

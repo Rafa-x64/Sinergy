@@ -243,8 +243,9 @@ export const equipoController = {
     try {
       const { ubicacionTecnicaId, plantaId, tipoEquipoId, estadoOperativo, busqueda } = req.query
 
+      const usuarioPlantaId: number | undefined = req.usuario?.plantaId ? Number(req.usuario.plantaId) : undefined
       let idUbicacionFiltro: number | undefined = undefined
-      let idPlantaFiltro: number | undefined = undefined
+      let idPlantaFiltro: number | undefined = usuarioPlantaId
       let idTipoEquipoFiltro: number | undefined = undefined
 
       if (ubicacionTecnicaId !== undefined) {
@@ -255,7 +256,8 @@ export const equipoController = {
         idUbicacionFiltro = idParseado
       }
 
-      if (plantaId !== undefined) {
+      // Si es admin (usuarioPlantaId === undefined), permite filtrar por query param
+      if (!usuarioPlantaId && plantaId !== undefined) {
         const idParseado = parsearId(plantaId)
         if (idParseado === null) {
           return res.status(400).json({ status: 'error', message: 'El parámetro plantaId debe ser un número válido' })

@@ -201,12 +201,16 @@ export const inspeccionController = {
         estadoFiltro = estadoInspeccion as EstadoInspeccion
       }
 
-      const inspecciones = await inspeccionService.obtenerInspecciones({
-        equipoId: idEquipoFiltro,
-        tipoInspeccion: tipoFiltro,
-        estadoInspeccion: estadoFiltro,
-        elaboradoPorId: idElaboradorFiltro
-      })
+      const inspecciones = await inspeccionService.obtenerInspecciones(
+        {
+          equipoId: idEquipoFiltro,
+          tipoInspeccion: tipoFiltro,
+          estadoInspeccion: estadoFiltro,
+          elaboradoPorId: idElaboradorFiltro
+        },
+        // PBAC: los admins (plantaId=undefined) ven todo; los demás, solo su planta.
+        req.usuario?.plantaId ? Number(req.usuario.plantaId) : undefined
+      )
 
       if (inspecciones.length === 0) {
         return res.status(404).json({

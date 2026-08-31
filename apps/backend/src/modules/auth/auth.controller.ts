@@ -57,7 +57,7 @@ export const authController = {
 
   async registrar(req: Request, res: Response, next: NextFunction) {
     try {
-      const { nombre, apellido, email, nombreUsuario, password, activo, rolId, supervisorId } = req.body
+      const { nombre, apellido, email, nombreUsuario, password, activo, rolId, plantaId, supervisorId } = req.body
 
       if (!nombre || typeof nombre !== 'string' || !nombre.trim()) {
         return res.status(400).json({ status: 'error', message: 'El nombre es requerido' })
@@ -91,6 +91,12 @@ export const authController = {
         return res.status(400).json({ status: 'error', message: 'El campo rolId es requerido y debe ser un número entero positivo' })
       }
 
+      if (plantaId !== undefined && plantaId !== null) {
+        if (typeof plantaId !== 'number' || !Number.isInteger(plantaId) || plantaId <= 0) {
+          return res.status(400).json({ status: 'error', message: 'El campo plantaId debe ser un número entero positivo o null' })
+        }
+      }
+
       const nombreUsuarioExistente = await authService.buscarPorNombreUsuario(nombreUsuarioLimpio)
       if (nombreUsuarioExistente !== null) {
         return res.status(409).json({ status: 'error', message: `Ya existe un usuario registrado con el nombre ${nombreUsuarioLimpio}` })
@@ -113,6 +119,7 @@ export const authController = {
         password,
         activo: typeof activo === 'boolean' ? activo : true,
         rolId,
+        plantaId: plantaId ?? null,
         supervisorId: supervisorId ?? null,
       })
 
@@ -132,7 +139,7 @@ export const authController = {
         return res.status(400).json({ status: 'error', message: 'El ID proporcionado no es válido' })
       }
 
-      const { nombre, apellido, email, nombreUsuario, password, activo, rolId, supervisorId } = req.body
+      const { nombre, apellido, email, nombreUsuario, password, activo, rolId, plantaId, supervisorId } = req.body
 
       if (Object.keys(req.body).length === 0) {
         return res.status(400).json({ status: 'error', message: 'Debe proporcionar al menos un campo para actualizar' })
@@ -184,6 +191,13 @@ export const authController = {
           return res.status(400).json({ status: 'error', message: 'El campo rolId debe ser un número entero positivo' })
         }
         datosActualizados.rolId = rolId
+      }
+
+      if (plantaId !== undefined) {
+        if (plantaId !== null && (typeof plantaId !== 'number' || !Number.isInteger(plantaId) || plantaId <= 0)) {
+          return res.status(400).json({ status: 'error', message: 'El campo plantaId debe ser un número entero positivo o null' })
+        }
+        datosActualizados.plantaId = plantaId
       }
 
       if (supervisorId !== undefined) {

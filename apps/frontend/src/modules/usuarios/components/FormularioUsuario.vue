@@ -4,6 +4,7 @@ import { usuarioRules } from '../validations/usuario'
 import type { VuetifyForm } from '../../../core/types/vuetifyForm'
 import type { RegistrarUsuarioDTO } from '../usuarios.store'
 import type { Rol } from '../../auth/roles.store'
+import type { Planta } from '../../plantas/plantas.store'
 
 interface SupervisorOption {
     id: number
@@ -17,11 +18,13 @@ const props = withDefaults(
         cargando: boolean
         textoBoton: string
         roles: Rol[]
+        plantas: Planta[]
         supervisores: SupervisorOption[]
         esEdicion?: boolean
     }>(),
     {
         roles: () => [],
+        plantas: () => [],
         supervisores: () => [],
         esEdicion: false
     }
@@ -40,6 +43,10 @@ const rolSeleccionado = computed<Rol | undefined>(() =>
 )
 
 const requiereSupervisor = computed<boolean>(() => rolSeleccionado.value?.requiereSupervisor ?? false)
+
+const esRolAdmin = computed<boolean>(() =>
+    (rolSeleccionado.value?.nombre || '').trim().toUpperCase() === 'ADMINISTRADOR'
+)
 
 watch(
     () => props.datosIniciales,
@@ -102,6 +109,13 @@ const manejarEnvio = async (): Promise<void> => {
                 <v-select v-model="formulario.rolId" :items="roles" item-title="nombre" item-value="id"
                     label="Rol Asignado" variant="outlined" :rules="usuarioRules.rolId" :disabled="cargando"
                     required></v-select>
+            </v-col>
+
+            <v-col cols="12" md="6">
+                <v-select v-model="formulario.plantaId" :items="plantas" item-title="nombre" item-value="id"
+                    label="Planta Asignada" variant="outlined" :rules="usuarioRules.plantaId(esRolAdmin)" :disabled="cargando"
+                    clearable :hint="esRolAdmin ? 'Dejar vacío para acceso global a todas las plantas' : ''"
+                    persistent-hint></v-select>
             </v-col>
 
             <v-col v-if="requiereSupervisor" cols="12" md="6">

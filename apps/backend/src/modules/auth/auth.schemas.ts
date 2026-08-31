@@ -16,6 +16,7 @@ export interface CrearUsuarioDTO {
   password: string
   activo?: boolean
   rolId: number
+  plantaId?: number | null
   supervisorId?: number | null
 }
 
@@ -27,6 +28,7 @@ export interface ActualizarUsuarioDTO {
   password?: string
   activo?: boolean
   rolId?: number
+  plantaId?: number | null
   supervisorId?: number | null
 }
 

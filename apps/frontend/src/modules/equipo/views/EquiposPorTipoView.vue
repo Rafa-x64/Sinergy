@@ -11,11 +11,13 @@ import {
   type RegistrarEquipoDTO
 } from '../equipo.store'
 import { useUbicacionStore } from '../../ubicaciones/ubicacion.store'
+import { useAuthStore } from '../../auth/auth.store'
 import type { TabItem } from '../../../core/types/tabs'
 import HeaderViews from '../../../components/HeaderViews.vue'
 
 const route = useRoute()
 const toast = useToast()
+const authStore = useAuthStore()
 const equipoStore = useEquipoStore()
 const ubicacionStore = useUbicacionStore()
 
@@ -124,14 +126,18 @@ const labelEstado = (estado: string): string => {
 // ─── Carga inicial de datos ──────────────────────────────────────────────────
 
 const inicializarDatos = async (): Promise<void> => {
-  const [resEquipos, resTipos, resUbicaciones] = await Promise.all([
+  const promesas: Promise<{ status: string; message?: string | null }>[] = [
     equipoStore.listarEquipos(),
-    equipoStore.listarTiposEquipo(),
-    ubicacionStore.listarUbicaciones()
-  ])
+    equipoStore.listarTiposEquipo()
+  ]
+  if (authStore.puedeGestionarMaquinas) {
+    promesas.push(ubicacionStore.listarUbicaciones())
+  }
+
+  const [resEquipos, resTipos, resUbicaciones] = await Promise.all(promesas)
   if (resEquipos.status === 'error') toast.error(resEquipos.message ?? 'Error al listar equipos')
   if (resTipos.status === 'error') toast.error(resTipos.message ?? 'Error al listar tipos de equipo')
-  if (resUbicaciones.status === 'error') toast.error(resUbicaciones.message ?? 'Error al listar ubicaciones')
+  if (resUbicaciones && resUbicaciones.status === 'error') toast.error(resUbicaciones.message ?? 'Error al listar ubicaciones')
 }
 inicializarDatos()
 

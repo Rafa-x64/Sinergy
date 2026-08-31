@@ -184,11 +184,12 @@ export const ubicacionController = {
     next: NextFunction
   ) {
     try {
+      const usuarioPlantaId: number | undefined = req.usuario?.plantaId ? Number(req.usuario.plantaId) : undefined
       const { plantaId } = req.query
-      let idPlantaFiltro: number | undefined = undefined
+      let idPlantaFiltro: number | undefined = usuarioPlantaId
 
-      // Filtrado Dinámico: Validamos el query param si el cliente decide enviarlo
-      if (plantaId !== undefined) {
+      // Si es admin (usuarioPlantaId === undefined), permite filtrar por query param
+      if (!usuarioPlantaId && plantaId !== undefined) {
         const idParseado = parsearId(plantaId)
         if (idParseado === null) {
           return res.status(400).json({

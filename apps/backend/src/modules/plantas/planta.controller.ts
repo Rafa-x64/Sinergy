@@ -17,7 +17,9 @@ export const plantaController = {
     //ver plantas
     async verPlantas(req: Request, res: Response<ResponseDTO>, next: NextFunction){
         try {
-            const plantas = await plantaService.obtener()
+            // PBAC: los admins (plantaId=undefined) ven todas; los usuarios ven solo la suya.
+            const usuarioPlantaId: number | undefined = req.usuario?.plantaId ? Number(req.usuario.plantaId) : undefined
+            const plantas = await plantaService.obtener(usuarioPlantaId)
             if(plantas.length === 0){
                 return res.status(404).json({ status: 'error', message: 'no hay plantas registradas'})
             }

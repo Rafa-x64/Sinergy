@@ -73,8 +73,13 @@ class InspeccionService {
     return serializarBigInt(inspeccion)
   }
 
-  async obtenerInspecciones(filtros: FiltrosInspeccion) {
+  async obtenerInspecciones(filtros: FiltrosInspeccion, plantaId?: number) {
     const where: Prisma.InspeccionWhereInput = {}
+
+    // PBAC: si se especifica plantaId, restringir al contexto de la planta del usuario.
+    if (plantaId !== undefined) {
+      where.plantaId = plantaId
+    }
 
     if (filtros.equipoId !== undefined) {
       where.equipoId = filtros.equipoId

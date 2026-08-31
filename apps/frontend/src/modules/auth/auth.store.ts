@@ -18,6 +18,8 @@ export interface TokenPayload {
   sub: number
   email: string
   roles: string[]
+  /** ID de la planta del usuario firmado en el JWT. Si es null, ve todas las plantas. */
+  plantaId?: number | null
 }
 
 function parseJwtPayload(token: string): TokenPayload | null {
@@ -51,13 +53,53 @@ export const useAuthStore = defineStore('auth', () => {
     return usuario.value?.roles || []
   })
 
+  const plantaId = computed<number | null>(() => {
+    return usuario.value?.plantaId ?? null
+  })
+
+  const esAdmin = computed<boolean>(() => {
+    return roles.value.some((r) =>
+      r.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().includes('ADMINISTRADOR')
+    )
+  })
+
+  const esSupervisor = computed<boolean>(() => {
+    return roles.value.some((r) =>
+      r.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().includes('SUPERVISOR')
+    )
+  })
+
+  const esTecnico = computed<boolean>(() => {
+    return roles.value.some((r) =>
+      r.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().includes('TECNICO')
+    )
+  })
+
+  /** Usuario sin planta asignada o Admin: puede ver datos de todas las plantas */
+  const accesoGlobal = computed<boolean>(() => esAdmin.value || !usuario.value?.plantaId)
+
+  /** Solo el Administrador puede crear, editar o eliminar maquinarias, componentes y variables */
+  const puedeGestionarMaquinas = computed<boolean>(() => esAdmin.value)
+
+  /** Técnicos y Administradores pueden registrar nuevas inspecciones */
+  const puedeRegistrarInspecciones = computed<boolean>(() => esAdmin.value || esTecnico.value)
+
+  /** Supervisores y Administradores pueden revisar, evaluar, aprobar o rechazar inspecciones */
+  const puedeEvaluarInspecciones = computed<boolean>(() => esAdmin.value || esSupervisor.value)
+
+  /** Solo el Administrador puede crear usuarios, roles, plantas y ubicaciones */
+  const puedeGestionarUsuarios = computed<boolean>(() => esAdmin.value)
+
   function tieneRol(rolesRequeridos?: string[]): boolean {
     if (!rolesRequeridos || rolesRequeridos.length === 0) return true
     if (roles.value.length === 0) return false
-    const userRolesNorm = roles.value.map((r) => r.trim().toUpperCase())
-    return rolesRequeridos.some((req) =>
-      userRolesNorm.some((userRole) => userRole === req.trim().toUpperCase())
+    const userRolesNorm = roles.value.map((r) =>
+      r.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase()
     )
+    return rolesRequeridos.some((req) => {
+      const reqNorm = req.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase()
+      return userRolesNorm.some((userRole) => userRole === reqNorm || userRole.includes(reqNorm))
+    })
   }
 
   async function login(credenciales: LoginDTO): Promise<RespuestaApi> {
@@ -130,6 +172,15 @@ export const useAuthStore = defineStore('auth', () => {
     estaAutenticado,
     usuario,
     roles,
+    plantaId,
+    esAdmin,
+    esSupervisor,
+    esTecnico,
+    accesoGlobal,
+    puedeGestionarMaquinas,
+    puedeRegistrarInspecciones,
+    puedeEvaluarInspecciones,
+    puedeGestionarUsuarios,
     tieneRol,
     login,
     refrescarToken,

@@ -261,7 +261,32 @@ export const useInspeccionesStore = defineStore('inspecciones', () => {
       const raw = localStorage.getItem(LOCAL_STORAGE_DRAFT_KEY)
       if (!raw) return false
       const data = JSON.parse(raw)
-      respuestasWizard.value = data.respuestas || {}
+
+      // Sanitizar: descartar respuestas obsoletas si los equipos ya están en memoria.
+      // Previene FK violations cuando los variable_id cambiaron tras una nueva migración.
+      const todasLasVariablesActuales = new Set<number>()
+      equiposElegibles.value.forEach((e) => {
+        e.componentes.forEach((c) => {
+          c.variables.forEach((v) => todasLasVariablesActuales.add(v.id))
+        })
+      })
+
+      const respuestasRaw: Record<number, any> = data.respuestas || {}
+
+      if (todasLasVariablesActuales.size > 0) {
+        // Equipos ya cargados: filtrar solo IDs válidos
+        const respuestasSaneadas: Record<number, any> = {}
+        for (const [idStr, valor] of Object.entries(respuestasRaw)) {
+          if (todasLasVariablesActuales.has(Number(idStr))) {
+            respuestasSaneadas[Number(idStr)] = valor
+          }
+        }
+        respuestasWizard.value = respuestasSaneadas
+      } else {
+        // Equipos aún no cargados: cargar todo y confiar en el filtro posterior
+        respuestasWizard.value = respuestasRaw
+      }
+
       observacionesGeneralesWizard.value = data.observacionesGenerales || ''
       pasoActualWizard.value = data.pasoActual || 1
       return true
@@ -310,11 +335,10 @@ export const useInspeccionesStore = defineStore('inspecciones', () => {
 
   // ─── ACCIONES DE SUPERVISIÓN Y REVISIÓN ──────────────────────────────────────
 
-  async function cargarPendientes(plantaId?: number) {
+  async function cargarPendientes() {
     cargandoAccion.value = true
     try {
-      const params = plantaId ? { plantaId } : undefined
-      const res = await api.get('/inspecciones/pendientes', { params })
+      const res = await api.get('/inspecciones/pendientes')
       if (res.data?.status === 'ok') {
         inspeccionesPendientes.value = res.data.data
         return { status: 'ok', data: inspeccionesPendientes.value }

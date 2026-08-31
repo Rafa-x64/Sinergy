@@ -2,7 +2,10 @@ import prisma from '../../core/prisma'
 import { RegistrarPlantaDTO, EditarPlantaDTO } from './planta.schemas'
 
 class PlantaService {
-    async obtener(){
+    async obtener(plantaId?: number){
+        if (plantaId !== undefined) {
+            return prisma.planta.findMany({ where: { id: plantaId } })
+        }
         return prisma.planta.findMany()
     }
     async crearPlanta(datos: RegistrarPlantaDTO) {

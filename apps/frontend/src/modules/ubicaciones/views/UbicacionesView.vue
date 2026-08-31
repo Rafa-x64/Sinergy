@@ -8,13 +8,14 @@ import { useUbicacionStore, type RegistrarUbicacionDTO, type Ubicacion } from '.
 import type { TabItem } from '../../../core/types/tabs'
 import { usePlantasStore } from '../../plantas/plantas.store'
 import HeaderViews from '../../../components/HeaderViews.vue'
-
-const plantaStore = usePlantasStore()
-const { plantas } = storeToRefs(plantaStore)
+import { useAuthStore } from '../../auth/auth.store'
 
 const toast = useToast()
+const authStore = useAuthStore()
 const ubicacionStore = useUbicacionStore()
+const plantaStore = usePlantasStore()
 const { ubicaciones } = storeToRefs(ubicacionStore)
+const { plantas } = storeToRefs(plantaStore)
 
 const cargando = ref<boolean>(false)
 const pestañaActiva = ref<string | number>('lista')
@@ -35,25 +36,32 @@ const cargandoEliminacion = ref<boolean>(false)
 
 const pestañasUbicaciones = computed<TabItem[]>(() => {
     const items: TabItem[] = [
-        { id: 'lista', name: 'Lista de Ubicaciones', color: '#f7474a' },
-        { id: 'registrar', name: 'Añadir Ubicación', color: '#f7474a' }
+        { id: 'lista', name: 'Lista de Ubicaciones', color: '#f7474a' }
     ]
-    if (idUbicacionEditar.value !== null) {
-        items.push({ id: 'editar', name: 'Editar Ubicación', color: '#f7474a' })
+    if (authStore.puedeGestionarUsuarios) {
+        items.push({ id: 'registrar', name: 'Añadir Ubicación', color: '#f7474a' })
+        if (idUbicacionEditar.value !== null) {
+            items.push({ id: 'editar', name: 'Editar Ubicación', color: '#f7474a' })
+        }
     }
     return items
 })
 
-const headersTabla = [
-    { title: 'Código', key: 'codigo', align: 'center' as const },
-    { title: 'Nombre', key: 'nombre', align: 'center' as const },
-    { title: 'Planta', key: 'planta', align: 'center' as const },
-    { title: 'Estado', key: 'activa', align: 'center' as const },
-    { title: 'Descripción', key: 'descripcion', align: 'center' as const },
-    { title: 'Fecha Creación', key: 'creadoEn', align: 'center' as const },
-    { title: 'Última Actualización', key: 'actualizadoEn', align: 'center' as const },
-    { title: 'Acciones', key: 'acciones', sortable: false, align: 'center' as const }
-]
+const headersTabla = computed(() => {
+    const h: { title: string; key: string; align: 'center'; sortable?: boolean }[] = [
+        { title: 'Código', key: 'codigo', align: 'center' },
+        { title: 'Nombre', key: 'nombre', align: 'center' },
+        { title: 'Planta', key: 'planta', align: 'center' },
+        { title: 'Estado', key: 'activa', align: 'center' },
+        { title: 'Descripción', key: 'descripcion', align: 'center' },
+        { title: 'Fecha Creación', key: 'creadoEn', align: 'center' },
+        { title: 'Última Actualización', key: 'actualizadoEn', align: 'center' }
+    ]
+    if (authStore.puedeGestionarUsuarios) {
+        h.push({ title: 'Acciones', key: 'acciones', sortable: false, align: 'center' })
+    }
+    return h
+})
 
 const formatearFecha = (fecha: Date | string | null | undefined): string => {
     if (!fecha) return '—'
