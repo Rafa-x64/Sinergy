@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express'
 import { ResponseDTO } from '../../core/types/response.dto'
-import { RegistrarComponenteDTO, EditarComponenteDTO } from './componente.schemas'
+import { RegistrarComponenteDTO, EditarComponenteDTO, QueryComponente } from './componente.schemas'
 import { componenteService } from './componente.service'
 import { parsearId } from '../../core/utils/parsearId'
 import { capitalizarPalabras } from '../../core/utils/capitalizarPalabras'
@@ -155,12 +155,12 @@ export const componenteController = {
   },
 //----------------------------------------------------LISTAR-----------------------------------------------------------
   async listarComponentes(
-    req: Request<unknown, ResponseDTO, unknown, { equipoId?: string; activo?: string }>,
+    req: Request<unknown, ResponseDTO, unknown, QueryComponente>,
     res: Response<ResponseDTO>,
     next: NextFunction
   ) {
     try {
-      const { equipoId, activo } = req.query
+      const { equipoId, activo, busqueda, nombre, descripcion } = req.query
 
       let idEquipoFiltro: number | undefined = undefined
       let activoFiltro: boolean | undefined = undefined
@@ -185,7 +185,10 @@ export const componenteController = {
 
       const componentes = await componenteService.obtenerComponentes({
         equipoId: idEquipoFiltro,
-        activo: activoFiltro
+        activo: activoFiltro,
+        busqueda: busqueda ? busqueda.trim() : undefined,
+        nombre: nombre ? nombre.trim() : undefined,
+        descripcion: descripcion ? descripcion.trim() : undefined
       })
 
       if (componentes.length === 0) {

@@ -71,20 +71,23 @@ POST /api/auth/logout
 
 El endpoint de login devuelve el mismo mensaje `"Credenciales inválidas"` tanto si el email no existe como si la contraseña es incorrecta. Esto impide que un atacante deduzca si un email está registrado.
 
-### 1.4 Control Basado en Roles (RBAC)
+### 1.4 Control Basado en Roles (RBAC) y Middlewares
 
-- Roles definidos en tabla `Rol` del schema Prisma.
-- El JWT contiene el array `roles` del usuario en el momento del login.
-- Los roles se refrescan automáticamente al rotar el access token.
-- **Regla:** La autorización por rol **siempre** se valida en el backend. El frontend solo usa los roles para ocultar/mostrar UI.
+- **Middlewares Backend:**
+  - `apps/backend/src/core/middlewares/autorizarRol.ts`: Factory `autorizarRol(roles: string[])` que valida si el usuario autenticado posee al menos uno de los roles requeridos. Si no lo tiene, responde `HTTP 403 Forbidden` (`"Acceso denegado: rol no autorizado"`).
+  - `apps/backend/src/core/middlewares/autorizarRoles.ts`: Middleware especializado para soporte multi-rol granular.
+- **Roles principales en sistema**: `ADMINISTRADOR`, `SUPERVISOR`, `TECNICO`, `PLANIFICADOR`, `AUDITOR`.
+- **Frontend Guards**:
+  - `authStore.tieneRol(rol)` y `authStore.esAdmin` evalúan los roles desencriptados del Access Token para condicionalmente renderizar botones de acción (crear, editar, eliminar) y elementos del menú.
+  - `router.beforeEach` en `router.ts` valida `meta.roles` en cada transición de ruta.
 
 ### 1.5 Control de Acceso por Planta (PBAC — Plant-Based Access Control)
 
-- **Asociación obligatoria:** Cada usuario pertenece a exactamente una planta (`Usuario.plantaId`).
-- **Inclusión en JWT:** El `plantaId` viaja firmado en el `accessToken` (`TokenPayload.plantaId`) y se renueva en cada refresh de sesión.
-- **Aislamiento por backend:** Las consultas y transacciones en módulos operativos (`inspecciones`, `equipos`, `ubicaciones`, `plantas`, `variables-críticas`) extraen el `plantaId` directamente de `req.usuario.plantaId`.
-- **Excepción para ADMINISTRADOR:** Si el usuario posee el rol `ADMINISTRADOR`, `req.plantaId` queda `undefined`, permitiendo listar o filtrar a través de todas las plantas de forma global.
-- **Seguridad en creación de registros:** Al registrar inspecciones u operaciones, el backend fuerza la asociación a la planta del usuario autenticado, imposibilitando la inyección de datos cruzados entre plantas desde el frontend.
+- **Middleware `autorizarPlanta.ts`**:
+  - Inyecta `req.plantaId` en cada petición autenticada basándose en `req.usuario.plantaId`.
+  - **Bypass de Administrador**: Si el usuario cuenta con el rol `ADMINISTRADOR`, `req.plantaId` permanece `undefined` (o permite consultar libremente cualquier planta solicitada).
+  - **Aislamiento Multi-Tenant de Planta**: Para roles operativos (`SUPERVISOR`, `TECNICO`), todos los servicios de negocio (`equipos`, `ubicaciones`, `plantas`, `inspecciones`, `variables-críticas`) fuerzan las cláusulas `where: { plantaId }` o `where: { equipo: { ubicacion: { plantaId } } }`.
+  - Imposibilita la lectura o escritura cruzada entre plantas desde el frontend o clientes API externos.
 
 ---
 
@@ -141,10 +144,10 @@ Prisma parametriza todas las consultas automáticamente. **Regla:** nunca usar `
 
 ## 6. Seguridad Pendiente (Backlog)
 
-| Item | Prioridad | Descripción |
-|------|-----------|-------------|
-| Rate limiting | Alta | `express-rate-limit`: 5 intentos/15 min en `/api/auth/login` |
-| Middleware de roles | Alta | Guard `requerirRol(roles[])` para endpoints admin |
-| Logs estructurados | Media | Winston/Pino para registrar eventos de seguridad |
-| Rotación de refresh token | Media | Emitir nuevo refresh token en cada `/refresh` e invalidar el anterior |
-| `GET /api/auth/me` | Baja | Endpoint para obtener perfil completo del usuario autenticado |
+| Item | Prioridad | Estado | Descripción |
+|------|-----------|--------|-------------|
+| Middleware de roles | Alta | ✅ Implementado | Guards `autorizarRol(roles[])` y `autorizarPlanta` activos en rutas backend |
+| Rate limiting | Alta | Pendiente | `express-rate-limit`: 5 intentos/15 min en `/api/auth/login` |
+| Logs estructurados | Media | Pendiente | Winston/Pino para registrar eventos de seguridad |
+| Rotación de refresh token | Media | Pendiente | Emitir nuevo refresh token en cada `/refresh` e invalidar el anterior |
+| `GET /api/auth/me` | Baja | Pendiente | Endpoint para obtener perfil completo del usuario autenticado |

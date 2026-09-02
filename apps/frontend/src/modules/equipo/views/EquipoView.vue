@@ -5,6 +5,8 @@ import { useToast } from 'vue-toastification'
 import AppTabs from '../../../components/AppTabs.vue'
 import FormularioEquipo from '../components/FormularioEquipo.vue'
 import FormularioTipoEquipo from '../components/FormularioTipoEquipo.vue'
+import type { ConfiguracionCampoFiltro, ContenidoFiltro } from '../../../../../shared/types/index.ts'
+import FiltroGenerico from '../../../components/FiltroGenerico.vue'
 import {
   useEquipoStore,
   type Equipo,
@@ -143,19 +145,25 @@ const labelEstado = (estado: string): string => {
 // ─── Inicialización ───────────────────────────────────────────────────────────
 
 const inicializarDatos = async (): Promise<void> => {
-  const promesas: Promise<{ status: string; message?: string | null }>[] = [
-    equipoStore.listarEquipos(),
-    equipoStore.listarTiposEquipo()
-  ]
-  // Las ubicaciones solo se necesitan en el formulario de creación/edición (solo Admins)
-  if (authStore.puedeGestionarMaquinas) {
-    promesas.push(ubicacionStore.listarUbicaciones())
-  }
+  cargando.value = true
+  try {
+    const promesas: Promise<{ status: string; message?: string | null }>[] = [
+      equipoStore.listarEquipos(),
+      equipoStore.listarTiposEquipo()
+    ]
 
-  const [resEquipos, resTipos, resUbicaciones] = await Promise.all(promesas)
-  if (resEquipos.status === 'error') toast.error(resEquipos.message ?? 'Error al listar equipos')
-  if (resTipos.status === 'error') toast.error(resTipos.message ?? 'Error al listar tipos de equipo')
-  if (resUbicaciones && resUbicaciones.status === 'error') toast.error(resUbicaciones.message ?? 'Error al listar ubicaciones')
+    if (authStore.puedeGestionarMaquinas) {
+      promesas.push(ubicacionStore.listarUbicaciones())
+    }
+
+    const [resEquipos, resTipos, resUbicaciones] = await Promise.all(promesas)
+
+    if (resEquipos.status === 'error') toast.error(resEquipos.message ?? 'Error al listar equipos')
+    if (resTipos.status === 'error') toast.error(resTipos.message ?? 'Error al listar tipos de equipo')
+    if (resUbicaciones && resUbicaciones.status === 'error') toast.error(resUbicaciones.message ?? 'Error al listar ubicaciones')
+  } finally {
+    cargando.value = false
+  }
 }
 inicializarDatos()
 
@@ -307,6 +315,163 @@ watch(pestañaTipo, (nuevaPestana) => {
     datosFormularioTipo.value = { ...tipoVacio }
   }
 })
+
+type EquipmentFilterKeys =
+  | 'busqueda'
+  | 'codigo'
+  | 'nombre'
+  | 'marca'
+  | 'modelo'
+  | 'serial'
+  | 'estadoOperativo'
+  | 'tipoEquipoId'
+  | 'ubicacionTecnicaId'
+
+const equipmentFiltersConfig = computed<ConfiguracionCampoFiltro<EquipmentFilterKeys>[]>(() => {
+  const configs: ConfiguracionCampoFiltro<EquipmentFilterKeys>[] = [
+    {
+      key: 'busqueda',
+      nombre: 'Búsqueda Global',
+      tipo: 'text',
+      placeholder: 'Código, nombre o serial...',
+      retrasoMs: 400,
+      ancho: 4
+    },
+    {
+      key: 'codigo',
+      nombre: 'Código',
+      tipo: 'text',
+      placeholder: 'Filtrar por código...',
+      retrasoMs: 400,
+      ancho: 4
+    },
+    {
+      key: 'nombre',
+      nombre: 'Nombre',
+      tipo: 'text',
+      placeholder: 'Filtrar por nombre...',
+      retrasoMs: 400,
+      ancho: 4
+    },
+    {
+      key: 'marca',
+      nombre: 'Marca',
+      tipo: 'text',
+      placeholder: 'Filtrar por marca...',
+      retrasoMs: 400,
+      ancho: 3
+    },
+    {
+      key: 'modelo',
+      nombre: 'Modelo',
+      tipo: 'text',
+      placeholder: 'Filtrar por modelo...',
+      retrasoMs: 400,
+      ancho: 3
+    },
+    {
+      key: 'serial',
+      nombre: 'Serial',
+      tipo: 'text',
+      placeholder: 'Filtrar por serial...',
+      retrasoMs: 400,
+      ancho: 3
+    },
+    {
+      key: 'estadoOperativo',
+      nombre: 'Estado Operativo',
+      tipo: 'select',
+      ancho: 3,
+      opciones: [
+        { titulo: 'Operativo', valor: 'OPERATIVO' },
+        { titulo: 'En Mantenimiento', valor: 'EN_MANTENIMIENTO' },
+        { titulo: 'Inoperativo', valor: 'INOPERATIVO' }
+      ]
+    }
+  ]
+
+  if (tiposEquipo.value && tiposEquipo.value.length > 0) {
+    configs.push({
+      key: 'tipoEquipoId',
+      nombre: 'Tipo de Equipo',
+      tipo: 'select',
+      ancho: 3,
+      opciones: tiposEquipo.value.map((tipo) => ({
+        titulo: tipo.nombre,
+        valor: tipo.id
+      }))
+    })
+  }
+
+  if (ubicaciones.value && ubicaciones.value.length > 0) {
+    configs.push({
+      key: 'ubicacionTecnicaId',
+      nombre: 'Ubicación Técnica',
+      tipo: 'select',
+      ancho: 3,
+      opciones: ubicaciones.value.map((u) => ({
+        titulo: `${u.codigo} - ${u.nombre}`,
+        valor: u.id
+      }))
+    })
+  }
+
+  return configs
+})
+
+const handleFilterChange = async (payload: ContenidoFiltro): Promise<void> => {
+  cargando.value = true
+  try {
+    const res = await equipoStore.listarEquipos(payload)
+    if (res.status === 'error') {
+      toast.error(res.message ?? 'Error al aplicar filtros')
+    }
+  } finally {
+    cargando.value = false
+  }
+}
+
+type TiposFilterKeys = 'busqueda' | 'nombre' | 'descripcion'
+
+const tiposFiltersConfig: ConfiguracionCampoFiltro<TiposFilterKeys>[] = [
+  {
+    key: 'busqueda',
+    nombre: 'Búsqueda Global',
+    tipo: 'text',
+    placeholder: 'Nombre o descripción...',
+    retrasoMs: 400,
+    ancho: 4
+  },
+  {
+    key: 'nombre',
+    nombre: 'Nombre de Tipo',
+    tipo: 'text',
+    placeholder: 'Filtrar por nombre...',
+    retrasoMs: 400,
+    ancho: 4
+  },
+  {
+    key: 'descripcion',
+    nombre: 'Descripción',
+    tipo: 'text',
+    placeholder: 'Filtrar por descripción...',
+    retrasoMs: 400,
+    ancho: 4
+  }
+]
+
+const handleTiposFilterChange = async (payload: ContenidoFiltro): Promise<void> => {
+  cargando.value = true
+  try {
+    const res = await equipoStore.listarTiposEquipo(payload)
+    if (res.status === 'error') {
+      toast.error(res.message ?? 'Error al filtrar tipos de equipo')
+    }
+  } finally {
+    cargando.value = false
+  }
+}
+
 </script>
 
 <template>
@@ -317,12 +482,13 @@ watch(pestañaTipo, (nuevaPestana) => {
 
       <!-- ══════════════ SECCIÓN EQUIPOS ══════════════ -->
       <template #tab-equipos>
+        <FiltroGenerico :config="equipmentFiltersConfig" :loading="cargando"
+          @cambiar-filtro="handleFilterChange" />
         <AppTabs v-model="pestañaEquipo" :tabs="pestañasEquipo">
 
           <!-- Lista de Equipos -->
           <template #tab-lista-equipos>
-            <v-data-table :items="equipos" :headers="headersEquipos"
-              :no-data-text="'No hay equipos registrados'">
+            <v-data-table :items="equipos" :headers="headersEquipos" :no-data-text="'No hay equipos registrados'">
               <!-- Tipo -->
               <template #item.tipo="{ item }">
                 <span>{{ item.tipoEquipo?.nombre ?? '—' }}</span>
@@ -330,7 +496,8 @@ watch(pestañaTipo, (nuevaPestana) => {
 
               <!-- Ubicación Técnica -->
               <template #item.ubicacionTecnica="{ item }">
-                <span>{{ item.ubicacionTecnica ? `${item.ubicacionTecnica.codigo} - ${item.ubicacionTecnica.nombre}` : '—' }}</span>
+                <span>{{ item.ubicacionTecnica ? `${item.ubicacionTecnica.codigo} - ${item.ubicacionTecnica.nombre}` :
+                  '—' }}</span>
               </template>
 
               <!-- Marca / Modelo combinados -->
@@ -353,14 +520,12 @@ watch(pestañaTipo, (nuevaPestana) => {
               <!-- Acciones -->
               <template #item.acciones="{ item }">
                 <div class="d-flex ga-2 align-center justify-center">
-                  <v-btn color="primary" variant="text" size="small"
-                    @click="prepararEdicionEquipo(item)" prepend-icon="mdi-file-edit">
+                  <v-btn color="primary" variant="text" size="small" @click="prepararEdicionEquipo(item)"
+                    prepend-icon="mdi-file-edit">
                     Editar
                   </v-btn>
-                  <v-btn color="error" variant="text" size="small"
-                    @click="prepararEliminacionEquipo(item.id)"
-                    :disabled="item.estadoOperativo === 'INOPERATIVO'"
-                    prepend-icon="mdi-minus-circle">
+                  <v-btn color="error" variant="text" size="small" @click="prepararEliminacionEquipo(item.id)"
+                    :disabled="item.estadoOperativo === 'INOPERATIVO'" prepend-icon="mdi-minus-circle">
                     Desactivar
                   </v-btn>
                 </div>
@@ -374,9 +539,9 @@ watch(pestañaTipo, (nuevaPestana) => {
               <v-card-title class="px-0 mb-4 text-h5 font-weight-bold">
                 Registrar Nuevo Equipo
               </v-card-title>
-              <FormularioEquipo :datos-iniciales="equipoVacio" :cargando="cargando"
-                texto-boton="Guardar Equipo" :tipos-equipo="tiposEquipo" :ubicaciones="ubicaciones"
-                @submit="manejarGuardadoEquipo" @cancelar="cancelarEdicionEquipo" />
+              <FormularioEquipo :datos-iniciales="equipoVacio" :cargando="cargando" texto-boton="Guardar Equipo"
+                :tipos-equipo="tiposEquipo" :ubicaciones="ubicaciones" @submit="manejarGuardadoEquipo"
+                @cancelar="cancelarEdicionEquipo" />
             </v-card>
           </template>
 
@@ -397,6 +562,8 @@ watch(pestañaTipo, (nuevaPestana) => {
 
       <!-- ══════════════ SECCIÓN TIPOS DE EQUIPO ══════════════ -->
       <template #tab-tipos>
+        <FiltroGenerico :config="tiposFiltersConfig" :loading="cargando"
+          @cambiar-filtro="handleTiposFilterChange" />
         <AppTabs v-model="pestañaTipo" :tabs="pestañasTipo">
 
           <!-- Lista de Tipos -->
@@ -409,12 +576,12 @@ watch(pestañaTipo, (nuevaPestana) => {
 
               <template #item.acciones="{ item }">
                 <div class="d-flex ga-2 align-center justify-center">
-                  <v-btn color="primary" variant="text" size="small"
-                    @click="prepararEdicionTipo(item)" prepend-icon="mdi-file-edit">
+                  <v-btn color="primary" variant="text" size="small" @click="prepararEdicionTipo(item)"
+                    prepend-icon="mdi-file-edit">
                     Editar
                   </v-btn>
-                  <v-btn color="error" variant="text" size="small"
-                    @click="prepararEliminacionTipo(item.id)" prepend-icon="mdi-minus-circle">
+                  <v-btn color="error" variant="text" size="small" @click="prepararEliminacionTipo(item.id)"
+                    prepend-icon="mdi-minus-circle">
                     Eliminar
                   </v-btn>
                 </div>
@@ -428,9 +595,8 @@ watch(pestañaTipo, (nuevaPestana) => {
               <v-card-title class="px-0 mb-4 text-h5 font-weight-bold">
                 Registrar Tipo de Equipo
               </v-card-title>
-              <FormularioTipoEquipo :datos-iniciales="tipoVacio" :cargando="cargando"
-                texto-boton="Guardar Tipo" @submit="manejarGuardadoTipo"
-                @cancelar="cancelarEdicionTipo" />
+              <FormularioTipoEquipo :datos-iniciales="tipoVacio" :cargando="cargando" texto-boton="Guardar Tipo"
+                @submit="manejarGuardadoTipo" @cancelar="cancelarEdicionTipo" />
             </v-card>
           </template>
 
@@ -442,8 +608,7 @@ watch(pestañaTipo, (nuevaPestana) => {
               </v-card-title>
 
               <FormularioTipoEquipo :datos-iniciales="datosFormularioTipo" :cargando="cargando"
-                texto-boton="Actualizar Tipo" @submit="manejarGuardadoTipo"
-                @cancelar="cancelarEdicionTipo" />
+                texto-boton="Actualizar Tipo" @submit="manejarGuardadoTipo" @cancelar="cancelarEdicionTipo" />
             </v-card>
           </template>
         </AppTabs>
@@ -455,7 +620,8 @@ watch(pestañaTipo, (nuevaPestana) => {
       <v-card>
         <v-card-title class="text-h6 font-weight-bold text-error">Confirmar Acción</v-card-title>
         <v-card-text>
-          El equipo será marcado como <strong>Inoperativo</strong>. Esta acción puede revertirse editando el estado del equipo.
+          El equipo será marcado como <strong>Inoperativo</strong>. Esta acción puede revertirse editando el estado del
+          equipo.
         </v-card-text>
         <v-card-actions>
           <v-spacer />
@@ -463,8 +629,7 @@ watch(pestañaTipo, (nuevaPestana) => {
             @click="mostrarDialogoEliminarEquipo = false">
             Cancelar
           </v-btn>
-          <v-btn color="error" variant="flat" :loading="cargandoEliminacion"
-            @click="ejecutarEliminacionEquipo">
+          <v-btn color="error" variant="flat" :loading="cargandoEliminacion" @click="ejecutarEliminacionEquipo">
             Desactivar
           </v-btn>
         </v-card-actions>
@@ -484,8 +649,7 @@ watch(pestañaTipo, (nuevaPestana) => {
             @click="mostrarDialogoEliminarTipo = false">
             Cancelar
           </v-btn>
-          <v-btn color="error" variant="flat" :loading="cargandoEliminacionTipo"
-            @click="ejecutarEliminacionTipo">
+          <v-btn color="error" variant="flat" :loading="cargandoEliminacionTipo" @click="ejecutarEliminacionTipo">
             Eliminar
           </v-btn>
         </v-card-actions>

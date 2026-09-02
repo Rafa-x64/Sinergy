@@ -11,14 +11,16 @@ export const inspeccionesController = {
     next: NextFunction
   ) {
     try {
+      const esAdmin = req.usuario?.roles?.some((r: string) =>
+        r.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().includes('ADMINISTRADOR')
+      )
       const usuarioPlantaId: number | undefined = req.usuario?.plantaId ? Number(req.usuario.plantaId) : undefined
-      const esAdmin = !usuarioPlantaId
 
-      // Admins pueden filtrar por cualquier planta vía query param;
+      // Admins pueden filtrar por cualquier planta vía query param o su planta si viene;
       // usuarios normales siempre ven la suya.
       const plantaId = esAdmin
-        ? (req.query.plantaId !== undefined ? Number(req.query.plantaId) : NaN)
-        : usuarioPlantaId
+        ? (req.query.plantaId !== undefined ? Number(req.query.plantaId) : (usuarioPlantaId ?? NaN))
+        : (usuarioPlantaId ?? (req.query.plantaId !== undefined ? Number(req.query.plantaId) : NaN))
 
       const alcance = (req.query.alcance as AlcanceInspeccion) || 'POR_LINEA'
       const referenciaId = req.query.referenciaId ? Number(req.query.referenciaId) : undefined
@@ -57,11 +59,18 @@ export const inspeccionesController = {
         return res.status(401).json({ status: 'error', message: 'Usuario no autenticado' })
       }
 
-      // Forzar la planta del usuario autenticado sobre cualquier valor que venga en el body.
-      // Los admins (plantaId=undefined) pueden usar el plantaId del body.
+      const esAdmin = req.usuario?.roles?.some((r: string) =>
+        r.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().includes('ADMINISTRADOR')
+      )
+
+      // Si es admin, respeta la planta del body; si no, usa la planta de su perfil
+      const plantaId = esAdmin
+        ? (req.body.plantaId ? Number(req.body.plantaId) : (usuarioPlantaId ?? 1))
+        : (usuarioPlantaId ?? Number(req.body.plantaId)) ?? null
+
       const body: CrearInspeccionDTO = {
         ...req.body,
-        plantaId: usuarioPlantaId ?? req.body.plantaId ?? null,
+        plantaId,
       }
 
       const resultado = await inspeccionesService.crearInspeccion(usuarioId, body)

@@ -295,12 +295,18 @@ src/
 
 ### Stores actuales
 
-| Store               | Archivo                                    | Responsabilidad                                                                          |
-| ------------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------- |
-| `auth.store`        | `modules/auth/auth.store.ts`               | Access Token en memoria, estado de sesión, `login()`, `refrescarToken()`, `apiFetch()`   |
-| `dashboard.store`   | `modules/dashboard/dashboard.store.ts`   | Estado y datos del panel principal                                                      |
-| `equipment.store`   | `modules/equipment/equipment.store.ts`     | Lista de equipos, filtros activos, detalle seleccionado                                  |
-| `maintenance.store` | `modules/maintenance/maintenance.store.ts` | Variables críticas, reportes, estado de inspección                                       |
+| Store                 | Archivo                                         | Responsabilidad                                                                          |
+| --------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `auth.store`          | `modules/auth/auth.store.ts`                    | Access Token en memoria, estado de sesión, roles, `login()`, `refrescarToken()`, `apiFetch()` |
+| `usuarios.store`      | `modules/usuarios/usuarios.store.ts`            | Gestión de usuarios, alta, actualización, asignación de roles y vinculación a plantas    |
+| `plantas.store`       | `modules/plantas/plantas.store.ts`              | Catálogo de plantas industriales, CRUD y filtrado PBAC                                   |
+| `ubicacion.store`     | `modules/ubicaciones/ubicacion.store.ts`        | Ubicaciones técnicas por planta y jerarquía                                              |
+| `lineas.store`        | `modules/lineas/lineas.store.ts`                | Líneas operativas de producción                                                          |
+| `equipo.store`        | `modules/equipo/equipo.store.ts`                | Catálogo general de equipos y tipos de maquinaria industrial                             |
+| `componente.store`    | `modules/componentes/componente.store.ts`       | Partes y componentes constitutivos de maquinarias                                        |
+| `variables.store`     | `modules/variables/variables.store.ts`          | Árbol jerárquico, plantillas de variables por tipo de equipo e instancias por componente |
+| `inspecciones.store`  | `modules/inspecciones/inspecciones.store.ts`    | Wizard de captura, borrador local resiliente, estadísticas y bandeja de supervisión     |
+| `notificaciones.store`| `modules/notificaciones/notificaciones.store.ts`| WebSockets Socket.io, alertas técnicas y avisos de aprobación en tiempo real             |
 
 ---
 

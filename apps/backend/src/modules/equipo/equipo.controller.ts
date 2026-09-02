@@ -1,7 +1,7 @@
 import { equipoService } from './equipo.service'
 import { Request, Response, NextFunction } from 'express'
 import { ResponseDTO } from '../../core/types/response.dto'
-import { Params, RegistrarTipoDTO, EditarTipoDTO, RegistrarEquipoDTO, EditarEquipoDTO, QueryEquipo } from './equipo.schemas'
+import { Params, RegistrarTipoDTO, EditarTipoDTO, RegistrarEquipoDTO, EditarEquipoDTO, QueryEquipo, QueryTipoEquipo } from './equipo.schemas'
 import { parsearId } from '../../core/utils/parsearId'
 import { capitalizar } from '../../core/utils/capitalizar'
 import { capitalizarPalabras } from '../../core/utils/capitalizarPalabras'
@@ -241,7 +241,7 @@ export const equipoController = {
     next: NextFunction
   ) {
     try {
-      const { ubicacionTecnicaId, plantaId, tipoEquipoId, estadoOperativo, busqueda } = req.query
+      const { ubicacionTecnicaId, plantaId, tipoEquipoId, estadoOperativo, busqueda, codigo, nombre, marca, modelo, serial } = req.query
 
       const usuarioPlantaId: number | undefined = req.usuario?.plantaId ? Number(req.usuario.plantaId) : undefined
       let idUbicacionFiltro: number | undefined = undefined
@@ -285,7 +285,12 @@ export const equipoController = {
         plantaId: idPlantaFiltro,
         tipoEquipoId: idTipoEquipoFiltro,
         estadoOperativo: estadoOperativo as EstadoOperativo | undefined,
-        busqueda: busqueda ? busqueda.trim() : undefined
+        busqueda: busqueda ? busqueda.trim() : undefined,
+        codigo: codigo ? codigo.trim() : undefined,
+        nombre: nombre ? nombre.trim() : undefined,
+        marca: marca ? marca.trim() : undefined,
+        modelo: modelo ? modelo.trim() : undefined,
+        serial: serial ? serial.trim() : undefined
       }
 
       const equipos = await equipoService.obtenerEquipos(filtros)
@@ -392,17 +397,29 @@ export const equipoController = {
     }
   },
 
-  async listarTipos(req: Request, res: Response<ResponseDTO>, next: NextFunction) {
-    const tipos = await equipoService.obtenerTipos()
+  async listarTipos(req: Request<unknown, ResponseDTO, unknown, QueryTipoEquipo>, res: Response<ResponseDTO>, next: NextFunction) {
+    try {
+      const { busqueda, nombre, descripcion } = req.query
 
-    if (!tipos) {
-      return res.status(400).json({ status: 'error', message: 'error al consultar los tipos' })
-    }
-    if (tipos.length === 0) {
-      return res.status(404).json({ status: 'error', message: 'no hay tipos registrados aun' })
-    }
+      const filtros = {
+        busqueda: busqueda ? busqueda.trim() : undefined,
+        nombre: nombre ? nombre.trim() : undefined,
+        descripcion: descripcion ? descripcion.trim() : undefined
+      }
 
-    return res.status(200).json({ status: 'ok', message: 'tipos de equipos encontrados', data: tipos })
+      const tipos = await equipoService.obtenerTipos(filtros)
+
+      if (!tipos) {
+        return res.status(400).json({ status: 'error', message: 'error al consultar los tipos' })
+      }
+      if (tipos.length === 0) {
+        return res.status(404).json({ status: 'error', message: 'no hay tipos registrados aun' })
+      }
+
+      return res.status(200).json({ status: 'ok', message: 'tipos de equipos encontrados', data: tipos })
+    } catch (error: unknown) {
+      next(error)
+    }
   },
 
   async editarTipo(req: Request<any, {}, EditarTipoDTO>, res: Response<ResponseDTO>, next: NextFunction) {

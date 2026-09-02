@@ -5,6 +5,8 @@ import { storeToRefs } from 'pinia'
 import { useToast } from 'vue-toastification'
 import AppTabs from '../../../components/AppTabs.vue'
 import FormularioEquipo from '../components/FormularioEquipo.vue'
+import FiltroGenerico from '../../../components/FiltroGenerico.vue'
+import type { ConfiguracionCampoFiltro, ContenidoFiltro } from '../../../../../shared/types'
 import {
   useEquipoStore,
   type Equipo,
@@ -41,12 +43,136 @@ const tipoEquipoActual = computed(() => {
   return tiposEquipo.value.find(t => t.nombre.toLowerCase().includes(raizBusqueda.value))
 })
 
-// Filtra reactivamente la lista global de equipos por el tipo actual
+// Filtro local del componente
+const filtrosLocales = ref<ContenidoFiltro>({})
+
+const handleFilterChange = (payload: ContenidoFiltro): void => {
+  filtrosLocales.value = payload
+}
+
+// Filtra reactivamente la lista global de equipos por el tipo actual y los filtros aplicados
 const equiposFiltrados = computed<Equipo[]>(() => {
-  if (!tipoFiltro.value) return equipos.value
-  return equipos.value.filter(e =>
-    e.tipoEquipo?.nombre.toLowerCase().includes(raizBusqueda.value)
-  )
+  let resultado = equipos.value
+
+  if (tipoFiltro.value) {
+    resultado = resultado.filter(e =>
+      e.tipoEquipo?.nombre.toLowerCase().includes(raizBusqueda.value)
+    )
+  }
+
+  const f = filtrosLocales.value
+  if (!f || Object.keys(f).length === 0) {
+    return resultado
+  }
+
+  return resultado.filter(e => {
+    if (f.busqueda) {
+      const q = String(f.busqueda).toLowerCase()
+      const matchCodigo = e.codigo?.toLowerCase().includes(q)
+      const matchNombre = e.nombre?.toLowerCase().includes(q)
+      const matchSerial = e.serial?.toLowerCase().includes(q)
+      const matchMarca = e.marca?.toLowerCase().includes(q)
+      const matchModelo = e.modelo?.toLowerCase().includes(q)
+      if (!matchCodigo && !matchNombre && !matchSerial && !matchMarca && !matchModelo) return false
+    }
+    if (f.codigo && !e.codigo?.toLowerCase().includes(String(f.codigo).toLowerCase())) return false
+    if (f.nombre && !e.nombre?.toLowerCase().includes(String(f.nombre).toLowerCase())) return false
+    if (f.marca && !e.marca?.toLowerCase().includes(String(f.marca).toLowerCase())) return false
+    if (f.modelo && !e.modelo?.toLowerCase().includes(String(f.modelo).toLowerCase())) return false
+    if (f.serial && !e.serial?.toLowerCase().includes(String(f.serial).toLowerCase())) return false
+    if (f.estadoOperativo && e.estadoOperativo !== f.estadoOperativo) return false
+    if (f.ubicacionTecnicaId && e.ubicacionTecnicaId !== Number(f.ubicacionTecnicaId)) return false
+    return true
+  })
+})
+
+type EquipmentByTypeFilterKeys =
+  | 'busqueda'
+  | 'codigo'
+  | 'nombre'
+  | 'marca'
+  | 'modelo'
+  | 'serial'
+  | 'estadoOperativo'
+  | 'ubicacionTecnicaId'
+
+const equipmentFiltersConfig = computed<ConfiguracionCampoFiltro<EquipmentByTypeFilterKeys>[]>(() => {
+  const configs: ConfiguracionCampoFiltro<EquipmentByTypeFilterKeys>[] = [
+    {
+      key: 'busqueda',
+      nombre: 'Búsqueda Global',
+      tipo: 'text',
+      placeholder: 'Código, nombre o serial...',
+      retrasoMs: 400,
+      ancho: 4
+    },
+    {
+      key: 'codigo',
+      nombre: 'Código',
+      tipo: 'text',
+      placeholder: 'Filtrar por código...',
+      retrasoMs: 400,
+      ancho: 4
+    },
+    {
+      key: 'nombre',
+      nombre: 'Nombre',
+      tipo: 'text',
+      placeholder: 'Filtrar por nombre...',
+      retrasoMs: 400,
+      ancho: 4
+    },
+    {
+      key: 'marca',
+      nombre: 'Marca',
+      tipo: 'text',
+      placeholder: 'Filtrar por marca...',
+      retrasoMs: 400,
+      ancho: 3
+    },
+    {
+      key: 'modelo',
+      nombre: 'Modelo',
+      tipo: 'text',
+      placeholder: 'Filtrar por modelo...',
+      retrasoMs: 400,
+      ancho: 3
+    },
+    {
+      key: 'serial',
+      nombre: 'Serial',
+      tipo: 'text',
+      placeholder: 'Filtrar por serial...',
+      retrasoMs: 400,
+      ancho: 3
+    },
+    {
+      key: 'estadoOperativo',
+      nombre: 'Estado Operativo',
+      tipo: 'select',
+      ancho: 3,
+      opciones: [
+        { titulo: 'Operativo', valor: 'OPERATIVO' },
+        { titulo: 'En Mantenimiento', valor: 'EN_MANTENIMIENTO' },
+        { titulo: 'Inoperativo', valor: 'INOPERATIVO' }
+      ]
+    }
+  ]
+
+  if (ubicaciones.value && ubicaciones.value.length > 0) {
+    configs.push({
+      key: 'ubicacionTecnicaId',
+      nombre: 'Ubicación Técnica',
+      tipo: 'select',
+      ancho: 3,
+      opciones: ubicaciones.value.map((u) => ({
+        titulo: `${u.codigo} - ${u.nombre}`,
+        valor: u.id
+      }))
+    })
+  }
+
+  return configs
 })
 
 // ─── Estado de UI ────────────────────────────────────────────────────────────
@@ -88,26 +214,33 @@ const cargandoEliminacion = ref(false)
 
 const pestañasVista = computed<TabItem[]>(() => {
   const items: TabItem[] = [
-    { id: 'lista', name: 'Lista', color: 'safety-orange-light' },
-    { id: 'registrar', name: 'Añadir', color: 'safety-orange-light' }
+    { id: 'lista', name: 'Lista', color: 'safety-orange-light' }
   ]
-  if (idEquipoEditar.value !== null) {
-    items.push({ id: 'editar', name: 'Editar', color: 'safety-orange-light' })
+  if (authStore.puedeGestionarMaquinas) {
+    items.push({ id: 'registrar', name: 'Añadir', color: 'safety-orange-light' })
+    if (idEquipoEditar.value !== null) {
+      items.push({ id: 'editar', name: 'Editar', color: 'safety-orange-light' })
+    }
   }
   return items
 })
 
 // ─── Headers de tabla ────────────────────────────────────────────────────────
 
-const headersTabla = [
-  { title: 'Código', key: 'codigo', align: 'center' as const },
-  { title: 'Nombre', key: 'nombre', align: 'center' as const },
-  { title: 'Ubicación Técnica', key: 'ubicacionTecnica', align: 'center' as const },
-  { title: 'Marca / Modelo', key: 'marcaModelo', align: 'center' as const },
-  { title: 'Serial', key: 'serial', align: 'center' as const },
-  { title: 'Estado', key: 'estadoOperativo', align: 'center' as const },
-  { title: 'Acciones', key: 'acciones', sortable: false, align: 'center' as const }
-]
+const headersTabla = computed(() => {
+  const h: { title: string; key: string; align: 'center'; sortable?: boolean }[] = [
+    { title: 'Código', key: 'codigo', align: 'center' as const },
+    { title: 'Nombre', key: 'nombre', align: 'center' as const },
+    { title: 'Ubicación Técnica', key: 'ubicacionTecnica', align: 'center' as const },
+    { title: 'Marca / Modelo', key: 'marcaModelo', align: 'center' as const },
+    { title: 'Serial', key: 'serial', align: 'center' as const },
+    { title: 'Estado', key: 'estadoOperativo', align: 'center' as const }
+  ]
+  if (authStore.puedeGestionarMaquinas) {
+    h.push({ title: 'Acciones', key: 'acciones', sortable: false, align: 'center' as const })
+  }
+  return h
+})
 
 // ─── Utilidades de color ─────────────────────────────────────────────────────
 
@@ -233,6 +366,8 @@ watch(pestañaActiva, (nuevaPestana) => {
     <AppTabs v-model="pestañaActiva" :tabs="pestañasVista">
       <!-- Pestaña 1: Lista de equipos filtrados -->
       <template #tab-lista>
+        <FiltroGenerico :config="equipmentFiltersConfig" :loading="cargando"
+          @cambiar-filtro="handleFilterChange" />
         <v-data-table :items="equiposFiltrados" :headers="headersTabla"
           :no-data-text="`No hay ${tipoFiltro.toLowerCase()} registrados`">
           <template #item.ubicacionTecnica="{ item }">

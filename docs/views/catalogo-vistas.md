@@ -21,17 +21,21 @@ Este manual documenta todas las vistas (componentes de página) de la Single Pag
 
 ## 1. Mapa General de Vistas
 
-| Vista | Ruta | Autenticación (`meta`) | Layout | Propósito |
-|---|---|---|---|---|
-| `LoginView.vue` | `/login` | Pública (`requiresAuth: false`) | Sin Menú (`hideLayout: true`) | Inicio de sesión mediante usuario y contraseña |
-| `DashboardView.vue` | `/dashboard` | Privada (`requiresAuth: true`) | Con Menú Lateral | Muestra métricas de estado operativo e indicadores |
-| `PlantasView.vue` | `/plantas` | Privada (`requiresAuth: true`) | Con Menú Lateral | Catálogo de plantas industriales (CRUD + Soft Delete) |
-| `UbicacionesView.vue` | `/ubicaciones` | Privada (`requiresAuth: true`) | Con Menú Lateral | Gestión de ubicaciones técnicas vinculadas a plantas |
-| `LineasView.vue` | `/lineas` | Privada (`requiresAuth: true`) | Con Menú Lateral | Administración de líneas de producción por ubicación |
-| `EquipoView.vue` | `/equipos` | Privada (`requiresAuth: true`) | Con Menú Lateral | Catálogo general de equipos y administración de Tipos de Equipo |
-| `EquiposPorTipoView.vue` | `/montacargas`, `/compresor`, `/generador`, `/chiller` | Privada (`requiresAuth: true`) | Con Menú Lateral | Vista reutilizable parametrizada que filtra la maquinaria por su tipo correspondiente |
-| `MantenimientoView.vue` | `/mantenimiento` | Privada (`requiresAuth: true`) | Con Menú Lateral | Órdenes de trabajo, inspecciones e historial técnico |
-| `NotFoundView.vue` | `/:pathMatch(.*)*` | Pública (`requiresAuth: false`) | Sin Menú (`hideLayout: true`) | Pantalla 404 para rutas inexistentes |
+| Vista | Ruta | Autenticación (`meta`) | Roles Permitidos | Layout | Propósito |
+|---|---|---|---|---|---|
+| `LoginView.vue` | `/login` | Pública (`requiresAuth: false`) | Todos | Sin Menú (`hideLayout: true`) | Inicio de sesión mediante usuario y contraseña |
+| `DashboardView.vue` | `/dashboard` | Privada (`requiresAuth: true`) | Todos | Con Menú Lateral | Muestra métricas de estado operativo e indicadores |
+| `PlantasView.vue` | `/plantas` | Privada (`requiresAuth: true`) | `ADMINISTRADOR`, `SUPERVISOR` | Con Menú Lateral | Catálogo de plantas industriales (CRUD + PBAC) |
+| `UbicacionesView.vue` | `/ubicaciones` | Privada (`requiresAuth: true`) | `ADMINISTRADOR`, `SUPERVISOR` | Con Menú Lateral | Gestión de ubicaciones técnicas vinculadas a plantas |
+| `LineasView.vue` | `/lineas` | Privada (`requiresAuth: true`) | `ADMINISTRADOR`, `SUPERVISOR` | Con Menú Lateral | Administración de líneas de producción por ubicación |
+| `EquipoView.vue` | `/equipos` | Privada (`requiresAuth: true`) | Todos (Escritura: `ADMINISTRADOR`, `SUPERVISOR`) | Con Menú Lateral | Catálogo general de equipos y administración de Tipos de Equipo |
+| `EquiposPorTipoView.vue` | `/montacargas`, `/compresor`, `/generador`, `/chiller` | Privada (`requiresAuth: true`) | Todos | Con Menú Lateral | Vista reutilizable parametrizada que filtra la maquinaria por su tipo |
+| `ComponentesView.vue` | `/componentes` | Privada (`requiresAuth: true`) | Todos | Con Menú Lateral | Administración de componentes mecánicos/eléctricos de equipos |
+| `VariablesCriticasView.vue` | `/variables-criticas` | Privada (`requiresAuth: true`) | `ADMINISTRADOR`, `SUPERVISOR` | Con Menú Lateral | Gestión jerárquica de variables críticas y plantillas por tipo de equipo |
+| `InspeccionesView.vue` | `/inspecciones` | Privada (`requiresAuth: true`) | Todos (Técnico: captura, Supervisor: aprobación) | Con Menú Lateral | Form Wizard de captura en campo y bandeja de supervisión |
+| `UsuariosView.vue` | `/usuarios` | Privada (`requiresAuth: true`) | `ADMINISTRADOR` | Con Menú Lateral | Administración de usuarios, asignación a planta y control de roles |
+| `NotificacionesGlobalesView.vue` | `/notificaciones` | Privada (`requiresAuth: true`) | Todos | Con Menú Lateral | Historial y centro de notificaciones en tiempo real |
+| `NotFoundView.vue` | `/:pathMatch(.*)*` | Pública (`requiresAuth: false`) | Todos | Sin Menú (`hideLayout: true`) | Pantalla 404 para rutas inexistentes |
 
 ---
 
@@ -61,27 +65,9 @@ Este manual documenta todas las vistas (componentes de página) de la Single Pag
 - **Store Consumido**: `usePlantasStore` (`plantas.store.ts`)
 - **Componentes Incrustados**: `AppTabs.vue`, `PlantaForm.vue`
 - **Estructura y Pestañas**:
-  1. `tab-lista`: Tabla `<v-data-table>` con columnas `codigo`, `nombre`, `activa` y botones de acción.
+  1. `tab-lista`: Tabla `<v-data-table>` con columnas `codigo`, `nombre`, `activa` y botones de acción condicionados por rol.
   2. `tab-registrar`: Formulario para registrar una nueva planta.
   3. `tab-editar`: Formulario precargado para modificar una planta existente.
-
-```vue
-<!-- Patron de inicialización inmediata de datos en PlantasView.vue -->
-<script setup lang="ts">
-import { usePlantasStore } from '../plantas.store'
-import { useToast } from 'vue-toastification'
-
-const toast = useToast()
-const plantaStore = usePlantasStore()
-
-// Carga directa en el setup sin esperar a onMounted
-const inicializarDatos = async () => {
-    const res = await plantaStore.listarPlantas()
-    if (res.status === 'error') toast.error(res.message ?? 'Error al listar plantas')
-}
-inicializarDatos()
-</script>
-```
 
 ---
 
@@ -89,8 +75,8 @@ inicializarDatos()
 
 - **Ubicación**: `apps/frontend/src/modules/ubicaciones/views/UbicacionesView.vue`
 - **Store Consumido**: `useUbicacionesStore`, `usePlantasStore`
-- **Componentes Incrustados**: `AppTabs.vue`, `UbicacionForm.vue`
-- **Propósito**: Administrar las ubicaciones dentro de cada planta. Incluye selectores reactivos para asociar una ubicación a su planta padre.
+- **Componentes Incrustados**: `AppTabs.vue`, `FormularioUbicacion.vue`
+- **Propósito**: Administrar las ubicaciones dentro de cada planta. Incluye selectores reactivos para asociar una ubicación a su planta padre con aislamiento PBAC.
 
 ---
 
@@ -98,7 +84,7 @@ inicializarDatos()
 
 - **Ubicación**: `apps/frontend/src/modules/lineas/views/LineasView.vue`
 - **Store Consumido**: `useLineasStore`, `useUbicacionesStore`
-- **Propósito**: Gestionar las líneas operativas (ej: Línea de Extrusión 1, Línea de Inyección 2) asignadas a ubicaciones técnicas.
+- **Propósito**: Gestionar las líneas operativas asignadas a ubicaciones técnicas.
 
 ---
 
@@ -107,7 +93,7 @@ inicializarDatos()
 - **Ubicación**: `apps/frontend/src/modules/equipo/views/EquipoView.vue`
 - **Store Consumido**: `useEquipoStore`
 - **Componentes Incrustados**: `AppTabs.vue`, `FormularioEquipo.vue`, `FormularioTipoEquipo.vue`
-- **Propósito**: Catálogo principal de activos industriales. Muestra pestañas de primer nivel para alternar entre la gestión de Equipos y la administración de Tipos de Equipo.
+- **Propósito**: Catálogo principal de activos industriales. Muestra pestañas de primer nivel para alternar entre la gestión de Equipos y la administración de Tipos de Equipo. Protege acciones de escritura con `authStore.tieneRol`.
 
 ---
 
@@ -116,20 +102,51 @@ inicializarDatos()
 - **Ubicación**: `apps/frontend/src/modules/equipo/views/EquiposPorTipoView.vue`
 - **Store Consumido**: `useEquipoStore`, `useLineaStore`
 - **Componentes Incrustados**: `AppTabs.vue`, `FormularioEquipo.vue`
-- **Propósito**: Vista reutilizable parametrizada mediante metadatos de ruta (`route.meta.tipoFiltro`). Servida en las rutas `/montacargas`, `/compresor`, `/generador` y `/chiller`. Filtra reactivamente la maquinaria del tipo correspondiente y preselecciona el tipo de equipo en la pestaña de registro sin duplicar código ni carpetas.
+- **Propósito**: Vista reutilizable parametrizada mediante metadatos de ruta (`route.meta.tipoFiltro`). Servida en las rutas `/montacargas`, `/compresor`, `/generador` y `/chiller`.
 
 ---
 
-## 9. Vista `MantenimientoView.vue`
+## 9. Vista `VariablesCriticasView.vue`
 
-- **Ubicación**: `apps/frontend/src/modules/mantenimiento/views/MantenimientoView.vue`
-- **Store Consumido**: `useMantenimientoStore`
-- **Propósito**: Registro de órdenes de mantenimiento preventivo y correctivo, captura de métricas por técnicos y supervisión de tareas pendientes.
+- **Ubicación**: `apps/frontend/src/modules/variables/views/VariablesCriticasView.vue`
+- **Store Consumido**: `useVariablesStore`
+- **Componentes Incrustados**: `JerarquiaTreeView.vue`, `PlantillasVariablesPanel.vue`, `DetalleVariablesPanel.vue`, `DialogoPlantillaVariable.vue`, `DialogosJerarquia.vue`
+- **Propósito**: Panel dual de ingeniería para administración de variables de inspección. Permite navegación en árbol por Planta → Ubicación → Equipo → Componentes, edición de límites operativos (min/max), y gestión global de plantillas por tipo de equipo con auto-propagación.
 
 ---
 
-## 10. Vista `NotFoundView.vue` (404)
+## 10. Vista `InspeccionesView.vue`
+
+- **Ubicación**: `apps/frontend/src/modules/inspecciones/views/InspeccionesView.vue`
+- **Store Consumido**: `useInspeccionesStore`, `useAuthStore`
+- **Componentes Incrustados**: `FormWizardInspeccion.vue`, `WizardSeleccionAlcance.vue`, `BandejaSupervisionPanel.vue`, `DetalleInspeccionModal.vue`, `ResumenInspeccionDialog.vue`
+- **Propósito**: Módulo operativo para ejecución y supervisión de inspecciones industriales:
+  - **Técnicos**: Asistente guiado por pasos (Planta, Maquinaria/Línea, Captura de variables con alerta de desvío e ingreso rápido para variables sin rango). Soporte de borrador local.
+  - **Supervisores**: Bandeja de entrada con filtros, inspección detallada de desvíos, modal de resolución y cambio de estado (`APROBADO` / `RECHAZADO` con justificación).
+
+---
+
+## 11. Vista `UsuariosView.vue`
+
+- **Ubicación**: `apps/frontend/src/modules/usuarios/views/UsuariosView.vue`
+- **Store Consumido**: `useUsuariosStore`, `usePlantasStore`
+- **Componentes Incrustados**: `FormularioUsuario.vue`
+- **Propósito**: Panel exclusivo para usuarios con rol `ADMINISTRADOR`. Permite listar usuarios registrados, dar de alta nuevos operadores, modificar credenciales, asignar la planta base y conceder roles múltiples (`ADMINISTRADOR`, `SUPERVISOR`, `TECNICO`).
+
+---
+
+## 12. Vista `NotificacionesGlobalesView.vue`
+
+- **Ubicación**: `apps/frontend/src/modules/notificaciones/views/NotificacionesGlobalesView.vue`
+- **Store Consumido**: `useNotificacionesStore`
+- **Componentes Incrustados**: `NotificationBell.vue`
+- **Propósito**: Centro de alertas del usuario para seguimiento de inspecciones pendientes, aprobaciones y rechazos emitidos en tiempo real por WebSockets.
+
+---
+
+## 13. Vista `NotFoundView.vue` (404)
 
 - **Ubicación**: `apps/frontend/src/views/NotFoundView.vue`
 - **Propósito**: Captura cualquier ruta no registrada en Vue Router y ofrece un botón de retorno seguro al Dashboard o Login.
+
 

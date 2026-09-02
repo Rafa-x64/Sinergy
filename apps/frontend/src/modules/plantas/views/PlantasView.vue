@@ -8,6 +8,8 @@ import { usePlantasStore, type RegistrarPlantaDTO, type Planta } from '../planta
 import type { TabItem } from '../../../core/types/tabs'
 import HeaderViews from '../../../components/HeaderViews.vue'
 import { useAuthStore } from '../../auth/auth.store'
+import FiltroGenerico from '../../../components/FiltroGenerico.vue'
+import type { ConfiguracionCampoFiltro, ContenidoFiltro } from '../../../../../shared/types'
 
 const toast = useToast()
 const authStore = useAuthStore()
@@ -136,6 +138,69 @@ watch(pestañaActiva, (nuevaPestana) => {
         datosFormulario.value = { ...plantaVacia }
     }
 })
+
+type PlantaFilterKeys = 'busqueda' | 'codigo' | 'nombre' | 'activa'
+
+const filtrosActivos = ref<ContenidoFiltro>({})
+
+const plantasFiltersConfig = computed<ConfiguracionCampoFiltro<PlantaFilterKeys>[]>(() => [
+    {
+        key: 'busqueda',
+        nombre: 'Búsqueda Global',
+        tipo: 'text',
+        placeholder: 'Código o nombre...',
+        retrasoMs: 300,
+        ancho: 4
+    },
+    {
+        key: 'codigo',
+        nombre: 'Código',
+        tipo: 'text',
+        placeholder: 'Filtrar por código...',
+        retrasoMs: 300,
+        ancho: 4
+    },
+    {
+        key: 'nombre',
+        nombre: 'Nombre',
+        tipo: 'text',
+        placeholder: 'Filtrar por nombre...',
+        retrasoMs: 300,
+        ancho: 4
+    },
+    {
+        key: 'activa',
+        nombre: 'Estado',
+        tipo: 'select',
+        ancho: 4,
+        opciones: [
+            { titulo: 'Activas', valor: 'true' },
+            { titulo: 'Inactivas', valor: 'false' }
+        ]
+    }
+])
+
+const plantasFiltradas = computed<Planta[]>(() => {
+    return plantas.value.filter(p => {
+        const { busqueda, codigo, nombre, activa } = filtrosActivos.value
+
+        if (busqueda) {
+            const term = String(busqueda).toLowerCase()
+            if (!p.codigo.toLowerCase().includes(term) && !p.nombre.toLowerCase().includes(term)) return false
+        }
+        if (codigo && !p.codigo.toLowerCase().includes(String(codigo).toLowerCase())) return false
+        if (nombre && !p.nombre.toLowerCase().includes(String(nombre).toLowerCase())) return false
+        if (activa !== undefined && activa !== '') {
+            const esperado = activa === 'true' || activa === true
+            if (p.activa !== esperado) return false
+        }
+        return true
+    })
+})
+
+const handleFiltroPlantas = (payload: ContenidoFiltro): void => {
+    filtrosActivos.value = payload
+}
 </script>
 
 <template>
@@ -144,7 +209,9 @@ watch(pestañaActiva, (nuevaPestana) => {
         <AppTabs v-model="pestañaActiva" :tabs="pestañasPlantas">
 
             <template #tab-lista>
-                <v-data-table :items="plantas" :headers="headersTabla">
+                <FiltroGenerico :config="plantasFiltersConfig" :loading="cargando"
+                    @cambiar-filtro="handleFiltroPlantas" />
+                <v-data-table :items="plantasFiltradas" :headers="headersTabla">
                     <template #item.activa="{ item }">
                         <v-chip :color="item.activa ? 'success' : 'error'" size="small">
                             {{ item.activa ? 'Activa' : 'Inactiva' }}

@@ -1,5 +1,5 @@
 import prisma from '../../core/prisma'
-import { EditarTipoDTO, RegistrarTipoDTO, RegistrarEquipoDTO, EditarEquipoDTO, FiltrosObtenerEquipos } from './equipo.schemas'
+import { EditarTipoDTO, RegistrarTipoDTO, RegistrarEquipoDTO, EditarEquipoDTO, FiltrosObtenerEquipos, FiltrosTipoEquipo } from './equipo.schemas'
 import { Prisma, EstadoOperativo } from '@prisma/client'
 
 const INCLUDE_EQUIPO_RELACIONES: Prisma.EquipoInclude = {
@@ -54,11 +54,33 @@ class EquipoService {
       where.estadoOperativo = filtros.estadoOperativo
     }
 
+    if (filtros.codigo) {
+      where.codigo = { contains: filtros.codigo, mode: 'insensitive' }
+    }
+
+    if (filtros.nombre) {
+      where.nombre = { contains: filtros.nombre, mode: 'insensitive' }
+    }
+
+    if (filtros.marca) {
+      where.marca = { contains: filtros.marca, mode: 'insensitive' }
+    }
+
+    if (filtros.modelo) {
+      where.modelo = { contains: filtros.modelo, mode: 'insensitive' }
+    }
+
+    if (filtros.serial) {
+      where.serial = { contains: filtros.serial, mode: 'insensitive' }
+    }
+
     if (filtros.busqueda) {
       where.OR = [
         { codigo: { contains: filtros.busqueda, mode: 'insensitive' } },
         { nombre: { contains: filtros.busqueda, mode: 'insensitive' } },
-        { serial: { contains: filtros.busqueda, mode: 'insensitive' } }
+        { serial: { contains: filtros.busqueda, mode: 'insensitive' } },
+        { marca: { contains: filtros.busqueda, mode: 'insensitive' } },
+        { modelo: { contains: filtros.busqueda, mode: 'insensitive' } }
       ]
     }
 
@@ -116,8 +138,28 @@ class EquipoService {
     })
   }
 
-  async obtenerTipos() {
-    return prisma.tipoEquipo.findMany()
+  async obtenerTipos(filtros?: FiltrosTipoEquipo) {
+    const where: Prisma.TipoEquipoWhereInput = {}
+
+    if (filtros?.nombre) {
+      where.nombre = { contains: filtros.nombre, mode: 'insensitive' }
+    }
+
+    if (filtros?.descripcion) {
+      where.descripcion = { contains: filtros.descripcion, mode: 'insensitive' }
+    }
+
+    if (filtros?.busqueda) {
+      where.OR = [
+        { nombre: { contains: filtros.busqueda, mode: 'insensitive' } },
+        { descripcion: { contains: filtros.busqueda, mode: 'insensitive' } }
+      ]
+    }
+
+    return prisma.tipoEquipo.findMany({
+      where,
+      orderBy: { nombre: 'asc' }
+    })
   }
 
   async editarTipo(datos: EditarTipoDTO, id: number) {

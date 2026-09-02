@@ -31,6 +31,11 @@ export interface QueryEquipo {
   tipoEquipoId?: string
   estadoOperativo?: EstadoOperativo
   busqueda?: string
+  codigo?: string
+  nombre?: string
+  marca?: string
+  modelo?: string
+  serial?: string
 }
 
 export interface FiltrosObtenerEquipos {
@@ -39,6 +44,11 @@ export interface FiltrosObtenerEquipos {
   tipoEquipoId?: number
   estadoOperativo?: EstadoOperativo
   busqueda?: string
+  codigo?: string
+  nombre?: string
+  marca?: string
+  modelo?: string
+  serial?: string
 }
 
 export interface Params {
@@ -52,6 +62,18 @@ export interface RegistrarTipoDTO {
 }
 
 export interface EditarTipoDTO {
+  nombre?: string
+  descripcion?: string
+}
+
+export interface QueryTipoEquipo {
+  busqueda?: string
+  nombre?: string
+  descripcion?: string
+}
+
+export interface FiltrosTipoEquipo {
+  busqueda?: string
   nombre?: string
   descripcion?: string
 }
