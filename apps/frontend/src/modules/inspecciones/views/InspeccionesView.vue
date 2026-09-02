@@ -7,6 +7,7 @@ import WizardSeleccionAlcance from '../components/WizardSeleccionAlcance.vue'
 import FormWizardInspeccion from '../components/FormWizardInspeccion.vue'
 import ResumenInspeccionDialog from '../components/ResumenInspeccionDialog.vue'
 import BandejaSupervisionPanel from '../components/BandejaSupervisionPanel.vue'
+import PanelHistorialInspecciones from '../components/PanelHistorialInspecciones.vue'
 import { useInspeccionesStore } from '../inspecciones.store'
 import { useAuthStore } from '../../auth/auth.store'
 
@@ -100,13 +101,7 @@ onMounted(() => {
 
       <!-- Pestaña 3: Historial General -->
       <template #tab-historial>
-        <v-card class="elevation-1 pa-6 rounded-lg text-center bg-surface border">
-          <v-icon size="48" color="#5cb85c" class="mb-2">mdi-history</v-icon>
-          <h3 class="text-subtitle-1 font-weight-bold">Historial General de Inspecciones</h3>
-          <p class="text-caption text-medium-emphasis">
-            Filtra y exporta el registro histórico de inspecciones aprobadas y rechazadas.
-          </p>
-        </v-card>
+        <PanelHistorialInspecciones />
       </template>
     </AppTabs>
 

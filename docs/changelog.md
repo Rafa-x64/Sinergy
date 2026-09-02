@@ -16,6 +16,20 @@ El formato sigue el estándar [Keep a Changelog](https://keepachangelog.com/es/1
 
 ## [Unreleased]
 
+- **Sistema de Autorización Granular Multi-Planta y Roles (RBAC + PBAC)**:
+  - **Middlewares Backend (`autorizarRol.ts`, `autorizarRoles.ts`, `autorizarPlanta.ts`)**: Protección estricta de rutas mediante validación de roles (`ADMINISTRADOR`, `SUPERVISOR`, `TECNICO`, etc.) e inyección automática del alcance de planta (`req.usuario.plantaId`). Para usuarios no administradores, el backend restringe las consultas e inserciones estrictamente a su planta asignada; los administradores mantienen alcance global sin filtro restrictivo.
+  - **Seguridad en Rutas Críticas**: Integración de middlewares de autorización en los endpoints de `equipo.routes.ts`, `ubicacion.routes.ts`, `planta.routes.ts`, `inspeccion.routes.ts`, `variable-critica.routes.ts` y `auth.routes.ts`.
+  - **Gestión de Usuarios y Asignación de Plantas (`UsuariosView.vue`, `FormularioUsuario.vue`, `usuarios.store.ts`)**: Módulo administrativo para creación, edición, asignación de roles y vinculación de plantas por usuario con reactividad inmediata y validación de permisos en tiempo real.
+  - **Control de Visibilidad y Permisos en UI**: Ocultamiento condicional de botones de creación, edición y eliminación en `EquipoView.vue`, `PlantasView.vue`, `UbicacionesView.vue`, `ComponentesView.vue`, `VariablesCriticasView.vue` e `InspeccionesView.vue` basado en `authStore.tieneRol` y `authStore.esAdmin`.
+
+- **WebSockets y CORS Dinámico Multi-Entorno (`cors.ts`, `server.ts`, `notification.socket.ts`)**:
+  - Unificación de la lógica de orígenes permitidos compartida entre Express y Socket.io mediante `esOrigenPermitido`.
+  - Detección y autorización automática de redes locales (LAN: `192.168.x.x`, `10.x.x.x`, `172.16-31.x.x`) en entornos de desarrollo sin requerir configuración manual de IP fija.
+
+- **Herramientas de Migración y Auto-Instanciación (`pg-excel-migrator`)**:
+  - **Auto-Instanciación Inteligente de Plantillas (`importer.service.ts`)**: Generación y sincronización automática de variables e inserción de opciones de selección hacia todos los componentes correspondientes por tipo de equipo en PostgreSQL.
+  - **Sincronizador de Secuencias PostgreSQL (`sync_sequences.js`)**: Script automatizado para reparar y resetear todas las secuencias `serial`/`bigserial` de PostgreSQL al valor `COALESCE(MAX(id), 1)`.
+
 - **Módulo Completo de Inspecciones por Planta (`src/modules/inspecciones/`)**:
   - **Filtro de Equipos Operativos**: Consulta estricta en backend que expone en el Wizard únicamente maquinarias con `estadoOperativo === 'OPERATIVO'`.
   - **Form Wizard Interactivo de Captura (`FormWizardInspeccion.vue`, `WizardSeleccionAlcance.vue`)**: Flujo por pasos para técnicos navegando por Planta, Tipo de Maquinaria, Maquinaria Específica (con autocompletado inteligente por código alfanumérico y denominación) o Línea Completa.

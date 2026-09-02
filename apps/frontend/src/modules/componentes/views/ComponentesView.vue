@@ -9,6 +9,8 @@ import type { TabItem } from '../../../core/types/tabs.ts'
 import ComponenteForm from '../components/ComponenteForm.vue'
 import { useAuthStore } from '../../auth/auth.store'
 import HeaderViews from '../../../components/HeaderViews.vue'
+import FiltroGenerico from '../../../components/FiltroGenerico.vue'
+import type { ConfiguracionCampoFiltro, ContenidoFiltro } from '../../../../../shared/types'
 
 const toast = useToast()
 const authStore = useAuthStore()
@@ -36,6 +38,74 @@ const datosFormulario = ref<Partial<RegistrarComponenteDTO>>({ ...componenteVaci
 const mostrarDialogoEliminar = ref(false)
 const idComponenteAEliminar = ref<number | null>(null)
 const cargandoEliminacion = ref(false)
+
+type ComponenteFilterKeys = 'busqueda' | 'nombre' | 'descripcion' | 'equipoId' | 'activo'
+
+const componentesFiltersConfig = computed<ConfiguracionCampoFiltro<ComponenteFilterKeys>[]>(() => {
+    const configs: ConfiguracionCampoFiltro<ComponenteFilterKeys>[] = [
+        {
+            key: 'busqueda',
+            nombre: 'Búsqueda Global',
+            tipo: 'text',
+            placeholder: 'Nombre o descripción...',
+            retrasoMs: 400,
+            ancho: 4
+        },
+        {
+            key: 'nombre',
+            nombre: 'Nombre',
+            tipo: 'text',
+            placeholder: 'Filtrar por nombre...',
+            retrasoMs: 400,
+            ancho: 4
+        },
+        {
+            key: 'descripcion',
+            nombre: 'Descripción',
+            tipo: 'text',
+            placeholder: 'Filtrar por descripción...',
+            retrasoMs: 400,
+            ancho: 4
+        },
+        {
+            key: 'activo',
+            nombre: 'Estado',
+            tipo: 'select',
+            ancho: 4,
+            opciones: [
+                { titulo: 'Activos', valor: 'true' },
+                { titulo: 'Inactivos', valor: 'false' }
+            ]
+        }
+    ]
+
+    if (equipos.value && equipos.value.length > 0) {
+        configs.push({
+            key: 'equipoId',
+            nombre: 'Equipo',
+            tipo: 'select',
+            ancho: 4,
+            opciones: equipos.value.map(e => ({
+                titulo: `${e.codigo} - ${e.nombre}`,
+                valor: e.id
+            }))
+        })
+    }
+
+    return configs
+})
+
+const handleFiltroComponentesChange = async (payload: ContenidoFiltro): Promise<void> => {
+    cargando.value = true
+    try {
+        const res = await componenteStore.listarComponentes(payload)
+        if (res.status === 'error') {
+            toast.error(res.message ?? 'Error al aplicar filtros')
+        }
+    } finally {
+        cargando.value = false
+    }
+}
 
 const pestañas = computed<TabItem[]>(() => {
     const items: TabItem[] = [
@@ -157,6 +227,8 @@ watch(pestañaActiva, (nuevaPestana) => {
         <AppTabs v-model="pestañaActiva" :tabs="pestañas">
 
             <template #tab-lista>
+                <FiltroGenerico :config="componentesFiltersConfig" :loading="cargando"
+                    @cambiar-filtro="handleFiltroComponentesChange" />
                 <v-data-table :items="componentes" :headers="headersTabla"
                     no-data-text="No hay componentes registrados">
                     <template #item.equipo="{ item }">

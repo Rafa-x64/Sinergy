@@ -9,6 +9,8 @@ import type { TabItem } from '../../../core/types/tabs'
 import { useRolesStore } from '../../auth/roles.store.ts'
 import { usePlantasStore } from '../../plantas/plantas.store.ts'
 import HeaderViews from '../../../components/HeaderViews.vue'
+import FiltroGenerico from '../../../components/FiltroGenerico.vue'
+import type { ConfiguracionCampoFiltro, ContenidoFiltro } from '../../../../../shared/types'
 
 const rolesStore = useRolesStore()
 const { roles } = storeToRefs(rolesStore)
@@ -173,6 +175,116 @@ watch(pestañaActiva, (nuevaPestana) => {
         datosFormulario.value = { ...usuarioVacio }
     }
 })
+
+type UsuarioFilterKeys = 'busqueda' | 'nombre' | 'email' | 'nombreUsuario' | 'activo' | 'rolId' | 'plantaId'
+
+const filtrosUsuario = ref<ContenidoFiltro>({})
+
+const usuariosFiltersConfig = computed<ConfiguracionCampoFiltro<UsuarioFilterKeys>[]>(() => {
+    const configs: ConfiguracionCampoFiltro<UsuarioFilterKeys>[] = [
+        {
+            key: 'busqueda',
+            nombre: 'Búsqueda Global',
+            tipo: 'text',
+            placeholder: 'Nombre, email o usuario...',
+            retrasoMs: 300,
+            ancho: 4
+        },
+        {
+            key: 'nombre',
+            nombre: 'Nombre',
+            tipo: 'text',
+            placeholder: 'Filtrar por nombre...',
+            retrasoMs: 300,
+            ancho: 4
+        },
+        {
+            key: 'email',
+            nombre: 'Correo',
+            tipo: 'text',
+            placeholder: 'Filtrar por correo...',
+            retrasoMs: 300,
+            ancho: 4
+        },
+        {
+            key: 'nombreUsuario',
+            nombre: 'Nombre de Usuario',
+            tipo: 'text',
+            placeholder: 'Filtrar por usuario...',
+            retrasoMs: 300,
+            ancho: 4
+        },
+        {
+            key: 'activo',
+            nombre: 'Estado',
+            tipo: 'select',
+            ancho: 4,
+            opciones: [
+                { titulo: 'Activos', valor: 'true' },
+                { titulo: 'Inactivos', valor: 'false' }
+            ]
+        }
+    ]
+
+    if (roles.value.length > 0) {
+        configs.push({
+            key: 'rolId',
+            nombre: 'Rol',
+            tipo: 'select',
+            ancho: 4,
+            opciones: roles.value.map(r => ({ titulo: r.nombre, valor: r.id }))
+        })
+    }
+
+    if (plantas.value.length > 0) {
+        configs.push({
+            key: 'plantaId',
+            nombre: 'Planta',
+            tipo: 'select',
+            ancho: 4,
+            opciones: plantas.value.map(p => ({ titulo: p.nombre, valor: p.id }))
+        })
+    }
+
+    return configs
+})
+
+const usuariosFiltrados = computed<Usuario[]>(() => {
+    return usuarios.value.filter(u => {
+        const { busqueda, nombre, email, nombreUsuario, activo, rolId, plantaId } = filtrosUsuario.value
+
+        if (busqueda) {
+            const term = String(busqueda).toLowerCase()
+            const coincide = u.nombre.toLowerCase().includes(term) ||
+                u.apellido.toLowerCase().includes(term) ||
+                u.email.toLowerCase().includes(term) ||
+                u.nombreUsuario.toLowerCase().includes(term)
+            if (!coincide) return false
+        }
+        if (nombre) {
+            const term = String(nombre).toLowerCase()
+            if (!u.nombre.toLowerCase().includes(term) && !u.apellido.toLowerCase().includes(term)) return false
+        }
+        if (email && !u.email.toLowerCase().includes(String(email).toLowerCase())) return false
+        if (nombreUsuario && !u.nombreUsuario.toLowerCase().includes(String(nombreUsuario).toLowerCase())) return false
+        if (activo !== undefined && activo !== '') {
+            const esperado = activo === 'true' || activo === true
+            if (u.activo !== esperado) return false
+        }
+        if (rolId !== undefined && rolId !== '') {
+            const tieneRol = u.rolesUsuario.some(ru => ru.rolId === Number(rolId))
+            if (!tieneRol) return false
+        }
+        if (plantaId !== undefined && plantaId !== '') {
+            if (u.plantaId !== Number(plantaId)) return false
+        }
+        return true
+    })
+})
+
+const handleFiltroUsuarios = (payload: ContenidoFiltro): void => {
+    filtrosUsuario.value = payload
+}
 </script>
 
 <template>
@@ -181,7 +293,9 @@ watch(pestañaActiva, (nuevaPestana) => {
         <HeaderViews titulo="Usuarios" mensaje="Usuarios" color='purple' icono="mdi-account-group"></HeaderViews>
         <AppTabs v-model="pestañaActiva" :tabs="pestañasUsuarios">
             <template #tab-lista>
-                <v-data-table :items="usuarios" :headers="headersTabla">
+                <FiltroGenerico :config="usuariosFiltersConfig" :loading="cargando"
+                    @cambiar-filtro="handleFiltroUsuarios" />
+                <v-data-table :items="usuariosFiltrados" :headers="headersTabla">
                     <template #item.rol="{ item }">
                         <span>
                             {{

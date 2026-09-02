@@ -13,7 +13,18 @@ export interface EditarComponenteDTO {
   activo?: boolean
 }
 
+export interface QueryComponente {
+  equipoId?: string
+  activo?: string
+  busqueda?: string
+  nombre?: string
+  descripcion?: string
+}
+
 export interface FiltrosComponente {
   equipoId?: number
   activo?: boolean
+  busqueda?: string
+  nombre?: string
+  descripcion?: string
 }

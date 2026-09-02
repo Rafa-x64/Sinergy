@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { type RespuestaApi } from '../auth/auth.store'
 import api from '../../core/api'
 import { AxiosError } from 'axios'
+import type { ContenidoFiltro } from '../../../../shared/types/index' // O la ruta donde guardaste ContenidoFiltro
 
 // ─── Tipos de dominio ────────────────────────────────────────────────────────
 
@@ -69,7 +70,7 @@ export const useEquipoStore = defineStore('equipo', () => {
 
   // ── Equipos ──────────────────────────────────────────────────────────────
 
-  async function listarEquipos(params?: { ubicacionTecnicaId?: number; plantaId?: number; tipoEquipoId?: number }): Promise<RespuestaApi<Equipo[]>> {
+  async function listarEquipos(params?: ContenidoFiltro): Promise<RespuestaApi<Equipo[]>> {
     try {
       const { data } = await api.get<RespuestaApi<Equipo[]>>('/equipos/listar', { params })
       if (data.status === 'ok' && data.data) {
@@ -78,6 +79,14 @@ export const useEquipoStore = defineStore('equipo', () => {
       return data
     } catch (error: unknown) {
       const err = error as AxiosError<RespuestaApi>
+      if (err.response?.status === 404) {
+        equipos.value = []
+        return {
+          status: 'ok',
+          data: [],
+          message: err.response?.data?.message
+        }
+      }
       return {
         status: 'error',
         message: err.response?.data?.message ?? 'Error de red al listar los equipos'
@@ -135,15 +144,23 @@ export const useEquipoStore = defineStore('equipo', () => {
 
   // ── Tipos de Equipo ──────────────────────────────────────────────────────
 
-  async function listarTiposEquipo(): Promise<RespuestaApi<TipoEquipo[]>> {
+  async function listarTiposEquipo(params?: ContenidoFiltro): Promise<RespuestaApi<TipoEquipo[]>> {
     try {
-      const { data } = await api.get<RespuestaApi<TipoEquipo[]>>('/equipos/tipo/listar')
+      const { data } = await api.get<RespuestaApi<TipoEquipo[]>>('/equipos/tipo/listar', { params })
       if (data.status === 'ok' && data.data) {
         tiposEquipo.value = data.data
       }
       return data
     } catch (error: unknown) {
       const err = error as AxiosError<RespuestaApi>
+      if (err.response?.status === 404) {
+        tiposEquipo.value = []
+        return {
+          status: 'ok',
+          data: [],
+          message: err.response?.data?.message
+        }
+      }
       return {
         status: 'error',
         message: err.response?.data?.message ?? 'Error de red al listar los tipos de equipo'

@@ -400,7 +400,10 @@ export const variableCriticaController = {
     next: NextFunction
   ) {
     try {
-      const usuarioPlantaId: number | undefined = req.usuario?.plantaId ? Number(req.usuario.plantaId) : undefined
+      const esAdmin = req.usuario?.roles?.some((r: string) =>
+        r.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().includes('ADMINISTRADOR')
+      )
+      const usuarioPlantaId: number | undefined = (!esAdmin && req.usuario?.plantaId) ? Number(req.usuario.plantaId) : undefined
       const arbol = await variableCriticaService.obtenerArbolJerarquico(usuarioPlantaId)
 
       return res.status(200).json({

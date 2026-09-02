@@ -19,6 +19,11 @@ Este manual documenta técnicamente los componentes UI reutilizables ubicados en
   - [3.1 Descripción y propósito](#31-descripción-y-propósito)
 - [4. Componente `ThemeToggle.vue`](#4-componente-themetogglevue)
   - [4.1 Descripción y cambio de tema claro/oscuro](#41-descripción-y-cambio-de-tema-clarooscuro)
+- [5. Componente `FiltroGenerico.vue`](#5-componente-filtrogenericovue)
+  - [5.1 Descripción y propósito](#51-descripción-y-propósito)
+  - [5.2 Tipos y configuración (`ConfiguracionCampoFiltro`)](#52-tipos-y-configuración-configuracioncampofiltro)
+  - [5.3 Props y Emits](#53-props-y-emits)
+  - [5.4 Ejemplo de integración en Equipos](#54-ejemplo-de-integración-en-equipos)
 
 ---
 
@@ -166,3 +171,126 @@ const toggleTheme = () => {
       : 'sinergyLightTheme'
 }
 ```
+
+---
+
+## 5. Componente `FiltroGenerico.vue`
+
+### 5.1 Descripción y propósito
+
+`FiltroGenerico.vue` es la barra de filtrado universal reutilizable para las vistas del sistema. Permite renderizar dinámicamente controles de formulario (campos de texto con *debounce*, selects, selectores de fecha y checkboxes) según una configuración declarativa.
+
+### 5.2 Tipos y configuración (`ConfiguracionCampoFiltro`)
+
+Consume los tipos ubicados en `apps/shared/types/index.ts`:
+
+```typescript
+export type TipoControlFiltro = 'text' | 'select' | 'date' | 'boolean';
+
+export interface OpcionSelect<T = string | number> {
+  titulo: string;
+  valor: T;
+}
+
+export interface ConfiguracionCampoFiltro<TKey extends string = string> {
+  key: TKey;
+  nombre: string;
+  tipo: TipoControlFiltro;
+  placeholder?: string;
+  valorDefault?: string | number | boolean | null;
+  opciones?: OpcionSelect[];
+  inhabilitado?: boolean;
+  retrasoMs?: number; // Tiempo de debounce en ms para campos tipo 'text'
+  ancho?: number;     // Columnas de 1 a 12 en Vuetify grid
+}
+
+export type ContenidoFiltro = Record<string, string | number | boolean>;
+```
+
+### 5.3 Props y Emits
+
+**Props:**
+| Prop | Tipo | Requerido | Valor por defecto | Descripción |
+|---|---|---|---|---|
+| `config` | `ConfiguracionCampoFiltro<TKey>[]` | **Sí** | - | Lista de configuraciones de campos |
+| `loading` | `boolean` | No | `false` | Deshabilita controles mientras se realiza la consulta |
+
+**Emits:**
+| Evento | Payload | Descripción |
+|---|---|---|
+| `cambiar-filtro` | `ContenidoFiltro` | Emitido con el payload de filtros limpios (sin valores nulos o vacíos) |
+| `refrescar-filtro` | `void` | Emitido al presionar el botón "Limpiar Filtros" |
+
+### 5.4 Vistas que Implementan `FiltroGenerico.vue`
+
+1. **Equipos (`EquipoView.vue` - Pestaña Equipos)**:
+   - Filtros: `busqueda`, `codigo`, `nombre`, `marca`, `modelo`, `serial`, `estadoOperativo`, `tipoEquipoId`, `ubicacionTecnicaId`.
+2. **Tipos de Equipo (`EquipoView.vue` - Pestaña Tipos)**:
+   - Filtros: `busqueda`, `nombre`, `descripcion`.
+3. **Equipos Filtrados por Tipo (`EquiposPorTipoView.vue`)**:
+   - Filtros: `busqueda`, `codigo`, `nombre`, `marca`, `modelo`, `serial`, `estadoOperativo`, `ubicacionTecnicaId`.
+4. **Componentes (`ComponentesView.vue`)**:
+   - Filtros: `busqueda`, `nombre`, `descripcion`, `equipoId`, `activo`.
+
+### 5.5 Ejemplo de Integración Estándar
+
+```vue
+<script setup lang="ts">
+import { computed, ref } from 'vue'
+import FiltroGenerico from '@/components/FiltroGenerico.vue'
+import type { ConfiguracionCampoFiltro, ContenidoFiltro } from '@/../../shared/types'
+import { useComponenteStore } from '@/modules/componentes/componente.store'
+
+const componenteStore = useComponenteStore()
+const cargando = ref(false)
+
+type ComponenteFilterKeys = 'busqueda' | 'nombre' | 'descripcion' | 'activo'
+
+const componentesFiltersConfig: ConfiguracionCampoFiltro<ComponenteFilterKeys>[] = [
+  {
+    key: 'busqueda',
+    nombre: 'Búsqueda Global',
+    tipo: 'text',
+    placeholder: 'Nombre o descripción...',
+    retrasoMs: 400,
+    ancho: 4
+  },
+  {
+    key: 'nombre',
+    nombre: 'Nombre',
+    tipo: 'text',
+    placeholder: 'Filtrar por nombre...',
+    retrasoMs: 400,
+    ancho: 4
+  },
+  {
+    key: 'activo',
+    nombre: 'Estado',
+    tipo: 'select',
+    ancho: 4,
+    opciones: [
+      { titulo: 'Activos', valor: 'true' },
+      { titulo: 'Inactivos', valor: 'false' }
+    ]
+  }
+]
+
+const handleFilterChange = async (payload: ContenidoFiltro): Promise<void> => {
+  cargando.value = true
+  try {
+    await componenteStore.listarComponentes(payload)
+  } finally {
+    cargando.value = false
+  }
+}
+</script>
+
+<template>
+  <FiltroGenerico 
+    :config="componentesFiltersConfig" 
+    :loading="cargando" 
+    @cambiar-filtro="handleFilterChange" 
+  />
+</template>
+```
+

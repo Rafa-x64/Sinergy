@@ -9,6 +9,8 @@ import type { TabItem } from '../../../core/types/tabs'
 import { usePlantasStore } from '../../plantas/plantas.store'
 import HeaderViews from '../../../components/HeaderViews.vue'
 import { useAuthStore } from '../../auth/auth.store'
+import FiltroGenerico from '../../../components/FiltroGenerico.vue'
+import type { ConfiguracionCampoFiltro, ContenidoFiltro } from '../../../../../shared/types'
 
 const toast = useToast()
 const authStore = useAuthStore()
@@ -162,6 +164,95 @@ watch(pestañaActiva, (nuevaPestana) => {
         datosFormulario.value = { ...ubicacionVacia }
     }
 })
+
+type UbicacionFilterKeys = 'busqueda' | 'codigo' | 'nombre' | 'descripcion' | 'activa' | 'plantaId'
+
+const filtrosUbicacion = ref<ContenidoFiltro>({})
+
+const ubicacionesFiltersConfig = computed<ConfiguracionCampoFiltro<UbicacionFilterKeys>[]>(() => {
+    const configs: ConfiguracionCampoFiltro<UbicacionFilterKeys>[] = [
+        {
+            key: 'busqueda',
+            nombre: 'Búsqueda Global',
+            tipo: 'text',
+            placeholder: 'Código o nombre...',
+            retrasoMs: 300,
+            ancho: 4
+        },
+        {
+            key: 'codigo',
+            nombre: 'Código',
+            tipo: 'text',
+            placeholder: 'Filtrar por código...',
+            retrasoMs: 300,
+            ancho: 4
+        },
+        {
+            key: 'nombre',
+            nombre: 'Nombre',
+            tipo: 'text',
+            placeholder: 'Filtrar por nombre...',
+            retrasoMs: 300,
+            ancho: 4
+        },
+        {
+            key: 'descripcion',
+            nombre: 'Descripción',
+            tipo: 'text',
+            placeholder: 'Filtrar por descripción...',
+            retrasoMs: 300,
+            ancho: 4
+        },
+        {
+            key: 'activa',
+            nombre: 'Estado',
+            tipo: 'select',
+            ancho: 4,
+            opciones: [
+                { titulo: 'Activas', valor: 'true' },
+                { titulo: 'Inactivas', valor: 'false' }
+            ]
+        }
+    ]
+
+    if (plantas.value.length > 0) {
+        configs.push({
+            key: 'plantaId',
+            nombre: 'Planta',
+            tipo: 'select',
+            ancho: 4,
+            opciones: plantas.value.map(p => ({ titulo: p.nombre, valor: p.id }))
+        })
+    }
+
+    return configs
+})
+
+const ubicacionesFiltradas = computed<Ubicacion[]>(() => {
+    return ubicaciones.value.filter(u => {
+        const { busqueda, codigo, nombre, descripcion, activa, plantaId } = filtrosUbicacion.value
+
+        if (busqueda) {
+            const term = String(busqueda).toLowerCase()
+            if (!u.codigo.toLowerCase().includes(term) && !u.nombre.toLowerCase().includes(term)) return false
+        }
+        if (codigo && !u.codigo.toLowerCase().includes(String(codigo).toLowerCase())) return false
+        if (nombre && !u.nombre.toLowerCase().includes(String(nombre).toLowerCase())) return false
+        if (descripcion && !(u.descripcion ?? '').toLowerCase().includes(String(descripcion).toLowerCase())) return false
+        if (activa !== undefined && activa !== '') {
+            const esperado = activa === 'true' || activa === true
+            if (u.activa !== esperado) return false
+        }
+        if (plantaId !== undefined && plantaId !== '') {
+            if (u.plantaId !== Number(plantaId)) return false
+        }
+        return true
+    })
+})
+
+const handleFiltroUbicaciones = (payload: ContenidoFiltro): void => {
+    filtrosUbicacion.value = payload
+}
 </script>
 
 <template>
@@ -171,7 +262,9 @@ watch(pestañaActiva, (nuevaPestana) => {
         <AppTabs v-model="pestañaActiva" :tabs="pestañasUbicaciones">
 
             <template #tab-lista>
-                <v-data-table :items="ubicaciones" :headers="headersTabla">
+                <FiltroGenerico :config="ubicacionesFiltersConfig" :loading="cargando"
+                    @cambiar-filtro="handleFiltroUbicaciones" />
+                <v-data-table :items="ubicacionesFiltradas" :headers="headersTabla">
                     <template #item.planta="{ item }">
                         <span>{{ obtenerNombrePlanta(item.plantaId) }}</span>
                     </template>

@@ -79,7 +79,24 @@ class ComponenteService {
       where.equipoId = filtros.equipoId
     }
 
-    where.activo = filtros.activo !== undefined ? filtros.activo : true
+    if (filtros.activo !== undefined) {
+      where.activo = filtros.activo
+    }
+
+    if (filtros.nombre) {
+      where.nombre = { contains: filtros.nombre, mode: 'insensitive' }
+    }
+
+    if (filtros.descripcion) {
+      where.descripcion = { contains: filtros.descripcion, mode: 'insensitive' }
+    }
+
+    if (filtros.busqueda) {
+      where.OR = [
+        { nombre: { contains: filtros.busqueda, mode: 'insensitive' } },
+        { descripcion: { contains: filtros.busqueda, mode: 'insensitive' } }
+      ]
+    }
 
     return prisma.componente.findMany({
       where,

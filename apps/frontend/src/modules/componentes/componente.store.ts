@@ -5,6 +5,7 @@ import api from '../../core'
 import { ref } from 'vue'
 import { type RespuestaApi } from '../auth/auth.store'
 import { Equipo } from '../equipo/equipo.store'
+import type { ContenidoFiltro } from '../../../../shared/types'
 
 export interface RegistrarComponenteDTO {
     equipoId: number
@@ -29,15 +30,23 @@ export interface Componente {
 export const useComponenteStore = defineStore('componentes', () => {
     const componentes = ref<Componente[]>([])
 
-    async function listarComponentes(): Promise<RespuestaApi<Componente[]>> {
+    async function listarComponentes(params?: ContenidoFiltro): Promise<RespuestaApi<Componente[]>> {
         try {
-            const { data } = await api.get<RespuestaApi<Componente[]>>('/componentes/listar')
+            const { data } = await api.get<RespuestaApi<Componente[]>>('/componentes/listar', { params })
             if (data.data && data.status === 'ok') {
                 componentes.value = data.data
             }
             return data
         } catch (error: unknown) {
             const err = error as AxiosError<RespuestaApi>
+            if (err.response?.status === 404) {
+                componentes.value = []
+                return {
+                    status: 'ok',
+                    data: [],
+                    message: err.response?.data?.message
+                }
+            }
             return {
                 status: 'error',
                 message: err.response?.data?.message ?? 'Error de red al listar los componentes'

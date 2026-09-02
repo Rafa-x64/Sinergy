@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useVariablesStore } from '@/modules/variables/variables.store'
+import { usePlantasStore } from '@/modules/plantas/plantas.store'
+import { useUbicacionStore } from '@/modules/ubicaciones/ubicacion.store'
+import { useEquipoStore } from '@/modules/equipo/equipo.store'
 import { useInspeccionesStore, type AlcanceInspeccion } from '../inspecciones.store'
 import { useAuthStore } from '@/modules/auth/auth.store'
 
@@ -9,6 +12,9 @@ const emit = defineEmits<{
 }>()
 
 const variablesStore = useVariablesStore()
+const plantasStore = usePlantasStore()
+const ubicacionStore = useUbicacionStore()
+const equipoStore = useEquipoStore()
 const inspeccionesStore = useInspeccionesStore()
 const authStore = useAuthStore()
 
@@ -16,66 +22,88 @@ const plantaId = ref<number | null>(null)
 const alcance = ref<AlcanceInspeccion>('POR_LINEA')
 const referenciaId = ref<number | null>(null)
 
-/** Si el usuario tiene una planta asignada en su perfil, el selector se bloquea */
-const selectPlantaBloqueado = computed(() => !!authStore.plantaId)
+/** Si el usuario NO es administrador y tiene una planta asignada en su perfil, el selector se bloquea */
+const selectPlantaBloqueado = computed(() => !authStore.esAdmin && !!authStore.plantaId)
 
 onMounted(async () => {
+  const promesas: Promise<any>[] = [
+    plantasStore.listarPlantas(),
+    variablesStore.cargarTiposEquipo()
+  ]
   if (variablesStore.arbolJerarquico.length === 0) {
-    await variablesStore.cargarArbolJerarquico()
+    promesas.push(variablesStore.cargarArbolJerarquico())
   }
-  if (variablesStore.tiposEquipo.length === 0) {
-    await variablesStore.cargarTiposEquipo()
+  if (ubicacionStore.ubicaciones.length === 0) {
+    promesas.push(ubicacionStore.listarUbicaciones())
+  }
+  if (equipoStore.equipos.length === 0) {
+    promesas.push(equipoStore.listarEquipos())
   }
 
-  if (authStore.plantaId) {
-    // Usuario con planta asignada: forzar su planta
+  await Promise.all(promesas)
+
+  if (!authStore.esAdmin && authStore.plantaId) {
+    // Usuario no admin con planta asignada: forzar su planta
     plantaId.value = authStore.plantaId
-  } else if (variablesStore.arbolJerarquico.length > 0 && !plantaId.value) {
-    // Usuario sin planta (global): preseleccionar la primera
-    plantaId.value = variablesStore.arbolJerarquico[0].id
+  } else if (opcionesPlantas.value.length > 0 && !plantaId.value) {
+    // Usuario admin o sin planta: preseleccionar la primera planta activa
+    plantaId.value = opcionesPlantas.value[0].id
   }
 })
 
 watch(
   () => authStore.plantaId,
   (nuevoId) => {
-    if (nuevoId) {
+    if (!authStore.esAdmin && nuevoId) {
       plantaId.value = nuevoId
     }
   },
   { immediate: true }
 )
 
-// Si el usuario tiene planta asignada, solo se expone esa planta; si no, todas.
+// Catálogo de plantas disponibles: si es admin o acceso global muestra todas las plantas activas
 const opcionesPlantas = computed(() => {
-  const todasLasPlantas = variablesStore.arbolJerarquico.map((p) => ({
-    id: p.id,
-    nombre: p.nombre,
-    codigo: p.codigo
-  }))
+  // Lista desde plantas.store (catálogo oficial) o árbol jerárquico como fallback
+  let listado: Array<{ id: number; nombre: string; codigo: string }> = []
 
-  // Usuarios con planta asignada: restringir la lista a su única planta
-  if (authStore.plantaId) {
-    return todasLasPlantas.filter((p) => p.id === authStore.plantaId)
+  if (plantasStore.plantas.length > 0) {
+    listado = plantasStore.plantas
+      .filter((p) => p.activa)
+      .map((p) => ({
+        id: p.id,
+        nombre: p.nombre,
+        codigo: p.codigo
+      }))
+  } else if (variablesStore.arbolJerarquico.length > 0) {
+    listado = variablesStore.arbolJerarquico.map((p) => ({
+      id: p.id,
+      nombre: p.nombre,
+      codigo: p.codigo
+    }))
   }
 
-  // Usuarios sin planta (accesoGlobal): ver todas las plantas + opción "Ninguna"
-  const yaExisteNinguna = todasLasPlantas.some(
+  // Usuario no-admin con planta fija asignada
+  if (!authStore.esAdmin && authStore.plantaId) {
+    return listado.filter((p) => p.id === authStore.plantaId)
+  }
+
+  // Usuarios con acceso global / Admin: todas las plantas + opción "Ninguna" (móviles)
+  const yaExisteNinguna = listado.some(
     (p) => (p.nombre || '').toLowerCase().includes('ninguna') || (p.codigo || '').toLowerCase().includes('ninguna')
   )
 
-  if (!yaExisteNinguna) {
-    todasLasPlantas.push({ id: 0, nombre: 'Ninguna', codigo: 'NINGUNA' })
+  if (!yaExisteNinguna && listado.length > 0) {
+    listado = [...listado, { id: 0, nombre: 'Ninguna (Móviles)', codigo: 'NINGUNA' }]
   }
 
-  return todasLasPlantas
+  return listado
 })
 
 // Detecta si la planta seleccionada corresponde a "Ninguna" (equipos móviles / sin ubicación fija)
 const esPlantaNinguna = computed(() => {
   if (plantaId.value === null || plantaId.value === undefined) return false
   if (plantaId.value === 0) return true
-  const p = variablesStore.arbolJerarquico.find((p) => p.id === plantaId.value)
+  const p = opcionesPlantas.value.find((p) => p.id === plantaId.value)
   if (!p) return false
   const nom = (p.nombre || '').toLowerCase()
   const cod = (p.codigo || '').toLowerCase()
@@ -93,54 +121,86 @@ const placeholderUbicacion = computed(() => {
 })
 
 // Opciones de Ubicaciones para la Planta elegida
-const ubicacionesDisponibles = ref<{ id: number; nombre: string; codigo: string }[]>([])
+const ubicacionesDisponibles = computed<{ id: number; nombre: string; codigo: string }[]>(() => {
+  if (plantaId.value === null || plantaId.value === undefined || plantaId.value === 0) {
+    return []
+  }
+
+  // Primero buscar en ubicacionStore
+  const filtradasUbicStore = ubicacionStore.ubicaciones.filter((u) => u.plantaId === plantaId.value)
+  if (filtradasUbicStore.length > 0) {
+    return filtradasUbicStore.map((u) => ({
+      id: u.id,
+      nombre: u.nombre,
+      codigo: u.codigo
+    }))
+  }
+
+  // Fallback: buscar en variablesStore.arbolJerarquico
+  const plantaEncontrada = variablesStore.arbolJerarquico.find((p) => p.id === plantaId.value)
+  if (plantaEncontrada && plantaEncontrada.ubicacionesTecnicas) {
+    return plantaEncontrada.ubicacionesTecnicas.map((u) => ({
+      id: u.id,
+      nombre: u.nombre,
+      codigo: u.codigo
+    }))
+  }
+
+  return []
+})
 
 // Opciones de Equipos individuales para la Planta elegida
 const equiposDisponibles = computed(() => {
   if (plantaId.value === null || plantaId.value === undefined) return []
 
   if (plantaId.value === 0) {
-    // Si la planta elegida es "Ninguna", recopilamos todos los equipos de tipo Montacargas o sin ubicación fija
-    const listado: { id: number; codigo: string; nombre: string; etiqueta: string }[] = []
-    const idsAgregados = new Set<number>()
-
-    variablesStore.arbolJerarquico.forEach((p) => {
-      p.ubicacionesTecnicas?.forEach((u) => {
-        u.equipos?.forEach((e) => {
-          const esMontacarga = (e.tipoEquipo?.nombre || '').toLowerCase().includes('montacarg') ||
-                               (u.nombre || '').toLowerCase().includes('ninguna') ||
-                               (u.codigo || '').toLowerCase().includes('ninguna')
-          if (esMontacarga && !idsAgregados.has(e.id)) {
-            idsAgregados.add(e.id)
-            listado.push({
-              id: e.id,
-              codigo: e.codigo,
-              nombre: e.nombre,
-              etiqueta: `${e.codigo} — ${e.nombre}`
-            })
-          }
-        })
+    // Equipos de tipo Montacargas o sin ubicación fija
+    return equipoStore.equipos
+      .filter((e) => {
+        const tipoNom = (e.tipoEquipo?.nombre || '').toLowerCase()
+        return tipoNom.includes('montacarg')
       })
-    })
-    return listado
+      .map((e) => ({
+        id: e.id,
+        codigo: e.codigo,
+        nombre: e.nombre,
+        etiqueta: `${e.codigo} — ${e.nombre}`
+      }))
   }
 
-  const plantaEncontrada = variablesStore.arbolJerarquico.find((p) => p.id === plantaId.value)
-  if (!plantaEncontrada || !plantaEncontrada.ubicacionesTecnicas) return []
-
+  // Equipos asociados a la planta seleccionada
   const listado: { id: number; codigo: string; nombre: string; etiqueta: string }[] = []
-  plantaEncontrada.ubicacionesTecnicas.forEach((u) => {
-    if (u.equipos) {
-      u.equipos.forEach((e) => {
-        listado.push({
-          id: e.id,
-          codigo: e.codigo,
-          nombre: e.nombre,
-          etiqueta: `${e.codigo} — ${e.nombre}`
+
+  // 1. Desde equipoStore
+  const idsUbicacionesPlanta = new Set(ubicacionesDisponibles.value.map((u) => u.id))
+  const equiposDePlanta = equipoStore.equipos.filter((e) => idsUbicacionesPlanta.has(e.ubicacionTecnicaId))
+
+  if (equiposDePlanta.length > 0) {
+    return equiposDePlanta.map((e) => ({
+      id: e.id,
+      codigo: e.codigo,
+      nombre: e.nombre,
+      etiqueta: `${e.codigo} — ${e.nombre}`
+    }))
+  }
+
+  // 2. Fallback: desde el árbol jerárquico
+  const plantaEncontrada = variablesStore.arbolJerarquico.find((p) => p.id === plantaId.value)
+  if (plantaEncontrada && plantaEncontrada.ubicacionesTecnicas) {
+    plantaEncontrada.ubicacionesTecnicas.forEach((u) => {
+      if (u.equipos) {
+        u.equipos.forEach((e) => {
+          listado.push({
+            id: e.id,
+            codigo: e.codigo,
+            nombre: e.nombre,
+            etiqueta: `${e.codigo} — ${e.nombre}`
+          })
         })
-      })
-    }
-  })
+      }
+    })
+  }
+
   return listado
 })
 
@@ -148,23 +208,7 @@ watch(
   [plantaId, alcance],
   () => {
     referenciaId.value = null
-    if (plantaId.value === null || plantaId.value === undefined || plantaId.value === 0) {
-      ubicacionesDisponibles.value = []
-      return
-    }
-
-    const plantaEncontrada = variablesStore.arbolJerarquico.find((p) => p.id === plantaId.value)
-    if (plantaEncontrada && plantaEncontrada.ubicacionesTecnicas) {
-      ubicacionesDisponibles.value = plantaEncontrada.ubicacionesTecnicas.map((u) => ({
-        id: u.id,
-        nombre: u.nombre,
-        codigo: u.codigo
-      }))
-    } else {
-      ubicacionesDisponibles.value = []
-    }
-  },
-  { immediate: true }
+  }
 )
 
 const ejecutarBusquedaEquipos = async () => {
@@ -249,44 +293,73 @@ const ejecutarBusquedaEquipos = async () => {
           clearable
           hide-details
         >
+          <template #selection="{ item }">
+            <span>{{ item.raw.codigo ? `${item.raw.codigo} - ${item.raw.nombre}` : item.raw.nombre }}</span>
+          </template>
           <template #item="{ props: itemProps, item }">
-            <v-list-item v-bind="itemProps" :title="`${item.raw.codigo} - ${item.raw.nombre}`" />
+            <v-list-item v-bind="itemProps" :subtitle="item.raw.codigo" />
           </template>
         </v-select>
 
         <!-- Si es POR_TIPO_EQUIPO -->
-        <v-autocomplete
+        <v-select
           v-else-if="alcance === 'POR_TIPO_EQUIPO'"
           v-model="referenciaId"
           :items="variablesStore.tiposEquipo"
           item-title="nombre"
           item-value="id"
-          label="Tipo de Maquinaria (ej. Montacargas) *"
-          placeholder="Buscar tipo de equipo..."
-          prepend-inner-icon="mdi-cog-box"
+          label="Tipo de Maquinaria *"
+          placeholder="Seleccionar tipo de maquinaria"
+          prepend-inner-icon="mdi-cog-sync"
           variant="outlined"
           density="compact"
-          clearable
           hide-details
         />
 
         <!-- Si es POR_EQUIPO -->
         <v-autocomplete
-          v-else
+          v-else-if="alcance === 'POR_EQUIPO'"
           v-model="referenciaId"
           :items="equiposDisponibles"
           item-title="etiqueta"
           item-value="id"
-          label="Maquinaria / Equipo Específico *"
-          placeholder="Buscar por código o denominación..."
-          prepend-inner-icon="mdi-cog"
+          label="Maquinaria Específica *"
+          placeholder="Buscar por código o nombre..."
+          prepend-inner-icon="mdi-robot-industrial"
           variant="outlined"
           density="compact"
-          clearable
           hide-details
         />
       </v-col>
     </v-row>
+
+    <!-- Resumen de Cobertura según la configuración -->
+    <v-alert
+      v-if="plantaId !== null && plantaId !== undefined"
+      type="info"
+      variant="tonal"
+      density="compact"
+      class="mt-4 rounded-lg"
+      icon="mdi-information-outline"
+    >
+      <div class="text-caption">
+        <span v-if="alcance === 'POR_LINEA' && !referenciaId">
+          Se evaluarán <strong>todas las líneas y maquinarias operativas</strong> de la planta seleccionada.
+        </span>
+        <span v-else-if="alcance === 'POR_LINEA' && referenciaId">
+          Se evaluarán únicamente las maquinarias operativas ubicadas en la línea seleccionada.
+        </span>
+        <span v-else-if="alcance === 'POR_TIPO_EQUIPO' && referenciaId">
+          Se evaluarán todas las maquinarias operativas del tipo seleccionado dentro de la planta.
+        </span>
+        <span v-else-if="alcance === 'POR_EQUIPO' && referenciaId">
+          Se evaluará una sola maquinaria específica de manera individual.
+        </span>
+        <span v-else>
+          Completa la selección del alcance para consultar las maquinarias elegibles.
+        </span>
+      </div>
+    </v-alert>
 
     <!-- Botón para iniciar Form Wizard -->
     <div class="d-flex align-center justify-space-between mt-6 flex-wrap gap-2 pt-2 border-t">
@@ -305,7 +378,7 @@ const ejecutarBusquedaEquipos = async () => {
         :loading="inspeccionesStore.cargandoEquipos"
         @click="ejecutarBusquedaEquipos"
       >
-        Iniciar Wizard de Inspección
+        Iniciar Inspección
       </v-btn>
     </div>
   </v-card>
