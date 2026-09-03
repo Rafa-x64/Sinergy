@@ -49,15 +49,15 @@ const manejarSubmit = async (): Promise<void> => {
 <template>
   <div class="login-wrapper">
     <v-card class="login-card" elevation="4" rounded="lg">
-      <v-row no-gutters class="fill-height">
-        <!-- Columna de Formulario -->
-        <v-col cols="12" md="6" class="pa-8 d-flex flex-column justify-center">
+      <div class="card-grid">
+        <!-- Columna Formulario -->
+        <div class="form-section">
           <h1 class="text-h4 font-weight-bold mb-6 text-center">Bienvenido</h1>
 
-          <v-form @submit.prevent="manejarSubmit" ref="formRef" class="mt-6">
+          <v-form @submit.prevent="manejarSubmit" ref="formRef" class="mt-2">
             <v-text-field v-model="formulario.nombreUsuario" :rules="loginRules.nombreUsuario" label="Nombre de Usuario"
-              prepend-inner-icon="mdi-account" variant="outlined" placeholder="Ejemplo123*." type="text"
-              class="mb-2" validate-on="blur"></v-text-field>
+              prepend-inner-icon="mdi-account" variant="outlined" placeholder="Ejemplo123*." type="text" class="mb-2"
+              validate-on="blur"></v-text-field>
 
             <v-text-field v-model="formulario.password" :rules="loginRules.password" label="Contraseña"
               prepend-inner-icon="mdi-lock-outline" variant="outlined" placeholder="Contraseña123" type="password"
@@ -67,14 +67,13 @@ const manejarSubmit = async (): Promise<void> => {
               {{ cargando ? 'Iniciando Sesión...' : 'Iniciar Sesión' }}
             </v-btn>
           </v-form>
-        </v-col>
+        </div>
 
-        <!-- Columna de Imagen -->
-        <v-col cols="12" md="6" class="d-none d-md-flex">
-          <v-img src="https://i.pinimg.com/1200x/a7/ec/c6/a7ecc6a77608ffbab4545c5a789c9b45.jpg" cover
-            height="100%"></v-img>
-        </v-col>
-      </v-row>
+        <!-- Columna Logo -->
+        <div class="brand-section">
+          <img src="/LOGO_TUBRICA_AZUL.png" alt="Logo Tubrica" class="brand-logo" />
+        </div>
+      </div>
     </v-card>
   </div>
 </template>
@@ -94,6 +93,44 @@ const manejarSubmit = async (): Promise<void> => {
   width: 100%;
   max-width: 1000px;
   min-height: 550px;
+  display: flex;
   overflow: hidden;
+}
+
+/* Flex Grid Controlado */
+.card-grid {
+  display: flex;
+  width: 100%;
+  min-height: 550px;
+}
+
+.form-section {
+  flex: 1;
+  padding: 48px 32px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.brand-section {
+  flex: 1;
+  background-color: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+}
+
+.brand-logo {
+  max-width: 80%;
+  max-height: 250px;
+  object-fit: contain;
+}
+
+/* Responsividad para pantallas pequeñas */
+@media (max-width: 960px) {
+  .brand-section {
+    display: none;
+  }
 }
 </style>
