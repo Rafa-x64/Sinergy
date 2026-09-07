@@ -1,7 +1,7 @@
 import { eventBus, EventoInspeccionCreada, EventoInspeccionEvaluada, EventoAccionSistema } from '../../core/eventBus'
 import { notificationService } from './notification.service'
-import { emitirNotificacion } from './notification.socket'
-import { NotificationType, CategoriaNotificacion, Prisma } from '@prisma/client'
+import { emitirNotificacion, emitirNotificacionARol, emitirNotificacionGlobal } from './notification.socket'
+import { NotificationType, CategoriaNotificacion } from '@prisma/client'
 import { NotificacionPayload } from '../../core/eventBus'
 
 export function registrarListenersNotificaciones(): void {
@@ -16,7 +16,6 @@ export function registrarListenersNotificaciones(): void {
       if (supervisorId) {
         supervisoresIds.push(supervisorId)
       } else {
-        // Si el técnico no tiene un supervisor directo asignado, notificar a todos los supervisores
         const todosSupervisores = await notificationService.obtenerTodosSupervisores()
         supervisoresIds = todosSupervisores.map(s => s.id)
       }
@@ -28,33 +27,45 @@ export function registrarListenersNotificaciones(): void {
           tipo: NotificationType.WARNING,
           categoria: CategoriaNotificacion.INSPECCION_PENDIENTE,
           titulo: 'Inspección Pendiente de Revisión',
-          mensaje: `Se ha registrado la inspección ${payload.codigoInspeccion}. Requiere tu aprobación.`,
+          mensaje: `Se ha registrado la inspección ${payload.codigoInspeccion}. Requiere tu evaluación técnica.`,
           entidadAfectada: 'INSPECCION',
           entidadId: payload.inspeccionId
         })
         emitirNotificacion(sId, notifSup)
       }
+      // Broadcast adicional a la sala de rol de supervisores
+      emitirNotificacionARol('supervisor', {
+        tipo: NotificationType.WARNING,
+        categoria: CategoriaNotificacion.INSPECCION_PENDIENTE,
+        titulo: 'Nueva Inspección por Evaluar',
+        mensaje: `Inspección ${payload.codigoInspeccion} registrada y en espera de revisión.`,
+        entidadAfectada: 'INSPECCION',
+        entidadId: payload.inspeccionId,
+        creadoEn: new Date().toISOString()
+      })
 
-      // 2. Notificar a Administradores (Admin al tanto)
-      const notifsAdmin: Prisma.NotificacionCreateManyInput[] = admins.map(admin => ({
-        usuarioId: admin.id,
+      // 2. Notificar a Administradores (Auditoría en tiempo real)
+      for (const admin of admins) {
+        const notifAdmin = await notificationService.crearNotificacion({
+          usuarioId: admin.id,
+          tipo: NotificationType.ALERT,
+          categoria: CategoriaNotificacion.AUDITORIA_SISTEMA,
+          titulo: 'Nueva Inspección Registrada',
+          mensaje: `El técnico ha registrado la inspección ${payload.codigoInspeccion}.`,
+          entidadAfectada: 'INSPECCION',
+          entidadId: payload.inspeccionId
+        })
+        emitirNotificacion(admin.id, notifAdmin)
+      }
+      emitirNotificacionARol('admin', {
         tipo: NotificationType.ALERT,
         categoria: CategoriaNotificacion.AUDITORIA_SISTEMA,
-        titulo: 'Nueva Inspección Registrada',
-        mensaje: `El técnico ha registrado la inspección ${payload.codigoInspeccion}.`,
+        titulo: 'Registro de Inspección',
+        mensaje: `Inspección ${payload.codigoInspeccion} ingresada al sistema.`,
         entidadAfectada: 'INSPECCION',
-        entidadId: payload.inspeccionId
-      }))
-
-      if (notifsAdmin.length > 0) {
-        await notificationService.crearNotificacionesMasivas(notifsAdmin)
-        admins.forEach(admin => {
-          const notif = notifsAdmin.find(n => n.usuarioId === admin.id)
-          if (notif) {
-            emitirNotificacion(admin.id, notif)
-          }
-        })
-      }
+        entidadId: payload.inspeccionId,
+        creadoEn: new Date().toISOString()
+      })
 
     } catch (error) {
       console.error('[Error Notification]: Fallo procesando INSPECCION_CREADA', error)
@@ -66,14 +77,18 @@ export function registrarListenersNotificaciones(): void {
     try {
       const tipo = payload.estado === 'APROBADO' ? NotificationType.SUCCESS : NotificationType.ERROR
       const categoria = payload.estado === 'APROBADO' ? CategoriaNotificacion.INSPECCION_APROBADA : CategoriaNotificacion.INSPECCION_RECHAZADA
+      const titulo = payload.estado === 'APROBADO' ? 'Inspección Aprobada' : 'Inspección Rechazada'
+      const mensaje = payload.estado === 'APROBADO'
+        ? `¡Excelente! Tu inspección ${payload.codigoInspeccion} ha sido aprobada conforme.`
+        : `Atención: Tu inspección ${payload.codigoInspeccion} ha sido rechazada. Por favor revisa las observaciones del supervisor.`
 
-      // 2.1 Notificar al Técnico
+      // 2.1 Notificar al Técnico responsable
       const notifTecnico = await notificationService.crearNotificacion({
         usuarioId: payload.tecnicoId,
         tipo,
         categoria,
-        titulo: `Inspección ${payload.estado}`,
-        mensaje: `Tu inspección ${payload.codigoInspeccion} ha sido ${payload.estado.toLowerCase()}.`,
+        titulo,
+        mensaje,
         entidadAfectada: 'INSPECCION',
         entidadId: payload.inspeccionId
       })
@@ -81,73 +96,96 @@ export function registrarListenersNotificaciones(): void {
 
       // 2.2 Auditoría global: Notificar a Administradores
       const admins = await notificationService.obtenerAdministradores()
-
-      const notificacionesAdmins: Prisma.NotificacionCreateManyInput[] = admins.map(admin => ({
-        usuarioId: admin.id,
+      for (const admin of admins) {
+        const notifAdmin = await notificationService.crearNotificacion({
+          usuarioId: admin.id,
+          tipo: NotificationType.ALERT,
+          categoria: CategoriaNotificacion.AUDITORIA_SISTEMA,
+          titulo: 'Evaluación de Inspección',
+          mensaje: `La inspección ${payload.codigoInspeccion} fue calificada como ${payload.estado}.`,
+          entidadAfectada: 'INSPECCION',
+          entidadId: payload.inspeccionId
+        })
+        emitirNotificacion(admin.id, notifAdmin)
+      }
+      emitirNotificacionARol('admin', {
         tipo: NotificationType.ALERT,
         categoria: CategoriaNotificacion.AUDITORIA_SISTEMA,
-        titulo: 'Actividad de Supervisión',
-        mensaje: `La inspección ${payload.codigoInspeccion} fue ${payload.estado.toLowerCase()} por un supervisor.`,
+        titulo: 'Evaluación de Inspección',
+        mensaje: `La inspección ${payload.codigoInspeccion} fue calificada como ${payload.estado}.`,
         entidadAfectada: 'INSPECCION',
-        entidadId: payload.inspeccionId
-      }))
-
-      if (notificacionesAdmins.length > 0) {
-        await notificationService.crearNotificacionesMasivas(notificacionesAdmins)
-        admins.forEach(admin => {
-          const notif = notificacionesAdmins.find(n => n.usuarioId === admin.id)
-          if (notif) {
-            emitirNotificacion(admin.id, notif)
-          }
-        })
-      }
+        entidadId: payload.inspeccionId,
+        creadoEn: new Date().toISOString()
+      })
 
     } catch (error) {
       console.error('[Error Notification]: Fallo procesando INSPECCION_EVALUADA', error)
     }
   })
 
-  // Flujo 3: Acciones Generales del Sistema (Creaciones, Ediciones, Eliminaciones) -> Panel Admin
+  // Flujo 3: Acciones Generales del Sistema (Creaciones, Ediciones, Eliminaciones) -> Panel Admin y Supervisores
   eventBus.on('ACCION_SISTEMA', async (payload: EventoAccionSistema) => {
     try {
       const admins = await notificationService.obtenerAdministradores()
+      const mensaje = payload.detalles || `Se realizó la acción ${payload.accion} en ${payload.entidad}.`
 
-      const notificacionesAdmins: Prisma.NotificacionCreateManyInput[] = admins.map(admin => ({
-        usuarioId: admin.id,
+      for (const admin of admins) {
+        const notifAdmin = await notificationService.crearNotificacion({
+          usuarioId: admin.id,
+          tipo: NotificationType.ALERT,
+          categoria: CategoriaNotificacion.AUDITORIA_SISTEMA,
+          titulo: `Acción del Sistema: ${payload.accion}`,
+          mensaje,
+          entidadAfectada: payload.entidad,
+          entidadId: payload.entidadId ? String(payload.entidadId) : null
+        })
+        emitirNotificacion(admin.id, notifAdmin)
+      }
+
+      emitirNotificacionARol('admin', {
         tipo: NotificationType.ALERT,
         categoria: CategoriaNotificacion.AUDITORIA_SISTEMA,
-        titulo: `Acción del Sistema: ${payload.accion}`,
-        mensaje: `${payload.detalles || `Se realizó la acción ${payload.accion} en ${payload.entidad}`}.`,
+        titulo: `Acción: ${payload.accion}`,
+        mensaje,
         entidadAfectada: payload.entidad,
-        entidadId: payload.entidadId ? String(payload.entidadId) : null
-      }))
+        entidadId: payload.entidadId ? String(payload.entidadId) : null,
+        creadoEn: new Date().toISOString()
+      })
 
-      if (notificacionesAdmins.length > 0) {
-        await notificationService.crearNotificacionesMasivas(notificacionesAdmins)
-        admins.forEach(admin => {
-          const notif = notificacionesAdmins.find(n => n.usuarioId === admin.id)
-          if (notif) {
-            emitirNotificacion(admin.id, notif)
-          }
+      // Si la acción involucra cambio de estado de maquinaria o criticidad, alertar también a supervisores
+      if (payload.entidad === 'EQUIPO' || payload.accion === 'CAMBIO_ESTADO') {
+        emitirNotificacionARol('supervisor', {
+          tipo: NotificationType.WARNING,
+          categoria: CategoriaNotificacion.AUDITORIA_SISTEMA,
+          titulo: 'Alerta de Maquinaria Industrial',
+          mensaje,
+          entidadAfectada: 'EQUIPO',
+          entidadId: payload.entidadId ? String(payload.entidadId) : null,
+          creadoEn: new Date().toISOString()
         })
       }
+
     } catch (error) {
       console.error('[Error Notification]: Fallo procesando ACCION_SISTEMA', error)
     }
   })
 
-  // Flujo 4: Notificación directa del sistema
+  // Flujo 4: Notificación directa del sistema o broadcast
   eventBus.on('NOTIFICACION_SISTEMA', async (payload: NotificacionPayload) => {
     try {
       const notificacion = await notificationService.crearNotificacion({
-        usuarioId: payload.userId,
-        tipo: payload.type as NotificationType,
+        usuarioId: payload.userId || null,
+        tipo: (payload.type as NotificationType) || NotificationType.ALERT,
         categoria: CategoriaNotificacion.AUDITORIA_SISTEMA,
         titulo: 'Notificación del Sistema',
         mensaje: payload.message
       })
 
-      emitirNotificacion(payload.userId, notificacion)
+      if (payload.userId) {
+        emitirNotificacion(payload.userId, notificacion)
+      } else {
+        emitirNotificacionGlobal(notificacion)
+      }
     } catch (error) {
       console.error('[Error Notification]: Fallo procesando NOTIFICACION_SISTEMA', error)
     }

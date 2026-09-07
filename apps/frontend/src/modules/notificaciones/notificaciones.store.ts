@@ -30,12 +30,21 @@ export interface Notification {
     }
 }
 
+import { useToast } from 'vue-toastification'
+
 export const useNotificationStore = defineStore('notification', () => {
     const notifications = ref<Notification[]>([])
     const globalNotifications = ref<Notification[]>([])
     const socket = ref<Socket | null>(null)
     const isConnected = ref(false)
     const isLoading = ref(false)
+
+    let toastInstance: ReturnType<typeof useToast> | null = null
+    try {
+        toastInstance = useToast()
+    } catch {
+        // Inicialización diferida si no está en contexto de app
+    }
 
     const unreadCount = computed(() =>
         notifications.value.filter((n) => !n.leido).length
@@ -96,13 +105,32 @@ export const useNotificationStore = defineStore('notification', () => {
         })
 
         socket.value.on('nueva_notificacion', (nuevaNotif: Notification) => {
-            const exists = notifications.value.some(n => n.id === nuevaNotif.id)
-            if (!exists) {
-                notifications.value.unshift(nuevaNotif)
+            const notifConId: Notification = {
+                ...nuevaNotif,
+                id: nuevaNotif.id || `notif_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+                leido: nuevaNotif.leido ?? false,
+                creadoEn: nuevaNotif.creadoEn || new Date().toISOString()
             }
-            const existsGlobal = globalNotifications.value.some(n => n.id === nuevaNotif.id)
+            const exists = notifications.value.some(n => n.id === notifConId.id)
+            if (!exists) {
+                notifications.value.unshift(notifConId)
+            }
+            const existsGlobal = globalNotifications.value.some(n => n.id === notifConId.id)
             if (!existsGlobal) {
-                globalNotifications.value.unshift(nuevaNotif)
+                globalNotifications.value.unshift(notifConId)
+            }
+
+            try {
+                if (!toastInstance) toastInstance = useToast()
+                if (toastInstance) {
+                    const contenido = `${notifConId.titulo}: ${notifConId.mensaje}`
+                    if (notifConId.tipo === 'SUCCESS') toastInstance.success(contenido)
+                    else if (notifConId.tipo === 'ERROR') toastInstance.error(contenido)
+                    else if (notifConId.tipo === 'WARNING') toastInstance.warning(contenido)
+                    else toastInstance.info(contenido)
+                }
+            } catch {
+                // Fallback silencioso
             }
         })
 

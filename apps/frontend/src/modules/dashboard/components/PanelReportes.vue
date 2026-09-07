@@ -50,15 +50,21 @@ const listaTiposEquipo = ref<Array<{ id: number; nombre: string }>>([])
 
 async function cargarCatalogos() {
   try {
-    const [resP, resT, resE] = await Promise.all([
-      api.get("/plantas"),
-      api.get("/equipos/tipos"),
-      api.get("/equipos")
+    const [resP, resT, resE] = await Promise.allSettled([
+      api.get("/plantas/listar"),
+      api.get("/equipos/tipo/listar"),
+      api.get("/equipos/listar")
     ])
-    if (resP.data) listaPlantas.value = resP.data.data || resP.data
-    if (resT.data) listaTiposEquipo.value = resT.data.data || resT.data
-    if (resE.data) {
-      equiposDisponibles.value = (resE.data.data || resE.data).map((e: any) => ({
+
+    if (resP.status === "fulfilled" && resP.value.data) {
+      listaPlantas.value = resP.value.data.data || resP.value.data || []
+    }
+    if (resT.status === "fulfilled" && resT.value.data) {
+      listaTiposEquipo.value = resT.value.data.data || resT.value.data || []
+    }
+    if (resE.status === "fulfilled" && resE.value.data) {
+      const listaEquipos = resE.value.data.data || resE.value.data || []
+      equiposDisponibles.value = listaEquipos.map((e: any) => ({
         id: e.id,
         codigo: e.codigo,
         nombre: `${e.codigo} — ${e.nombre}`

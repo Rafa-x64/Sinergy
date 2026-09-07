@@ -7,14 +7,14 @@ const router = Router()
 
 // ─── Equipos ─────────────────────────────────────────────────────────────────
 // Lectura: cualquier usuario autenticado (técnico, supervisor, admin)
-router.get(['/listar', '/listar/'], validarJWT, equipoController.listarEquipos)
+router.get(['/', '/listar', '/listar/'], validarJWT, equipoController.listarEquipos)
 // Escritura / Configuración: solo Administrador
 router.post(['/crear', '/crear/'], validarJWT, autorizarRoles(ROL_ADMIN), equipoController.registrarEquipo)
 router.patch('/editar/:id', validarJWT, autorizarRoles(ROL_ADMIN), equipoController.actualizarEquipo)
 router.delete('/eliminar/:id', validarJWT, autorizarRoles(ROL_ADMIN), equipoController.eliminarEquipo)
 
 // ─── Tipos de Equipo ─────────────────────────────────────────────────────────
-router.get(['/tipo/listar', '/tipo/listar/'], validarJWT, equipoController.listarTipos)
+router.get(['/tipos', '/tipo/listar', '/tipo/listar/'], validarJWT, equipoController.listarTipos)
 router.get('/tipo/buscar/:id', validarJWT, equipoController.verTipo)
 router.post(['/tipo/crear', '/tipo/crear/'], validarJWT, autorizarRoles(ROL_ADMIN), equipoController.registrarTipo)
 router.patch('/tipo/editar/:id', validarJWT, autorizarRoles(ROL_ADMIN), equipoController.editarTipo)

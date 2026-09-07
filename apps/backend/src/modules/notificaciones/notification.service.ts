@@ -17,13 +17,15 @@ export const notificationService = {
     })
   },
 
-  async obtenerNotificacionesPorUsuario(usuarioId: number, filtros?: FiltrosNotificacionDTO) {
-    const where: Prisma.NotificacionWhereInput = {
-      OR: [
-        { usuarioId },
-        { usuarioId: null } // Notificaciones broadcast/sistema
-      ]
-    }
+  async obtenerNotificacionesPorUsuario(usuarioId: number, filtros?: FiltrosNotificacionDTO, esAdmin: boolean = false) {
+    const where: Prisma.NotificacionWhereInput = esAdmin
+      ? {}
+      : {
+        OR: [
+          { usuarioId },
+          { usuarioId: null } // Notificaciones broadcast/sistema
+        ]
+      }
 
     if (filtros?.leido !== undefined) {
       where.leido = filtros.leido
@@ -91,13 +93,15 @@ export const notificationService = {
     })
   },
 
-  async marcarTodasComoLeidas(usuarioId: number) {
+  async marcarTodasComoLeidas(usuarioId: number, esAdmin: boolean = false) {
     return await prisma.notificacion.updateMany({
       where: {
-        OR: [
-          { usuarioId },
-          { usuarioId: null }
-        ],
+        ...(esAdmin ? {} : {
+          OR: [
+            { usuarioId },
+            { usuarioId: null }
+          ]
+        }),
         leido: false
       },
       data: { leido: true }

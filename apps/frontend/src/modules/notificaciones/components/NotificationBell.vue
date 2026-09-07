@@ -38,10 +38,16 @@ function obtenerIconoTipo(tipo: NotificationType): string {
 
 async function manejarClickNotificacion(notif: Notification): Promise<void> {
     await notificationStore.marcarComoLeida(notif.id, props.userToken)
+    menuAbierto.value = false
 
     if (notif.entidadAfectada === 'INSPECCION') {
-        menuAbierto.value = false
         router.push('/inspecciones')
+    } else if (notif.entidadAfectada === 'EQUIPO') {
+        router.push('/equipos')
+    } else if (notif.entidadAfectada === 'USUARIO') {
+        router.push('/usuarios')
+    } else if (notif.entidadAfectada === 'PLANTA') {
+        router.push('/plantas')
     }
 }
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from 'vue'
+import { computed, watch, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMediaQuery } from '@vueuse/core'
 import SinergyChip from './SinergyChip.vue'
@@ -17,14 +17,21 @@ const { ocultarLayout } = defineProps<{
 
 const isDesktop = useMediaQuery('(min-width: 960px)')
 
-onMounted(() => {
-    const token = authStore.accessToken
-
-    if (token) {
-        notificationStore.cargarNotificaciones(token)
-        notificationStore.conectarWebSocket(token)
-    }
-})
+watch(
+    () => authStore.accessToken,
+    (nuevoToken) => {
+        if (nuevoToken) {
+            notificationStore.cargarNotificaciones(nuevoToken)
+            notificationStore.conectarWebSocket(nuevoToken)
+            if (authStore.esAdmin) {
+                notificationStore.cargarNotificacionesGlobales(nuevoToken)
+            }
+        } else {
+            notificationStore.desconectarWebSocket()
+        }
+    },
+    { immediate: true }
+)
 
 onUnmounted(() => {
     notificationStore.desconectarWebSocket()

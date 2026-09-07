@@ -1,112 +1,48 @@
-```typescript
-import 'dotenv/config'
-import express from 'express'
-// 1. Importamos el módulo HTTP nativo de Node.js
-import http from 'http'
-import cors from 'cors'
-import helmet from 'helmet'
-import cookieParser from 'cookie-parser'
-import prisma from './prisma'
-import { errorHandler } from './middlewares/errorHandler'
-import { notFoundHandler } from './middlewares/notFoundHandler'
+# Módulo de Notificaciones en Tiempo Real y Auditoría
 
-// Importaciones de rutas
-import authRoutes from '../modules/auth/auth.routes'
-import rolesRoutes from '../modules/roles/roles.routes'
-import equipoRoutes from '../modules/equipo/equipo.routes'
-import plantaRoutes from '../modules/plantas/planta.routes'
-import ubicacionRoutes from '../modules/ubicaciones/ubicacion.routes'
-import lineaRoutes from '../modules/lineas/linea.routes'
-import componenteRoutes from '../modules/componentes/componente.routes'
-import variableCriticaRoutes from '../modules/variables-criticas/variable-critica.routes'
-import inspeccionRoutes from '../modules/inspecciones/inspeccion.routes'
-import mantenimientoRoutes from '../modules/mantenimiento/mantenimiento.routes'
+## 1. Visión General
+El módulo de notificaciones de Sinergy provee una arquitectura desacoplada para emisión, persistencia y entrega en tiempo real de eventos críticos del sistema (inspecciones, cambios operativos de maquinaria, desvíos y auditoría de entidades).
 
-// 2. Importamos los inicializadores de nuestro módulo de notificaciones
-import { inicializarWebSockets } from '../modules/notifications/notification.socket'
-import { registrarListenersNotificaciones } from '../modules/notifications/notification.events'
+Combina:
+- **EventBus Interno de Node.js (`core/eventBus.ts`)**: Para comunicación asíncrona no bloqueante entre servicios (ej. `inspeccionService` emite `INSPECCION_CREADA`).
+- **Persistencia en Base de Datos (`notifications` table con Prisma)**: Para garantizar que las notificaciones no se pierdan si el usuario está offline o si el cliente no ha conectado su socket.
+- **WebSockets con Socket.io (`notification.socket.ts`)**: Para entrega instantánea bidireccional a clientes activos.
+- **Distribución por Roles (RBAC) y Contexto de Planta (PBAC)**: Segmentación de salas por usuario, rol (`rol_admin`, `rol_supervisor`, `rol_tecnico`) y planta.
 
-const app = express()
+---
 
-// 3. Creamos el servidor HTTP manualmente envolviendo la app de Express
-const httpServer = http.createServer(app)
+## 2. Decisiones Arquitectónicas (ADR)
 
-// 4. Inicializamos la capa de eventos y sockets
-// Primero encendemos la escucha de eventos internos
-registrarListenersNotificaciones()
-// Luego acoplamos Socket.io al servidor HTTP
-inicializarWebSockets(httpServer)
+### ADR-008: Corrección de Identificador de Usuario y Salas por Rol en Notificaciones
+- **Contexto**: Las notificaciones en la campana del frontend reportaban estado "Desconectado" tras el login y "No tienes notificaciones registradas", a pesar de existir registros de auditoría en base de datos. Además, los reportes normativos no podían listar plantas ni tipos de maquinaria debido a rutas no sincronizadas.
+- **Decisión**:
+  1. En `notificaciones.controller.ts`, unificar la extracción de la clave primaria del usuario hacia `req.usuario.sub` (definido en `TokenPayload`), eliminando el acceso inválido `(req as any).usuario?.id` que producía respuestas HTTP 401.
+  2. Implementar unión automática a salas por rol (`rol_admin`, `rol_supervisor`, `rol_tecnico`) y por planta (`planta_${plantaId}`) en `notification.socket.ts`, permitiendo emisiones dirigidas (`emitirNotificacionARol`, `emitirNotificacionAUsuario`, `emitirNotificacionGlobal`).
+  3. En `Menu.vue`, sustituir la invocación estática de `onMounted` por un `watch` reactivo e inmediato sobre `authStore.accessToken` para conectar/desconectar el socket y sincronizar notificaciones en tiempo real al iniciar y cerrar sesión.
+  4. En `PanelReportes.vue`, apuntar a los endpoints estandarizados `/plantas/listar`, `/equipos/tipo/listar` y `/equipos/listar` utilizando `Promise.allSettled` para aislamiento de fallos.
+- **Alternativas descartadas**:
+  - Polling HTTP recurrente desde el frontend (descartado por alto consumo de red y latencia).
+  - Emisión de sockets exclusivamente a nivel broadcast sin salas de rol (descartado por fuga de privacidad entre roles).
+- **Trade-offs**: La unión a múltiples salas en Socket.io añade una mínima sobrecarga en memoria del servidor por socket conectado, pero optimiza sustancialmente el ancho de banda y la pertinencia de las alertas.
 
-// ─── Middlewares de seguridad y parseo ────────────────────────────────────────
-app.use(helmet())
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true)
+---
 
-      if (process.env.NODE_ENV !== 'production') {
-        const esLocal = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(
-          origin
-        )
-        if (esLocal) return callback(null, true)
-      }
+## 3. Matriz de Notificaciones por Rol
 
-      const origenesPermitidos = [
-        'http://localhost:3000',
-        'http://localhost:5173',
-      ]
-      if (origenesPermitidos.includes(origin)) {
-        return callback(null, true)
-      }
+| Evento de Negocio | Tipo (`NotificationType`) | Categoría (`CategoriaNotificacion`) | Destinatarios | Mensaje / Acción |
+| :--- | :--- | :--- | :--- | :--- |
+| **Nueva Inspección Creada** | `WARNING` / `ALERT` | `INSPECCION_PENDIENTE` / `AUDITORIA_SISTEMA` | Supervisor de la planta y Administrador | Alerta al supervisor para evaluación técnica; registro en bitácora del admin. |
+| **Inspección Aprobada** | `SUCCESS` | `INSPECCION_APROBADA` | Técnico evaluado y Administrador | Notificación de conformidad al técnico; registro de supervisión al admin. |
+| **Inspección Rechazada** | `ERROR` | `INSPECCION_RECHAZADA` | Técnico evaluado y Administrador | Notificación de no conformidad al técnico con observación para corrección. |
+| **Acción General del Sistema** | `ALERT` | `AUDITORIA_SISTEMA` | Administrador del Sistema | Auditoría de creación, edición o eliminación de usuarios, roles, plantas o variables. |
+| **Cambio de Estado de Maquinaria** | `WARNING` | `AUDITORIA_SISTEMA` | Supervisor y Administrador | Alerta de maquinaria marcada como Inoperativa o En Mantenimiento. |
 
-      callback(new Error('No permitido por la política CORS'))
-    },
-    credentials: true, // Requerido para cookies HttpOnly (refresh token)
-  })
-)
-app.use(express.json())
-app.use(cookieParser())
+---
 
-// ─── Rutas de diagnóstico ─────────────────────────────────────────────────────
-app.get('/', (_req, res) => {
-  res.json({
-    name: 'Sinergy API Backend',
-    version: '1.0',
-    status: 'online',
-    healthCheck: '/api/health',
-  })
-})
+## 4. Endpoints de la API
 
-app.get('/api/health', async (_req, res, next) => {
-  try {
-    await prisma.$queryRaw`SELECT 1`
-    res.json({
-      status: 'ok',
-      message: 'Sinergy Backend running',
-      db: 'connected',
-    })
-  } catch (error) {
-    next(error)
-  }
-})
-
-// ─── Módulos de funcionalidades ───────────────────────────────────────────────
-app.use('/api/auth', authRoutes)
-app.use('/api/usuarios', authRoutes)
-app.use('/api/roles', rolesRoutes)
-app.use('/api/equipos', equipoRoutes)
-app.use('/api/plantas', plantaRoutes)
-app.use('/api/ubicaciones', ubicacionRoutes)
-app.use('/api/lineas', lineaRoutes)
-app.use('/api/componentes', componenteRoutes)
-app.use('/api/variables-criticas', variableCriticaRoutes)
-app.use('/api/inspecciones', inspeccionRoutes)
-app.use('/api/mantenimiento', mantenimientoRoutes)
-
-// ─── Handlers globales (deben ir al final) ────────────────────────────────────
-app.use(notFoundHandler)
-app.use(errorHandler)
-
-// 5. Exportamos el httpServer en lugar de app
-export default httpServer
-```
+- `GET /api/notificaciones`: Lista las notificaciones del usuario autenticado (si es Administrador, incluye el consolidado global de auditoría).
+- `GET /api/notificaciones/globales`: Solo Administrador. Historial completo de auditoría y actividades.
+- `PATCH /api/notificaciones/:id/leer`: Marca una notificación específica como leída.
+- `PATCH /api/notificaciones/marcar-todas-leidas`: Marca todas las notificaciones pendientes como leídas.
+- `DELETE /api/notificaciones/:id`: Elimina una notificación del historial.
