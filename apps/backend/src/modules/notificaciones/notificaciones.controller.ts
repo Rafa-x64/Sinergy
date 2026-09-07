@@ -6,10 +6,13 @@ import { CategoriaNotificacion, NotificationType } from '@prisma/client'
 export const notificacionesController = {
   async listarMisNotificaciones(req: Request, res: Response<ResponseDTO>, next: NextFunction) {
     try {
-      const usuarioId = (req as any).usuario?.id
+      const usuarioId = req.usuario?.sub
       if (!usuarioId) {
         return res.status(401).json({ status: 'error', message: 'Usuario no autenticado' })
       }
+
+      const roles: string[] = req.usuario?.roles || []
+      const esAdmin = roles.some(r => r.toLowerCase().includes('admin'))
 
       const { leido, categoria, tipo, limite } = req.query
 
@@ -20,7 +23,7 @@ export const notificacionesController = {
         limite: limite ? parseInt(String(limite), 10) : 50
       }
 
-      const notificaciones = await notificationService.obtenerNotificacionesPorUsuario(usuarioId, filtros)
+      const notificaciones = await notificationService.obtenerNotificacionesPorUsuario(usuarioId, filtros, esAdmin)
 
       return res.status(200).json({
         status: 'ok',
@@ -64,8 +67,11 @@ export const notificacionesController = {
 
   async marcarComoLeida(req: Request, res: Response<ResponseDTO>, next: NextFunction) {
     try {
-      const usuarioId = (req as any).usuario?.id
-      const roles: string[] = (req as any).usuario?.roles || []
+      const usuarioId = req.usuario?.sub
+      if (!usuarioId) {
+        return res.status(401).json({ status: 'error', message: 'Usuario no autenticado' })
+      }
+      const roles: string[] = req.usuario?.roles || []
       const esAdmin = roles.some(r => r.toLowerCase().includes('admin'))
 
       const { id } = req.params
@@ -94,12 +100,15 @@ export const notificacionesController = {
 
   async marcarTodasComoLeidas(req: Request, res: Response<ResponseDTO>, next: NextFunction) {
     try {
-      const usuarioId = (req as any).usuario?.id
+      const usuarioId = req.usuario?.sub
       if (!usuarioId) {
         return res.status(401).json({ status: 'error', message: 'Usuario no autenticado' })
       }
 
-      await notificationService.marcarTodasComoLeidas(usuarioId)
+      const roles: string[] = req.usuario?.roles || []
+      const esAdmin = roles.some(r => r.toLowerCase().includes('admin'))
+
+      await notificationService.marcarTodasComoLeidas(usuarioId, esAdmin)
 
       return res.status(200).json({
         status: 'ok',
@@ -112,8 +121,11 @@ export const notificacionesController = {
 
   async eliminarNotificacion(req: Request, res: Response<ResponseDTO>, next: NextFunction) {
     try {
-      const usuarioId = (req as any).usuario?.id
-      const roles: string[] = (req as any).usuario?.roles || []
+      const usuarioId = req.usuario?.sub
+      if (!usuarioId) {
+        return res.status(401).json({ status: 'error', message: 'Usuario no autenticado' })
+      }
+      const roles: string[] = req.usuario?.roles || []
       const esAdmin = roles.some(r => r.toLowerCase().includes('admin'))
 
       const { id } = req.params

@@ -5,8 +5,8 @@ import { autorizarRoles, ROL_ADMIN, ROL_SUPERVISOR } from '../../core/middleware
 
 const router = Router()
 
-// Lectura: Administrador y Supervisor
-router.get(['/listar', '/listar/'], validarJWT, autorizarRoles(ROL_ADMIN, ROL_SUPERVISOR), plantaController.verPlantas)
+// Lectura: cualquier usuario autenticado (controlado por PBAC en el controlador)
+router.get(['/', '/listar', '/listar/'], validarJWT, plantaController.verPlantas)
 
 // Escritura: solo Administrador
 router.post(['/crear', '/crear/'], validarJWT, autorizarRoles(ROL_ADMIN), plantaController.registrarPlanta)
