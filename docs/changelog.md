@@ -16,6 +16,21 @@ El formato sigue el estándar [Keep a Changelog](https://keepachangelog.com/es/1
 
 ## [Unreleased]
 
+- **Notificaciones en Tiempo Real y Segmentación por Roles (`notification.socket.ts`, `notification.events.ts`, `notificaciones.controller.ts`)**:
+  - **Salas de WebSocket por Rol y Planta**: Configuración en `notification.socket.ts` para que cada conexión activa se asocie a su sala de usuario (`user_${userId}`), salas por rol (`rol_admin`, `rol_supervisor`, `rol_tecnico`) y sala de planta (`planta_${plantaId}`). Implementadas funciones de emisión dirigida (`emitirNotificacionAUsuario`, `emitirNotificacionARol` y `emitirNotificacionGlobal`).
+  - **Corrección de Identificador de Usuario en Backend**: Corrección en `notificaciones.controller.ts` para leer la clave primaria desde `req.usuario.sub` en lugar de `(req as any).usuario.id`, resolviendo fallos HTTP 401 Unauthorized en el acceso a la bandeja de notificaciones.
+  - **Eventos Personalizados por Rol**:
+    - **Técnicos**: Notificaciones de inspecciones aprobadas (`SUCCESS`) o rechazadas (`ERROR`) con observaciones técnicas.
+    - **Supervisores**: Alertas de rondas pendientes de revisión (`WARNING`) y avisos inmediatos de equipos inoperativos o desvíos normativos.
+    - **Administradores**: Bitácora integral en tiempo real de actividades del sistema (`AUDITORIA_SISTEMA`) y evaluaciones globales.
+  - **Reactividad Inmediata al Autenticarse (`Menu.vue`)**: Reemplazo de llamada estática en `onMounted` por un `watch` reactivo con `immediate: true` sobre `authStore.accessToken`. El estado del WebSocket pasa a "En vivo" inmediatamente tras iniciar sesión desde cualquier vista.
+  - **Feedback Visual con Toastification (`notificaciones.store.ts`)**: Generación de alertas flotantes automáticas al recibir eventos por WebSocket mientras el usuario navega por el sistema.
+  - **Navegación Contextual desde la Campana (`NotificationBell.vue`)**: Redirección directa a la vista de inspecciones, equipos, usuarios o plantas al interactuar con una notificación.
+
+- **Catálogos y Reportes de Flota Industrial (`PanelReportes.vue`, `planta.routes.ts`, `equipo.routes.ts`)**:
+  - **Corrección de Endpoints en Reporte de Flota (R1)**: Actualización de `cargarCatalogos()` para consultar las rutas canónicas `/plantas/listar`, `/equipos/tipo/listar` y `/equipos/listar` mediante `Promise.allSettled`, asegurando la carga independiente de las plantas y los tipos de maquinaria.
+  - **Alias de Rutas RESTful en Backend**: Incorporación de rutas raíz y alias (`['/', '/listar', '/listar/']` y `['/tipos', '/tipo/listar', '/tipo/listar/']`) en los routers de plantas y equipos para tolerancia a fallos.
+
 - **Sistema de Autorización Granular Multi-Planta y Roles (RBAC + PBAC)**:
   - **Middlewares Backend (`autorizarRol.ts`, `autorizarRoles.ts`, `autorizarPlanta.ts`)**: Protección estricta de rutas mediante validación de roles (`ADMINISTRADOR`, `SUPERVISOR`, `TECNICO`, etc.) e inyección automática del alcance de planta (`req.usuario.plantaId`). Para usuarios no administradores, el backend restringe las consultas e inserciones estrictamente a su planta asignada; los administradores mantienen alcance global sin filtro restrictivo.
   - **Seguridad en Rutas Críticas**: Integración de middlewares de autorización en los endpoints de `equipo.routes.ts`, `ubicacion.routes.ts`, `planta.routes.ts`, `inspeccion.routes.ts`, `variable-critica.routes.ts` y `auth.routes.ts`.

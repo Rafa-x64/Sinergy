@@ -114,19 +114,22 @@ Lista de tareas organizada por fases. Marca las tareas a medida que se completan
 
 ---
 
-## Fase 4 — Dashboard y Reportes (SUPERVISOR)
+## Fase 4 — Dashboard y Reportes (SUPERVISOR / GERENTE / ADMIN)
 
 ### Backend
-- `[ ]` `GET /api/reportes/inspecciones` — Con filtros: fechas, planta, equipo, técnico
-- `[ ]` `GET /api/reportes/estadisticas` — KPIs para el dashboard
-- `[ ]` `POST /api/inspecciones/batch` — Sincronización masiva desde offline
+- `[x]` Endpoints consolidados en `/api/dashboard/*` (`reporte-flota`, `inspecciones-periodo`, `no-conformidades`, `reporte-ejecutivo`, `matriz-criticidad`, `tarjeta-ronda/:equipoId`)
+- `[x]` `GET /api/dashboard/disponibilidad` y `GET /api/dashboard/top-fallas` — KPIs para el dashboard
+- `[x]` Módulo de Notificaciones y WebSockets (`/api/notificaciones/*`, Socket.io) con salas por rol (`rol_admin`, `rol_supervisor`, `rol_tecnico`) y por planta
+- `[x]` Alias de rutas RESTful en `/api/plantas` y `/api/equipos` para catálogos auxiliares
 
 ### Frontend
-- `[ ]` Vista `DashboardView.vue` — Estadísticas en tiempo real con ApexCharts
-- `[ ]` Vista `ReportesView.vue` — Filtros avanzados + tabla de resultados
-- `[ ]` Composable `useExportPDF.ts` — Exportar reporte a PDF
-- `[ ]` Composable `useExportExcel.ts` — Exportar a Excel
-- `[ ]` Botón "Exportar Word" (HTML a `.doc`)
+- `[x]` Vista `DashboardView.vue` — Estadísticas e indicadores en tiempo real con Chart.js
+- `[x]` Componente `PanelReportes.vue` — Centro de Emisión de Reportes Normativos R1 a R6 con filtros independientes mediante `Promise.allSettled`
+- `[x]` Utilitario `pdfExport.ts` — Generación y exportación de reportes a PDF estructurado
+- `[x]` Exportación a Excel con librería `xlsx` para reportes R1, R2, R3 y R5
+- `[x]` Componente `NotificationBell.vue` con badge interactivo, chip de estado en vivo y popover de alertas
+- `[x]` Vista `NotificacionesGlobalesView.vue` para auditoría y bitácora en vivo
+- `[x]` Conexión WebSocket inmediata al autenticarse mediante watcher en `Menu.vue`
 - `[ ]` Integración con Power BI (pendiente acceso)
 
 ---

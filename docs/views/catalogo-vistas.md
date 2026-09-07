@@ -34,7 +34,7 @@ Este manual documenta todas las vistas (componentes de página) de la Single Pag
 | `VariablesCriticasView.vue` | `/variables-criticas` | Privada (`requiresAuth: true`) | `ADMINISTRADOR`, `SUPERVISOR` | Con Menú Lateral | Gestión jerárquica de variables críticas y plantillas por tipo de equipo |
 | `InspeccionesView.vue` | `/inspecciones` | Privada (`requiresAuth: true`) | Todos (Técnico: captura, Supervisor: aprobación) | Con Menú Lateral | Form Wizard de captura en campo y bandeja de supervisión |
 | `UsuariosView.vue` | `/usuarios` | Privada (`requiresAuth: true`) | `ADMINISTRADOR` | Con Menú Lateral | Administración de usuarios, asignación a planta y control de roles |
-| `NotificacionesGlobalesView.vue` | `/notificaciones` | Privada (`requiresAuth: true`) | Todos | Con Menú Lateral | Historial y centro de notificaciones en tiempo real |
+| `NotificacionesGlobalesView.vue` | `/notificaciones-globales` | Privada (`requiresAuth: true`) | `ADMINISTRADOR` | Con Menú Lateral | Panel de auditoría global y supervisión en tiempo real de actividades |
 | `NotFoundView.vue` | `/:pathMatch(.*)*` | Pública (`requiresAuth: false`) | Todos | Sin Menú (`hideLayout: true`) | Pantalla 404 para rutas inexistentes |
 
 ---
@@ -47,15 +47,25 @@ Este manual documenta todas las vistas (componentes de página) de la Single Pag
   - Renderiza el formulario de credenciales (`usuario` y `password`).
   - Llama a `authStore.login(credenciales)`.
   - Si la autenticación es exitosa, almacena el Access Token en memoria y redirige a `/dashboard`.
+  - Al iniciar sesión, el watcher global en `Menu.vue` conecta inmediatamente el WebSocket y descarga las notificaciones.
 
 ---
 
 ## 3. Vista `DashboardView.vue`
 
 - **Ubicación**: `apps/frontend/src/modules/dashboard/views/DashboardView.vue`
+- **Store Consumido**: `useDashboardStore` (`dashboard.store.ts`)
+- **Componentes Incrustados**:
+  - `PanelReportes.vue`: Centro de Emisión de Reportes Normativos (R1 a R6) con descargas en Excel y PDF estructurado:
+    - **R1: Estado de Flota Completo**: Filtros reactivos por Planta Industrial (`listaPlantas`), Tipo de Maquinaria (`listaTiposEquipo`) y Estado Operativo (`OPERATIVO`, `INOPERATIVO`, `EN_MANTENIMIENTO`).
+    - **R2: Inspecciones del Período**: Registro histórico con rangos de fechas y exportación.
+    - **R3: Equipos Críticos / No Conformidades**: Monitoreo de variables fuera de límites normativos.
+    - **R4: Resumen Ejecutivo Mensual**: Indicadores clave de disponibilidad, fallas e inoperatividad.
+    - **R5: Matriz de Criticidad ABC**: Clasificación de priorización de mantenimiento preventivo.
+    - **R6: Tarjeta de Ronda Física**: Formato imprimible para levantamiento en campo.
+  - Tarjetas de KPIs ejecutivos de disponibilidad industrial y gráficas dinámicas.
 - **Comportamiento**:
-  - Muestra tarjetas resumen con totales de equipos, inspecciones activas y plantas operativas.
-  - Diseñada responsive para visualización en computadoras y tabletas de supervisores.
+  - Diseñada responsive para visualización en computadoras de oficina y tabletas de supervisores.
 
 ---
 
@@ -135,12 +145,14 @@ Este manual documenta todas las vistas (componentes de página) de la Single Pag
 
 ---
 
-## 12. Vista `NotificacionesGlobalesView.vue`
+## 12. Vista `NotificacionesGlobalesView.vue` y Componente `NotificationBell.vue`
 
-- **Ubicación**: `apps/frontend/src/modules/notificaciones/views/NotificacionesGlobalesView.vue`
-- **Store Consumido**: `useNotificacionesStore`
-- **Componentes Incrustados**: `NotificationBell.vue`
-- **Propósito**: Centro de alertas del usuario para seguimiento de inspecciones pendientes, aprobaciones y rechazos emitidos en tiempo real por WebSockets.
+- **Ubicación de la Vista**: `apps/frontend/src/modules/notificaciones/views/NotificacionesGlobalesView.vue`
+- **Ubicación del Componente Flotante**: `apps/frontend/src/modules/notificaciones/components/NotificationBell.vue`
+- **Store Consumido**: `useNotificationStore` (`notificaciones.store.ts`)
+- **Propósito y Capacidades**:
+  - **`NotificationBell.vue` (Menú Superior)**: Icono de campana con badge dinámico de notificaciones no leídas, chip indicador de estado de WebSocket ("En vivo" / "Desconectado"), popover con scroll de alertas recientes segmentadas por criticidad (`ERROR`, `WARNING`, `ALERT`, `SUCCESS`), acción de marcar todas como leídas y acceso rápido al Panel Global para Administradores.
+  - **`NotificacionesGlobalesView.vue` (`/notificaciones-globales`)**: Panel de supervisión y auditoría en tiempo real para Administradores del Sistema. Permite filtrar por categorías (`INSPECCION_PENDIENTE`, `INSPECCION_APROBADA`, `INSPECCION_RECHAZADA`, `AUDITORIA_SISTEMA`), buscar por texto libre, y visualizar el usuario responsable, entidad afectada y timestamp exacto de cada evento.
 
 ---
 
