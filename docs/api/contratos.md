@@ -1228,3 +1228,138 @@ Busca un tipo de equipo específico por su ID.
   }
   ```
 - **Errores posibles:** `400` ID inválido, `404` tipo no existe.
+
+---
+
+## Módulo de Notificaciones y WebSockets
+
+### `GET /api/notificaciones`
+Obtiene las notificaciones dirigidas al usuario autenticado (o todo el registro de auditoría si el usuario posee rol Administrador).
+
+- **Acceso:** Protegido (`Authorization: Bearer <accessToken>`)
+- **Query Parameters (opcionales):**
+  - `leido`: boolean (`true` o `false`)
+  - `categoria`: enum `CategoriaNotificacion` (`INSPECCION_PENDIENTE`, `INSPECCION_APROBADA`, `INSPECCION_RECHAZADA`, `AUDITORIA_SISTEMA`)
+  - `tipo`: enum `NotificationType` (`ERROR`, `WARNING`, `ALERT`, `SUCCESS`)
+  - `limite`: number (por defecto 50)
+- **Response (200 OK):**
+  ```json
+  {
+    "status": "ok",
+    "message": "Notificaciones obtenidas correctamente",
+    "data": [
+      {
+        "id": "uuid-notificacion",
+        "usuarioId": 1,
+        "tipo": "SUCCESS",
+        "categoria": "INSPECCION_APROBADA",
+        "titulo": "Inspección Aprobada",
+        "mensaje": "¡Excelente! Tu inspección INSP-001 ha sido aprobada conforme.",
+        "entidadAfectada": "INSPECCION",
+        "entidadId": "12",
+        "leido": false,
+        "creadoEn": "2026-09-07T12:00:00.000Z"
+      }
+    ]
+  }
+  ```
+- **Errores posibles:** `401` No autenticado.
+
+---
+
+### `GET /api/notificaciones/globales`
+Obtiene el historial completo de auditoría y actividades globales del sistema.
+
+- **Acceso:** Protegido (`Authorization: Bearer <accessToken>`), restringido exclusivamente a **Administrador del Sistema**.
+- **Query Parameters (opcionales):** `leido`, `categoria`, `tipo`, `limite` (por defecto 100).
+- **Response (200 OK):**
+  ```json
+  {
+    "status": "ok",
+    "message": "Notificaciones globales de auditoría obtenidas correctamente",
+    "data": [
+      {
+        "id": "uuid-notificacion",
+        "usuarioId": 1,
+        "tipo": "ALERT",
+        "categoria": "AUDITORIA_SISTEMA",
+        "titulo": "Acción del Sistema: CREAR",
+        "mensaje": "El técnico registró la inspección INSP-001.",
+        "entidadAfectada": "INSPECCION",
+        "entidadId": "12",
+        "leido": false,
+        "creadoEn": "2026-09-07T12:00:00.000Z",
+        "usuario": {
+          "id": 1,
+          "nombre": "Rafael",
+          "apellido": "García",
+          "nombreUsuario": "rgarcia"
+        }
+      }
+    ]
+  }
+  ```
+- **Errores posibles:** `401` No autenticado, `403` No autorizado (solo Administrador).
+
+---
+
+### `PATCH /api/notificaciones/:id/leer`
+Marca una notificación específica como leída.
+
+- **Acceso:** Protegido (`Authorization: Bearer <accessToken>`)
+- **URL Parameters:** `id` (UUID de la notificación)
+- **Response (200 OK):**
+  ```json
+  {
+    "status": "ok",
+    "message": "Notificación marcada como leída",
+    "data": { "id": "uuid-notificacion", "leido": true }
+  }
+  ```
+- **Errores posibles:** `401` No autenticado, `403` Intento de modificar notificación de otro usuario, `404` Notificación no encontrada.
+
+---
+
+### `PATCH /api/notificaciones/marcar-todas-leidas`
+Marca todas las notificaciones pendientes del usuario como leídas.
+
+- **Acceso:** Protegido (`Authorization: Bearer <accessToken>`)
+- **Response (200 OK):**
+  ```json
+  {
+    "status": "ok",
+    "message": "Todas las notificaciones fueron marcadas como leídas"
+  }
+  ```
+
+---
+
+### `DELETE /api/notificaciones/:id`
+Elimina físicamente una notificación del historial.
+
+- **Acceso:** Protegido (`Authorization: Bearer <accessToken>`)
+- **URL Parameters:** `id` (UUID de la notificación)
+- **Response (200 OK):**
+  ```json
+  {
+    "status": "ok",
+    "message": "Notificación eliminada correctamente",
+    "data": { "id": "uuid-notificacion" }
+  }
+  ```
+- **Errores posibles:** `401` No autenticado, `403` No autorizado, `404` Notificación no encontrada.
+
+---
+
+### `POST /api/test-notificacion`
+Endpoint de diagnóstico para emitir un evento de prueba al bus de notificaciones en vivo.
+
+- **Acceso:** Protegido (`Authorization: Bearer <accessToken>`)
+- **Response (200 OK):**
+  ```json
+  {
+    "status": "ok",
+    "message": "Evento emitido al bus correctamente"
+  }
+  ```
+

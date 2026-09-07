@@ -1,4 +1,4 @@
-﻿# Módulo: Dashboard Integral & Centro de Reportes
+# Módulo: Dashboard Integral & Centro de Reportes
 
 ## 1. Visión General
 
@@ -36,6 +36,14 @@ Todos los gráficos fueron desarrollados con **Chart.js** y `vue-chartjs` con di
 | **R4** | Reporte Ejecutivo Mensual (1 Pág.) | Gerente | Excel + PDF | 5 KPIs consolidados de planta, horas estimadas de inoperatividad y top fallas. |
 | **R5** | Matriz de Criticidad por Equipo | Mantenimiento | Excel + PDF | Clasificación ABC interactiva (Críticos, Medios, Bajos) según fallas y rechazos. |
 | **R6** | Tarjeta de Ronda de Inspección | Técnico | Impresión + PDF | Formato F-MANT-04 para toma física de lecturas en campo con firmas. |
+
+### 3.1 Integración y Carga de Catálogos Auxiliares en `PanelReportes.vue`
+Para los filtros reactivos de R1 (Flota) y R6 (Tarjeta de Ronda), el componente consume de forma asíncrona y tolerante a fallos:
+- **Plantas Industriales**: Consulta a `/api/plantas/listar` (o alias `/api/plantas`), alimentando el selector reactivo `listaPlantas`.
+- **Tipos de Maquinaria**: Consulta a `/api/equipos/tipo/listar` (o alias `/api/equipos/tipos`), alimentando el selector reactivo `listaTiposEquipo`.
+- **Inventario de Maquinarias**: Consulta a `/api/equipos/listar` (o alias `/api/equipos`), alimentando el catálogo para la selección de tarjeta de ronda física.
+
+La carga se realiza mediante `Promise.allSettled`, asegurando que la indisponibilidad de un catálogo no bloquee la carga ni el filtrado de los demás.
 
 ---
 

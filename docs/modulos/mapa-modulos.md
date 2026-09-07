@@ -41,7 +41,8 @@ El sistema Sinergy está dividido en 9 dominios funcionales. Cada dominio es aut
 | **Componentes**| `Componente` | `/api/componentes/*` | `useComponenteStore` | `ComponentesView.vue`, integrado en `JerarquiaTreeView` |
 | **Variables Críticas** | `PlantillaVariable`, `PlantillaOpcionSeleccion`, `Variable`, `OpcionSeleccion` | `/api/variables-criticas/*` | `useVariablesStore` | `VariablesCriticasView.vue`, `JerarquiaTreeView.vue`, `PlantillasVariablesPanel.vue`, `DetalleVariablesPanel.vue`, `DialogoPlantillaVariable.vue` |
 | **Inspecciones** | `Inspeccion`, `InspeccionDetalle`, `InspeccionAdjunto` | `/api/inspecciones/*` | `useInspeccionesStore` | `InspeccionesView.vue`, `FormWizardInspeccion.vue`, `WizardSeleccionAlcance.vue`, `BandejaSupervisionPanel.vue`, `DetalleInspeccionModal.vue` |
-| **Notificaciones** | `Notificacion` | `/api/notificaciones/*`, WebSocket Socket.io | `useNotificacionesStore` | `NotificationBell.vue`, `NotificacionesGlobalesView.vue` |
+| **Notificaciones** | `Notificacion` | `/api/notificaciones/*`, WebSocket Socket.io | `useNotificationStore` | `NotificationBell.vue`, `NotificacionesGlobalesView.vue` |
+| **Dashboard & Reportes** | `Equipo`, `Inspeccion`, `Planta` | `/api/dashboard/*` | `useDashboardStore` | `DashboardView.vue`, `PanelReportes.vue` (R1 a R6) |
 
 ---
 
@@ -92,6 +93,14 @@ El sistema Sinergy está dividido en 9 dominios funcionales. Cada dominio es aut
 - **Flujo**: Flujo técnico de captura paso a paso (Planta → Tipo → Equipo/Línea → Captura de variables con validación de rangos operativos y borrador local). Bandeja de supervisión con evaluación técnica (Aprobación/Rechazo) y trazabilidad completa.
 
 ### 3.10 Módulo `notificaciones`
-- **Backend**: `notification.socket.ts`, integración en servidor Express con Socket.io.
+- **Backend**: `notificaciones.routes.ts`, `notificaciones.controller.ts`, `notification.service.ts`, `notification.socket.ts`, `notification.events.ts`.
+- **Ruta base**: `/api/notificaciones/` + WebSockets Socket.io.
 - **Frontend**: `notificaciones.store.ts`, `NotificationBell.vue`, `NotificacionesGlobalesView.vue`.
-- **Flujo**: Notificaciones en tiempo real vía WebSockets para eventos de inspecciones, aprobaciones y alertas técnicas.
+- **Flujo**: Desacoplado mediante EventBus interno (`core/eventBus.ts`). Distribución en tiempo real con salas por rol (`rol_admin`, `rol_supervisor`, `rol_tecnico`) y por planta. Notificaciones dirigidas por criticidad (`ERROR`, `WARNING`, `ALERT`, `SUCCESS`) y panel global de auditoría para administradores.
+
+### 3.11 Módulo `dashboard` y Reportes Normativos
+- **Backend**: `dashboard.routes.ts`, `dashboard.controller.ts`, `dashboard.service.ts`.
+- **Ruta base**: `/api/dashboard/`
+- **Frontend**: `dashboard.store.ts`, `DashboardView.vue`, `PanelReportes.vue`, utilitarios de exportación `pdfExport.ts` y biblioteca `xlsx`.
+- **Flujo**: Métricas operativas en tiempo real (disponibilidad, distribución de flota, ranking de fallas, productividad por técnico) y Centro de Emisión de Reportes Normativos R1 a R6 (Flota, Inspecciones, No-Conformidades, Ejecutivo Mensual, Criticidad ABC y Tarjeta de Ronda física F-MANT-04) con filtros reactivos y tolerancia a fallos mediante `Promise.allSettled`.
+
