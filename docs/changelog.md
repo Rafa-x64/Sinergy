@@ -1,4 +1,4 @@
-# Changelog — Sinergy
+# Changelog — Sinergy v1.0.1
 
 Todos los cambios notables del proyecto se documentan en este archivo.
 
