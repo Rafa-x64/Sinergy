@@ -166,6 +166,29 @@ export const lubricacionService = {
     })
   },
 
+  async eliminarPuntoLubricacion(id: number) {
+    const punto = await prisma.puntoLubricacion.findUnique({
+      where: { id },
+      include: { detallesRutina: { select: { id: true } } }
+    })
+    if (!punto) {
+      throw new AppError('Parte a lubricar no encontrada', 404)
+    }
+
+    // Si tiene registros históricos de rutina, aplicamos desactivación lógica (soft delete)
+    if (punto.detallesRutina && punto.detallesRutina.length > 0) {
+      return prisma.puntoLubricacion.update({
+        where: { id },
+        data: { activo: false }
+      })
+    }
+
+    // Si es un punto recién creado sin historial, eliminación física segura
+    return prisma.puntoLubricacion.delete({
+      where: { id }
+    })
+  },
+
   // ─── CONTROL DE HORÓMETROS Y ANTI-RETROCESO ─────────────────────────────────
 
   async registrarLecturaHorometro(dto: RegistrarHorometroDTO, usuarioId: number) {

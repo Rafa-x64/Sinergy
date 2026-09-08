@@ -6,6 +6,7 @@ import type {
   CrearLubricanteInput,
   PuntoLubricacion,
   CrearPuntoLubricacionInput,
+  EditarPuntoLubricacionInput,
   FilaMatrizLubricacion,
   RegistrarRutinaPayload,
   ReporteFugaItem,
@@ -97,6 +98,28 @@ export const useLubricacionStore = defineStore('lubricacion', () => {
       return nuevo
     }
     throw new Error(res.data?.message || 'Error al configurar punto de lubricación')
+  }
+
+  async function editarPuntoLubricacion(id: number, payload: EditarPuntoLubricacionInput): Promise<PuntoLubricacion> {
+    const res = await api.put(`/lubricacion/puntos/${id}`, payload)
+    if (res.data?.status === 'ok' && res.data.data) {
+      const actualizado = res.data.data as PuntoLubricacion
+      const idx = puntosPorEquipo.value.findIndex(p => p.id === id)
+      if (idx !== -1) {
+        puntosPorEquipo.value[idx] = actualizado
+      }
+      return actualizado
+    }
+    throw new Error(res.data?.message || 'Error al editar parte a lubricar')
+  }
+
+  async function eliminarPuntoLubricacion(id: number): Promise<void> {
+    const res = await api.delete(`/lubricacion/puntos/${id}`)
+    if (res.data?.status === 'ok') {
+      puntosPorEquipo.value = puntosPorEquipo.value.filter(p => p.id !== id)
+      return
+    }
+    throw new Error(res.data?.message || 'Error al eliminar parte a lubricar')
   }
 
   // Acciones: Matriz y Horómetros
@@ -202,6 +225,8 @@ export const useLubricacionStore = defineStore('lubricacion', () => {
     crearLubricante,
     cargarPuntosPorEquipo,
     crearPuntoLubricacion,
+    editarPuntoLubricacion,
+    eliminarPuntoLubricacion,
     cargarMatriz,
     registrarLecturaHorometro,
     registrarRutina,

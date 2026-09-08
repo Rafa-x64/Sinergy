@@ -16,6 +16,14 @@ El formato sigue el estándar [Keep a Changelog](https://keepachangelog.com/es/1
 
 ## [Unreleased]
 
+### Fixed
+- **Configuración por Variables de Entorno** (`feat: env-config`):
+  - `apps/frontend/.env`: Ahora define `VITE_API_URL=http://localhost:3000/api` eliminando el fallback implícito `/api` que rompía la app en máquinas sin el proxy de Vite.
+  - `apps/frontend/.env.example`: Plantilla documentada para que cualquier desarrollador sepa qué configurar al clonar el repositorio.
+  - `apps/frontend/vite.config.ts`: Refactorizado a la forma funcional `defineConfig(({ mode }) => ...)` con `loadEnv` para que el proxy del servidor de desarrollo también lea `VITE_API_URL` del `.env`, sin valores hardcodeados.
+  - `apps/backend/.env`: Añadida variable `ALLOWED_ORIGINS` para controlar la política CORS sin tocar código.
+  - `apps/backend/.env.example`: Creado como plantilla de referencia para el backend.
+
 - **Módulo de Lubricación y Horómetros (Backend y Frontend 100% Completados)**:
   - **Modelado en PostgreSQL**: Nuevas tablas `catalogo_lubricantes`, `puntos_lubricacion`, `historial_horometros`, `rutinas_lubricacion` y `rutina_lubricacion_detalles` con enums `TipoLubricante`, `NivelLubricante`, `UnidadMedidaLubricante` y `OrigenLecturaHorometro`.
   - **Catálogo Maestro de Lubricantes**: Endpoints para gestión de marcas, viscosidades y tipos (aceites y grasas) con precarga automática de referencias industriales estándar.
@@ -24,12 +32,15 @@ El formato sigue el estándar [Keep a Changelog](https://keepachangelog.com/es/1
   - **Matriz de Cálculo de Vida Útil de Lubricante**: Endpoint `/api/lubricacion/matriz` con cálculo dinámico en tiempo real de $\Delta \text{Horas}$ acumuladas desde el último cambio de aceite y semáforo porcentual de estado (`NORMAL`, `PREVENTIVO`, `CRITICO`).
   - **Rutinas Transaccionales y Notificaciones en Tiempo Real**: Endpoint `POST /api/lubricacion/rutinas` para ejecución atómica de inspecciones, actualización automática del horómetro base en caso de cambio total de aceite, y emisión inmediata de eventos `LUBRICACION_FUGA_DETECTADA` y `LUBRICACION_HOROMETRO_LIMITE` a través de WebSockets y EventBus.
   - **Reportes Analíticos de Lubricación**: Endpoints para consulta de fugas activas no resueltas, consolidado de consumo por lubricante (volumen y peso) e historial de ejecuciones.
-  - **Frontend — Vistas y Componentes Reactivos**:
-    - **`MatrizLubricacionView.vue`**: Planilla operativa con selectores en cascada (Planta ➔ Equipo), actualización de odómetro con recálculo dinámico en el cliente, tabla interactiva con semáforos de vida útil, registro de niveles, fugas detectadas, reposición y cambio total.
-    - **`ReportesLubricacionView.vue`**: Tablero analítico con pestañas para fugas detectadas, consumo de insumos por rango de fechas e historial auditable de rutinas.
-    - **Componentes Auxiliares**: `SemaforoBadge.vue` (indicadores visuales verde, amarillo, rojo), `ModalReemplazoHorometro.vue` (modal de advertencia y justificación al detectar odómetro menor) y `ModalNuevoPunto.vue` (configuración rápida de puntos a lubricar).
+  - **Frontend — Vistas y Componentes Reactivos (Enfoque en Partes a Lubricar y Excel Interactivo)**:
+    - **`MatrizLubricacionView.vue`**: Rediseñado en dos pestañas modulares:
+      1. **Pestaña 'Partes a Lubricar'**: Grid interactivo estilo Excel con selectores predictivos autocompletables (`v-autocomplete` para búsqueda por código, nombre o planta), CRUD completo (creación, edición de frecuencias/capacidades/componentes y eliminación con diálogo de confirmación y soft delete).
+      2. **Pestaña '(Inspección) de Lubricación'**: Captura operativa diaria de horómetros con validación anti-retroceso, cálculo dinámico de semáforos en el cliente, registro de niveles de aceite, reposición en lts/gal/kg, alerta inmediata de fugas y cambio total de lubricante.
+    - **Integración de Reportes en el Dashboard (`PanelReportes.vue`)**:
+      - Incorporado reporte normativo **R7: Lubricación**, integrando pestañas para Fugas Detectadas activas y Consumo acumulado de aceites y grasas con filtros de planta y rango de fechas, más descarga en Excel.
+    - **Componentes Auxiliares**: `SemaforoBadge.vue` (chips visuales para `NORMAL`, `PREVENTIVO` y `CRITICO`), `ModalParteLubricar.vue` (modal para crear y editar con selección en cascada de Equipo y Componente, eliminando el campo técnico confuso de horómetro base inicial) y `ModalReemplazoHorometro.vue` (justificación técnica al registrar odómetros menores).
     - **Store Pinia y Tipado Estricto**: `lubricacion.store.ts` y `lubricacion.types.ts` completamente tipados sin `any`.
-    - **Rutas y Navegación**: Integración en `router.ts` (`/lubricacion`, `/lubricacion/reportes`) y enlaces en `Menu.vue` protegidos bajo RBAC para Administradores, Supervisores y Técnicos de Mantenimiento.
+    - **Menú y Navegación**: Menú lateral unificado con acceso directo a `/lubricacion` para Administradores, Supervisores y Técnicos.
 
 - **Conectividad y Autenticación de PostgreSQL con Prisma (`prisma.ts`, `prisma.config.ts`, `.env`)**:
   - **Sanitización y Codificación de Credenciales**: Implementación de `encodeURIComponent` sobre `process.env.DB_PASSWORD` en `prisma.ts` y `prisma.config.ts` para tolerar caracteres especiales (`#`, `@`, `:`, `/`, etc.) al construir cadenas de conexión URI a PostgreSQL.

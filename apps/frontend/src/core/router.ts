@@ -130,13 +130,7 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/lubricacion/reportes',
-    name: 'lubricacion-reportes',
-    component: () => import('../modules/lubricacion/views/ReportesLubricacionView.vue'),
-    meta: {
-      requiresAuth: true,
-      hideLayout: false,
-      roles: ['Administrador del Sistema', 'Supervisor / Gerente de Mantenimiento', 'Técnico de Mantenimiento']
-    },
+    redirect: '/dashboard'
   },
   {
     path: '/notificaciones-globales',

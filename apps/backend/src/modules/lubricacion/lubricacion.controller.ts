@@ -176,6 +176,23 @@ export const lubricacionController = {
     }
   },
 
+  async eliminarPuntoLubricacion(req: Request<{ id: string }>, res: Response<ResponseDTO>, next: NextFunction) {
+    try {
+      const id = parsearId(req.params.id)
+      if (id === null) {
+        return res.status(400).json({ status: 'error', message: 'ID de parte a lubricar inválido' })
+      }
+
+      await lubricacionService.eliminarPuntoLubricacion(id)
+      return res.status(200).json({
+        status: 'ok',
+        message: 'Parte a lubricar eliminada o desactivada correctamente'
+      })
+    } catch (error) {
+      next(error)
+    }
+  },
+
   // ─── CONTROL DE HORÓMETRO ───────────────────────────────────────────────────
 
   async registrarHorometro(req: Request<{}, {}, RegistrarHorometroDTO>, res: Response<ResponseDTO>, next: NextFunction) {

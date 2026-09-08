@@ -7,8 +7,44 @@ import { exportarTablaPDF } from "../utils/pdfExport"
 
 const store = useDashboardStore()
 
-// Sub-pestaña de reportes (R1 a R6)
-const reporteSeleccionado = ref<"r1" | "r2" | "r3" | "r4" | "r5" | "r6">("r1")
+// Sub-pestaña de reportes (R1 a R6 + RLUB)
+const reporteSeleccionado = ref<"r1" | "r2" | "r3" | "r4" | "r5" | "r6" | "rlub">("r1")
+
+// Filtros y estado para R7: Lubricación
+const rlubSubTab = ref<"fugas" | "consumo">("fugas")
+const rlubPlantaId = ref<number | undefined>(undefined)
+const rlubFechaDesde = ref<string>("")
+const rlubFechaHasta = ref<string>("")
+const rlubCargando = ref(false)
+const rlubDescargandoExcel = ref(false)
+
+interface FugaReporteDashboardItem {
+  rutinaId: string
+  codigoRutina: string
+  fechaEjecucion: string
+  equipoId: number
+  equipoCodigo: string
+  equipoNombre: string
+  plantaNombre: string
+  ubicacionNombre: string
+  puntoId: number
+  puntoNombre: string
+  lubricanteNombre: string
+  observaciones: string | null
+}
+
+interface ConsumoReporteDashboardItem {
+  lubricanteId: number
+  lubricanteCodigo: string
+  lubricanteNombre: string
+  tipo: string
+  unidadMedida: string
+  totalRepuesto: number
+  intervenciones: number
+}
+
+const rlubFugas = ref<FugaReporteDashboardItem[]>([])
+const rlubConsumo = ref<ConsumoReporteDashboardItem[]>([])
 
 // Filtros para R1
 const r1PlantaId = ref<number | undefined>(undefined)
@@ -412,6 +448,81 @@ function imprimirTarjetaRonda() {
   window.print()
 }
 
+// ═══════════════════════════════════════════════════════════════
+// R7: REPORTE DE LUBRICACIÓN, FUGAS Y CONSUMOS
+// ═══════════════════════════════════════════════════════════════
+async function cargarRLub() {
+  rlubCargando.value = true
+  try {
+    const paramsFugas: Record<string, number | string> = {}
+    if (rlubPlantaId.value) paramsFugas.plantaId = rlubPlantaId.value
+
+    const paramsConsumo: Record<string, number | string> = {}
+    if (rlubPlantaId.value) paramsConsumo.plantaId = rlubPlantaId.value
+    if (rlubFechaDesde.value) paramsConsumo.fechaDesde = rlubFechaDesde.value
+    if (rlubFechaHasta.value) paramsConsumo.fechaHasta = rlubFechaHasta.value
+
+    const [resF, resC] = await Promise.allSettled([
+      api.get("/lubricacion/reportes/fugas", { params: paramsFugas }),
+      api.get("/lubricacion/reportes/consumo", { params: paramsConsumo })
+    ])
+
+    if (resF.status === "fulfilled" && resF.value.data?.status === "ok") {
+      rlubFugas.value = resF.value.data.data || []
+    }
+    if (resC.status === "fulfilled" && resC.value.data?.status === "ok") {
+      rlubConsumo.value = resC.value.data.data || []
+    }
+  } finally {
+    rlubCargando.value = false
+  }
+}
+
+function exportarRLubExcel() {
+  if (rlubSubTab.value === "fugas") {
+    if (!rlubFugas.value.length) return
+    rlubDescargandoExcel.value = true
+    try {
+      const filas = rlubFugas.value.map(f => ({
+        "Fecha": new Date(f.fechaEjecucion).toLocaleDateString("es-ES"),
+        "Rutina": f.codigoRutina,
+        "Código Equipo": f.equipoCodigo,
+        "Equipo": f.equipoNombre,
+        "Planta": f.plantaNombre,
+        "Ubicación": f.ubicacionNombre,
+        "Parte con Fuga": f.puntoNombre,
+        "Lubricante": f.lubricanteNombre,
+        "Observaciones": f.observaciones || "Fuga detectada"
+      }))
+      const ws = XLSX.utils.json_to_sheet(filas)
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, "Fugas_Lubricacion")
+      XLSX.writeFile(wb, `Reporte_Fugas_Lubricacion_${new Date().toISOString().slice(0, 10)}.xlsx`)
+    } finally {
+      rlubDescargandoExcel.value = false
+    }
+  } else {
+    if (!rlubConsumo.value.length) return
+    rlubDescargandoExcel.value = true
+    try {
+      const filas = rlubConsumo.value.map(c => ({
+        "Código": c.lubricanteCodigo,
+        "Lubricante": c.lubricanteNombre,
+        "Tipo": c.tipo,
+        "Unidad": c.unidadMedida,
+        "Total Repuesto": c.totalRepuesto,
+        "Intervenciones": c.intervenciones
+      }))
+      const ws = XLSX.utils.json_to_sheet(filas)
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, "Consumo_Lubricantes")
+      XLSX.writeFile(wb, `Reporte_Consumo_Lubricantes_${new Date().toISOString().slice(0, 10)}.xlsx`)
+    } finally {
+      rlubDescargandoExcel.value = false
+    }
+  }
+}
+
 onMounted(() => {
   cargarCatalogos()
   cargarR1()
@@ -419,6 +530,7 @@ onMounted(() => {
   cargarR3()
   cargarR4()
   cargarR5()
+  cargarRLub()
 })
 </script>
 
@@ -452,6 +564,7 @@ onMounted(() => {
           <v-btn value="r4" prepend-icon="mdi-chart-box-outline">R4: Ejecutivo</v-btn>
           <v-btn value="r5" prepend-icon="mdi-matrix">R5: Criticidad</v-btn>
           <v-btn value="r6" prepend-icon="mdi-printer-outline">R6: Tarjeta Ronda</v-btn>
+          <v-btn value="rlub" prepend-icon="mdi-oil">R7: Lubricación</v-btn>
         </v-btn-toggle>
       </div>
     </v-card>
@@ -1174,6 +1287,155 @@ onMounted(() => {
             <div>Firma y Nombre del Supervisor</div>
           </div>
         </div>
+      </div>
+    </v-card>
+
+    <!-- R7: REPORTE DE LUBRICACIÓN, FUGAS Y CONSUMO -->
+    <v-card v-if="reporteSeleccionado === 'rlub'" class="elevation-1 rounded-xl pa-4 pa-sm-5 bg-surface border">
+      <div class="d-flex flex-column flex-sm-row align-start align-sm-center justify-space-between gap-2 mb-4">
+        <div>
+          <div class="text-subtitle-1 font-weight-bold text-primary">R7. Reporte de Lubricación, Consumo y Fugas</div>
+          <div class="text-caption text-medium-emphasis">Control analítico de fugas activas no resueltas y volumen de lubricantes consumidos</div>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+          <v-btn
+            color="success"
+            variant="flat"
+            prepend-icon="mdi-microsoft-excel"
+            :loading="rlubDescargandoExcel"
+            @click="exportarRLubExcel"
+          >
+            Exportar Excel
+          </v-btn>
+          <v-btn
+            color="primary"
+            variant="outlined"
+            prepend-icon="mdi-refresh"
+            :loading="rlubCargando"
+            @click="cargarRLub"
+          >
+            Actualizar
+          </v-btn>
+        </div>
+      </div>
+
+      <!-- Filtros de Lubricación -->
+      <v-row dense class="mb-4">
+        <v-col cols="12" sm="4">
+          <v-select
+            v-model="rlubPlantaId"
+            :items="listaPlantas"
+            item-title="nombre"
+            item-value="id"
+            label="Planta Industrial"
+            placeholder="Todas las plantas"
+            clearable
+            density="compact"
+            variant="outlined"
+            hide-details
+            @update:model-value="cargarRLub"
+          />
+        </v-col>
+        <v-col cols="12" sm="4">
+          <v-text-field
+            v-model="rlubFechaDesde"
+            type="date"
+            label="Fecha Desde"
+            density="compact"
+            variant="outlined"
+            hide-details
+            @change="cargarRLub"
+          />
+        </v-col>
+        <v-col cols="12" sm="4">
+          <v-text-field
+            v-model="rlubFechaHasta"
+            type="date"
+            label="Fecha Hasta"
+            density="compact"
+            variant="outlined"
+            hide-details
+            @change="cargarRLub"
+          />
+        </v-col>
+      </v-row>
+
+      <!-- Sub-pestañas Fugas vs Consumo -->
+      <v-tabs v-model="rlubSubTab" color="primary" density="compact" class="mb-3">
+        <v-tab value="fugas">
+          <v-icon start size="18">mdi-water-alert</v-icon>
+          Fugas Detectadas ({{ rlubFugas.length }})
+        </v-tab>
+        <v-tab value="consumo">
+          <v-icon start size="18">mdi-gas-station</v-icon>
+          Consumo de Lubricantes ({{ rlubConsumo.length }})
+        </v-tab>
+      </v-tabs>
+
+      <!-- Tabla de Fugas -->
+      <div v-if="rlubSubTab === 'fugas'" class="table-responsive">
+        <div v-if="rlubFugas.length === 0" class="text-center py-6 text-muted">
+          <v-icon size="40" color="success" class="mb-1">mdi-check-circle-outline</v-icon>
+          <div class="text-subtitle-2 font-weight-bold">No se registran fugas activas de lubricante</div>
+        </div>
+        <table v-else class="table table-sm table-hover border">
+          <thead class="bg-light">
+            <tr>
+              <th>Fecha</th>
+              <th>Rutina</th>
+              <th>Equipo</th>
+              <th>Planta / Ubicación</th>
+              <th>Parte con Fuga</th>
+              <th>Lubricante</th>
+              <th>Diagnóstico / Observaciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="f in rlubFugas" :key="`${f.rutinaId}-${f.puntoId}`">
+              <td class="text-caption font-weight-medium">{{ new Date(f.fechaEjecucion).toLocaleDateString() }}</td>
+              <td><span class="badge bg-secondary text-white">{{ f.codigoRutina }}</span></td>
+              <td><strong>{{ f.equipoCodigo }}</strong> - {{ f.equipoNombre }}</td>
+              <td class="text-caption">{{ f.plantaNombre }} &bull; {{ f.ubicacionNombre }}</td>
+              <td>
+                <span class="badge bg-danger text-white">{{ f.puntoNombre }}</span>
+              </td>
+              <td>{{ f.lubricanteNombre }}</td>
+              <td class="text-caption text-danger">{{ f.observaciones || 'Fuga detectada en rutina' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Tabla de Consumo -->
+      <div v-if="rlubSubTab === 'consumo'" class="table-responsive">
+        <div v-if="rlubConsumo.length === 0" class="text-center py-6 text-muted">
+          <v-icon size="40" color="grey" class="mb-1">mdi-oil-level</v-icon>
+          <div class="text-subtitle-2">Sin reposiciones de lubricante en el período</div>
+        </div>
+        <table v-else class="table table-sm table-hover border">
+          <thead class="bg-light">
+            <tr>
+              <th>Código</th>
+              <th>Lubricante</th>
+              <th>Tipo</th>
+              <th>Unidad</th>
+              <th class="text-end">Total Repuesto</th>
+              <th class="text-end">Intervenciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="c in rlubConsumo" :key="c.lubricanteId">
+              <td class="font-weight-bold">{{ c.lubricanteCodigo }}</td>
+              <td>{{ c.lubricanteNombre }}</td>
+              <td><span class="badge bg-light text-dark border">{{ c.tipo }}</span></td>
+              <td>{{ c.unidadMedida }}</td>
+              <td class="text-end font-weight-bold text-primary">
+                {{ c.totalRepuesto.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 2 }) }}
+              </td>
+              <td class="text-end">{{ c.intervenciones }}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </v-card>
   </div>
