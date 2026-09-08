@@ -1,4 +1,4 @@
-# Changelog — Sinergy v1.0.1
+# Changelog — Sinergy v1.1.0
 
 Todos los cambios notables del proyecto se documentan en este archivo.
 
@@ -15,6 +15,11 @@ El formato sigue el estándar [Keep a Changelog](https://keepachangelog.com/es/1
 ---
 
 ## [Unreleased]
+
+- **Conectividad y Autenticación de PostgreSQL con Prisma (`prisma.ts`, `prisma.config.ts`, `.env`)**:
+  - **Sanitización y Codificación de Credenciales**: Implementación de `encodeURIComponent` sobre `process.env.DB_PASSWORD` en `prisma.ts` y `prisma.config.ts` para tolerar caracteres especiales (`#`, `@`, `:`, `/`, etc.) al construir cadenas de conexión URI a PostgreSQL.
+  - **Prevención de Truncamiento en `dotenv`**: Configuración de comillas dobles en las variables de entorno de base de datos (`DB_PASSWORD="..."`), evitando que el analizador de `.env` interprete el carácter `#` como inicio de comentario y trunque la contraseña.
+  - **Inyección Explícita de `DATABASE_URL`**: Asegurada la propagación de `process.env.DATABASE_URL` en tiempo de ejecución hacia el schema de Prisma y el pool de conexiones de `@prisma/adapter-pg`.
 
 - **Notificaciones en Tiempo Real y Segmentación por Roles (`notification.socket.ts`, `notification.events.ts`, `notificaciones.controller.ts`)**:
   - **Salas de WebSocket por Rol y Planta**: Configuración en `notification.socket.ts` para que cada conexión activa se asocie a su sala de usuario (`user_${userId}`), salas por rol (`rol_admin`, `rol_supervisor`, `rol_tecnico`) y sala de planta (`planta_${plantaId}`). Implementadas funciones de emisión dirigida (`emitirNotificacionAUsuario`, `emitirNotificacionARol` y `emitirNotificacionGlobal`).

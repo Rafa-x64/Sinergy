@@ -93,8 +93,15 @@ VITE_APP_NAME=Sinergy
 El archivo `apps/backend/.env` ya fue creado con `prisma init`. Édita la variable `DATABASE_URL` con tus credenciales reales:
 
 ```env
-# Formato: postgresql://USUARIO:CONTRASEÑA@HOST:PUERTO/NOMBRE_DB
-DATABASE_URL="postgresql://postgres:tu_password_aqui@localhost:5432/sinergy_db"
+# Variables individuales para el pool nativo de PG y PrismaPg adapter
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD="tu_password_aqui"
+DB_NAME=sinergy_db
+
+# Formato URI completo (si la contraseña tiene caracteres especiales como # o @, usa comillas y codificación URL)
+DATABASE_URL="postgresql://postgres:tu_password_aqui@localhost:5432/sinergy_db?schema=public"
 
 # Puerto del servidor Express
 PORT=3000
@@ -102,6 +109,9 @@ PORT=3000
 # Entorno
 NODE_ENV=development
 ```
+
+> [!WARNING]
+> Si la contraseña de PostgreSQL contiene caracteres especiales como `#`, `@`, `:`, `/`, debes **envolver el valor entre comillas dobles** en `.env` (ej: `DB_PASSWORD="mi#clave@2026"`). De lo contrario, la librería `dotenv` interpretará `#` como inicio de un comentario y truncará la contraseña, provocando errores de autenticación.
 
 > [!CAUTION]
 > Nunca subas archivos `.env` al repositorio. El `.gitignore` ya los excluye. Antes de hacer un `git add .`, ejecuta `git status` y verifica que no aparecen los `.env`.
@@ -323,4 +333,24 @@ Get-NetTCPConnection -LocalPort 3000 | Select-Object OwningProcess, State
 taskkill /F /PID <PID>
 ```
 3. Opcionalmente, cambia la variable `PORT` en `apps/backend/.env` si necesitas ejecutar el servidor en un puerto alternativo.
+
+---
+
+### `Authentication failed against the database server, the provided database credentials for '(not available)' are not valid`
+
+**Causa:** 
+1. La contraseña en `apps/backend/.env` contiene caracteres especiales (`#`, `@`, etc.) y no está envuelta entre comillas dobles, lo que hace que `dotenv` interprete `#` como comentario y trunque la contraseña.
+2. La URI `DATABASE_URL` no tiene los caracteres especiales codificados en formato porcentaje (ej: `%23` para `#`).
+3. El usuario o contraseña no coinciden con la instancia de PostgreSQL.
+
+**Diagnóstico y Solución:**
+1. Verifica que en `apps/backend/.env` la contraseña esté entre comillas dobles:
+```env
+DB_PASSWORD="tu#password@completo"
+```
+2. Comprueba que `DATABASE_URL` use caracteres URL-encoded para la contraseña (`encodeURIComponent`).
+3. Comprueba conectividad directa con `psql` para descartar bloqueos de usuario o pg_hba:
+```powershell
+$env:PGPASSWORD='tu_password'; psql -h 10.10.7.5 -p 5432 -U postgres -d Sinergy_produccion -c "SELECT 1;"
+```
 
