@@ -1,6 +1,6 @@
-import { eventBus, EventoInspeccionCreada, EventoInspeccionEvaluada, EventoAccionSistema } from '../../core/eventBus'
+import { eventBus, EventoInspeccionCreada, EventoInspeccionEvaluada, EventoAccionSistema, EventoFugaLubricante, EventoHorometroLimite } from '../../core/eventBus'
 import { notificationService } from './notification.service'
-import { emitirNotificacion, emitirNotificacionARol, emitirNotificacionGlobal } from './notification.socket'
+import { emitirNotificacion, emitirNotificacionARol, emitirNotificacionGlobal, emitirNotificacionAPlanta } from './notification.socket'
 import { NotificationType, CategoriaNotificacion } from '@prisma/client'
 import { NotificacionPayload } from '../../core/eventBus'
 
@@ -190,4 +190,65 @@ export function registrarListenersNotificaciones(): void {
       console.error('[Error Notification]: Fallo procesando NOTIFICACION_SISTEMA', error)
     }
   })
+
+  // Flujo 5: Fuga de lubricante detectada en rutina
+  eventBus.on('LUBRICACION_FUGA_DETECTADA', async (payload: EventoFugaLubricante) => {
+    try {
+      const titulo = 'Fuga de Lubricante Detectada'
+      const mensaje = `Fuga activa reportada en el equipo ${payload.equipoCodigo} (Punto: ${payload.puntoNombre}). Se requiere inspección correctiva inmediata.`
+
+      const notificacionPayload = {
+        tipo: NotificationType.WARNING,
+        categoria: CategoriaNotificacion.AUDITORIA_SISTEMA,
+        titulo,
+        mensaje,
+        entidadAfectada: 'EQUIPO',
+        entidadId: String(payload.equipoId),
+        creadoEn: new Date().toISOString()
+      }
+
+      // 1. Notificar a supervisores y administradores
+      emitirNotificacionARol('supervisor', notificacionPayload)
+      emitirNotificacionARol('admin', notificacionPayload)
+
+      // 2. Notificar a toda la sala de la planta correspondiente
+      if (payload.plantaId) {
+        emitirNotificacionAPlanta(payload.plantaId, notificacionPayload)
+      }
+    } catch (error) {
+      console.error('[Error Notification]: Fallo procesando LUBRICACION_FUGA_DETECTADA', error)
+    }
+  })
+
+  // Flujo 6: Horómetro cercano o superando el límite de horas de vida útil
+  eventBus.on('LUBRICACION_HOROMETRO_LIMITE', async (payload: EventoHorometroLimite) => {
+    try {
+      const esCritico = payload.nivelAlerta === 'CRITICO'
+      const tipo = esCritico ? NotificationType.ERROR : NotificationType.WARNING
+      const titulo = esCritico ? 'Cambio de Aceite Vencido' : 'Alerta Preventiva: Horómetro Próximo al Límite'
+      const mensaje = `El equipo ${payload.equipoCodigo} (${payload.puntoNombre}) alcanzó ${payload.horasUso} hrs de uso sobre el límite de ${payload.limiteHoras} hrs.`
+
+      const notificacionPayload = {
+        tipo,
+        categoria: CategoriaNotificacion.AUDITORIA_SISTEMA,
+        titulo,
+        mensaje,
+        entidadAfectada: 'EQUIPO',
+        entidadId: String(payload.equipoId),
+        creadoEn: new Date().toISOString()
+      }
+
+      emitirNotificacionARol('supervisor', notificacionPayload)
+      if (esCritico) {
+        emitirNotificacionARol('admin', notificacionPayload)
+      }
+
+      if (payload.plantaId) {
+        emitirNotificacionAPlanta(payload.plantaId, notificacionPayload)
+      }
+    } catch (error) {
+      console.error('[Error Notification]: Fallo procesando LUBRICACION_HOROMETRO_LIMITE', error)
+    }
+  })
 }
+

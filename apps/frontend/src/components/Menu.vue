@@ -59,6 +59,8 @@ const modulos: ModuloItem[] = [
     { title: 'Componentes', icon: 'mdi-view-grid', color: 'success', to: '/componentes', roles: ROLES_TODOS },
     { title: 'Variables', icon: 'mdi-variable-box', color: 'primary', to: '/variables', roles: ROLES_TODOS },
     { title: 'Inspecciones', icon: 'mdi-clipboard-check', color: '#5cb85c', to: '/inspecciones', roles: ROLES_TODOS },
+    { title: 'Lubricación', icon: 'mdi-oil', color: 'amber-darken-2', to: '/lubricacion', roles: ROLES_TODOS },
+    { title: 'Reportes Lubricación', icon: 'mdi-chart-box-outline', color: 'amber', to: '/lubricacion/reportes', roles: ROLES_TODOS },
     { title: 'Auditoría Global', icon: 'mdi-shield-account', color: 'primary-dark', to: '/notificaciones-globales', roles: ROLES_ADMIN },
     { title: 'Plantas', icon: 'mdi-factory', color: 'text-principal', to: '/plantas', roles: ROLES_ADMIN_SUPERVISOR },
     { title: 'Ubicaciones Técnicas', icon: 'mdi-map-marker-radius', color: '#f7474a', to: '/ubicaciones', roles: ROLES_ADMIN_SUPERVISOR },

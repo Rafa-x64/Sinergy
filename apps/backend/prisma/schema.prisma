@@ -10,7 +10,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 // -----------------------------------------------------------------------------
@@ -91,6 +90,8 @@ model Usuario {
   logsAuditoria          AuditoriaLog[]
   rolesUsuario           UsuarioRol[]
   notificaciones         Notificacion[]
+  lecturasHorometro      HistorialHorometro[]
+  rutinasLubricacion     RutinaLubricacion[]
 
   @@index([supervisorId])
   @@map("usuarios")
@@ -136,6 +137,7 @@ model Planta {
 
   ubicacionesTecnicas UbicacionTecnica[]
   inspecciones        Inspeccion[]
+  rutinasLubricacion  RutinaLubricacion[]
 
   @@map("plantas")
 }
@@ -153,6 +155,7 @@ model UbicacionTecnica {
 
   equipos      Equipo[]
   inspecciones Inspeccion[]
+  rutinasLubricacion RutinaLubricacion[]
 
   @@index([plantaId])
   @@map("ubicaciones_tecnicas")
@@ -179,6 +182,9 @@ model Equipo {
   montacargasDetalle MontacargasDetalle?
   componentes        Componente[]
   inspecciones       Inspeccion[]
+  puntosLubricacion   PuntoLubricacion[]
+  historialHorometros HistorialHorometro[]
+  rutinasLubricacion  RutinaLubricacion[]
 
   @@index([ubicacionTecnicaId])
   @@index([tipoEquipoId])
@@ -225,6 +231,7 @@ model Componente {
   actualizadoEn DateTime @updatedAt @map("actualizado_en")
 
   variables Variable[]
+  puntosLubricacion PuntoLubricacion[]
 
   @@index([equipoId])
   @@index([activo]) // D-05: filtro frecuente en carga de formulario Data-Driven
@@ -443,4 +450,136 @@ model Notificacion {
   @@index([usuarioId, leido])
   @@index([categoria])
   @@map("notifications")
+}
+
+// -----------------------------------------------------------------------------
+// CAPA 6: LUBRICACIÓN Y HORÓMETROS
+// -----------------------------------------------------------------------------
+
+enum TipoLubricante {
+  ACEITE
+  GRASA
+  OTRO
+}
+
+enum NivelLubricante {
+  OK
+  BAJO
+  CRITICO
+  SOBRELLENADO
+  NO_APLICA
+}
+
+enum UnidadMedidaLubricante {
+  LITROS
+  KILOGRAMOS
+  GALONES
+}
+
+enum OrigenLecturaHorometro {
+  RUTINA_LUBRICACION
+  INSPECCION_OPERATIVA
+  LECTURA_MANUAL
+  CAMBIO_ACEITE
+}
+
+model CatalogoLubricante {
+  id           Int                    @id @default(autoincrement())
+  codigo       String                 @unique @db.VarChar(50)
+  nombre       String                 @db.VarChar(150)
+  marca        String?                @db.VarChar(100)
+  tipo         TipoLubricante
+  viscosidad   String?                @db.VarChar(50)
+  unidadMedida UnidadMedidaLubricante @default(LITROS) @map("unidad_medida")
+  activo       Boolean                @default(true)
+  creadoEn     DateTime               @default(now()) @map("creado_en")
+
+  puntosLubricacion PuntoLubricacion[]
+
+  @@map("catalogo_lubricantes")
+}
+
+model PuntoLubricacion {
+  id                    Int                @id @default(autoincrement())
+  equipoId              Int                @map("equipo_id")
+  equipo                Equipo             @relation(fields: [equipoId], references: [id], onDelete: Cascade)
+  componenteId          Int?               @map("componente_id")
+  componente            Componente?        @relation(fields: [componenteId], references: [id], onDelete: SetNull)
+  lubricanteId          Int                @map("lubricante_id")
+  lubricante            CatalogoLubricante @relation(fields: [lubricanteId], references: [id], onDelete: Restrict)
+  nombrePunto           String             @map("nombre_punto") @db.VarChar(150)
+  limiteHorasCambio     Decimal            @map("limite_horas_cambio") @db.Decimal(10, 2)
+  horometroUltimoCambio Decimal            @default(0) @map("horometro_ultimo_cambio") @db.Decimal(10, 2)
+  fechaUltimoCambio     DateTime?          @map("fecha_ultimo_cambio")
+  capacidadRecomendada  Decimal?           @map("capacidad_recomendada") @db.Decimal(8, 2)
+  activo                Boolean            @default(true)
+  creadoEn              DateTime           @default(now()) @map("creado_en")
+  actualizadoEn         DateTime           @updatedAt @map("actualizado_en")
+
+  detallesRutina RutinaLubricacionDetalle[]
+
+  @@index([equipoId])
+  @@index([componenteId])
+  @@index([lubricanteId])
+  @@map("puntos_lubricacion")
+}
+
+model HistorialHorometro {
+  id               BigInt                 @id @default(autoincrement())
+  equipoId         Int                    @map("equipo_id")
+  equipo           Equipo                 @relation(fields: [equipoId], references: [id], onDelete: Cascade)
+  valorHorometro   Decimal                @map("valor_horometro") @db.Decimal(10, 2)
+  fechaLectura     DateTime               @default(now()) @map("fecha_lectura")
+  origen           OrigenLecturaHorometro @default(RUTINA_LUBRICACION)
+  registradoPorId  Int                    @map("registrado_por_id")
+  registradoPor    Usuario                @relation(fields: [registradoPorId], references: [id], onDelete: Restrict)
+  esReemplazoReloj Boolean                @default(false) @map("es_reemplazo_reloj")
+  justificacion    String?                @db.Text
+
+  @@index([equipoId, fechaLectura])
+  @@map("historial_horometros")
+}
+
+model RutinaLubricacion {
+  id                  BigInt            @id @default(autoincrement())
+  codigoRutina        String            @unique @map("codigo_rutina") @db.VarChar(100)
+  plantaId            Int               @map("planta_id")
+  planta              Planta            @relation(fields: [plantaId], references: [id], onDelete: Restrict)
+  ubicacionTecnicaId  Int               @map("ubicacion_tecnica_id")
+  ubicacionTecnica    UbicacionTecnica  @relation(fields: [ubicacionTecnicaId], references: [id], onDelete: Restrict)
+  equipoId            Int               @map("equipo_id")
+  equipo              Equipo            @relation(fields: [equipoId], references: [id], onDelete: Restrict)
+  elaboradoPorId      Int               @map("elaborado_por_id")
+  elaboradoPor        Usuario           @relation(fields: [elaboradoPorId], references: [id], onDelete: Restrict)
+  fechaEjecucion      DateTime          @default(now()) @map("fecha_ejecucion")
+  horometroRegistrado Decimal           @map("horometro_registrado") @db.Decimal(10, 2)
+  observaciones       String?           @db.Text
+  creadoEn            DateTime          @default(now()) @map("creado_en")
+
+  detalles RutinaLubricacionDetalle[]
+
+  @@index([plantaId])
+  @@index([ubicacionTecnicaId])
+  @@index([equipoId])
+  @@index([fechaEjecucion])
+  @@map("rutinas_lubricacion")
+}
+
+model RutinaLubricacionDetalle {
+  id                   BigInt            @id @default(autoincrement())
+  rutinaId             BigInt            @map("rutina_id")
+  rutina               RutinaLubricacion @relation(fields: [rutinaId], references: [id], onDelete: Cascade)
+  puntoLubricacionId   Int               @map("punto_lubricacion_id")
+  puntoLubricacion     PuntoLubricacion  @relation(fields: [puntoLubricacionId], references: [id], onDelete: Restrict)
+  nivelLubricante      NivelLubricante   @default(OK) @map("nivel_lubricante")
+  seRealizoReposicion  Boolean           @default(false) @map("se_realizo_reposicion")
+  cantidadRepuesta     Decimal?          @map("cantidad_repuesta") @db.Decimal(8, 2)
+  seRealizoCambioTotal Boolean           @default(false) @map("se_realizo_cambio_total")
+  presentaFuga         Boolean           @default(false) @map("presenta_fuga")
+  observaciones        String?           @db.Text
+
+  @@index([rutinaId])
+  @@index([puntoLubricacionId])
+  @@index([presentaFuga])
+  @@map("rutina_lubricacion_detalles")
 }
