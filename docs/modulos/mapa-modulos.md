@@ -43,6 +43,7 @@ El sistema Sinergy está dividido en 9 dominios funcionales. Cada dominio es aut
 | **Inspecciones** | `Inspeccion`, `InspeccionDetalle`, `InspeccionAdjunto` | `/api/inspecciones/*` | `useInspeccionesStore` | `InspeccionesView.vue`, `FormWizardInspeccion.vue`, `WizardSeleccionAlcance.vue`, `BandejaSupervisionPanel.vue`, `DetalleInspeccionModal.vue` |
 | **Notificaciones** | `Notificacion` | `/api/notificaciones/*`, WebSocket Socket.io | `useNotificationStore` | `NotificationBell.vue`, `NotificacionesGlobalesView.vue` |
 | **Dashboard & Reportes** | `Equipo`, `Inspeccion`, `Planta` | `/api/dashboard/*` | `useDashboardStore` | `DashboardView.vue`, `PanelReportes.vue` (R1 a R6) |
+| **Lubricación (Planificación)** | `PuntoLubricacion`, `CatalogoLubricante`, `HistorialHorometro`, `RutinaLubricacion` | `/api/lubricacion/*` | `useLubricacionStore` | `MatrizLubricacionView.vue`, `ReportesLubricacionView.vue` |
 
 ---
 
@@ -103,4 +104,10 @@ El sistema Sinergy está dividido en 9 dominios funcionales. Cada dominio es aut
 - **Ruta base**: `/api/dashboard/`
 - **Frontend**: `dashboard.store.ts`, `DashboardView.vue`, `PanelReportes.vue`, utilitarios de exportación `pdfExport.ts` y biblioteca `xlsx`.
 - **Flujo**: Métricas operativas en tiempo real (disponibilidad, distribución de flota, ranking de fallas, productividad por técnico) y Centro de Emisión de Reportes Normativos R1 a R6 (Flota, Inspecciones, No-Conformidades, Ejecutivo Mensual, Criticidad ABC y Tarjeta de Ronda física F-MANT-04) con filtros reactivos y tolerancia a fallos mediante `Promise.allSettled`.
+
+### 3.12 Módulo `lubricacion` y Horómetros (En Planificación)
+- **Backend**: `lubricacion.routes.ts`, `lubricacion.controller.ts`, `lubricacion.service.ts`, `lubricacion.schemas.ts`.
+- **Ruta base**: `/api/lubricacion/`
+- **Frontend**: `lubricacion.store.ts`, `MatrizLubricacionView.vue`, `ReportesLubricacionView.vue`.
+- **Flujo**: Gestión preventiva basada en uso. Control de horas acumuladas de horómetro con bloqueo anti-retroceso, cálculo dinámico de $\Delta \text{Horas}$ de vida útil de lubricante con semáforo porcentual, captura ágil mediante matriz estilo hoja de cálculo, reporte de consumos/fugas y disparadores de alertas tempranas vía WebSockets. Documentación completa en [`docs/modulos/lubricacion/README.md`](../lubricacion/README.md).
 

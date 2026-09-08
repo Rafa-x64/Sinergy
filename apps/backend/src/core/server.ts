@@ -18,6 +18,7 @@ import variableCriticaRoutes from '../modules/variables-criticas/variable-critic
 import inspeccionRoutes from '../modules/inspecciones/inspeccion.routes'
 import mantenimientoRoutes from '../modules/mantenimiento/mantenimiento.routes'
 import dashboardRoutes from '../modules/dashboard/dashboard.routes'
+import lubricacionRoutes from '../modules/lubricacion/lubricacion.routes'
 
 import { inicializarWebSockets } from '../modules/notificaciones/notification.socket'
 import { registrarListenersNotificaciones } from '../modules/notificaciones/notification.events'
@@ -79,6 +80,7 @@ app.use('/api/inspecciones', inspeccionRoutes)
 app.use('/api/mantenimiento', mantenimientoRoutes)
 app.use('/api/notificaciones', notificacionesRoutes)
 app.use('/api/dashboard', dashboardRoutes)
+app.use('/api/lubricacion', lubricacionRoutes)
 
 import { eventBus } from './eventBus'
 import {validarJWT} from './middlewares/autenticar'

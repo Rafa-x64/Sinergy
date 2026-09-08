@@ -27,11 +27,34 @@ export interface NotificacionPayload {
   message: string
 }
 
+export interface EventoFugaLubricante {
+  rutinaId: string
+  equipoId: number
+  equipoCodigo: string
+  puntoId: number
+  puntoNombre: string
+  plantaId: number
+  tecnicoId: number
+}
+
+export interface EventoHorometroLimite {
+  equipoId: number
+  equipoCodigo: string
+  puntoId: number
+  puntoNombre: string
+  plantaId: number
+  horasUso: number
+  limiteHoras: number
+  nivelAlerta: 'PREVENTIVO' | 'CRITICO'
+}
+
 interface AppEvents {
   'INSPECCION_CREADA': (payload: EventoInspeccionCreada) => void
   'INSPECCION_EVALUADA': (payload: EventoInspeccionEvaluada) => void
   'ACCION_SISTEMA': (payload: EventoAccionSistema) => void
   'NOTIFICACION_SISTEMA': (payload: NotificacionPayload) => void
+  'LUBRICACION_FUGA_DETECTADA': (payload: EventoFugaLubricante) => void
+  'LUBRICACION_HOROMETRO_LIMITE': (payload: EventoHorometroLimite) => void
 }
 
 class TypedEventEmitter extends EventEmitter {

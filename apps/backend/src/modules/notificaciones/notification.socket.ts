@@ -86,3 +86,9 @@ export function emitirNotificacionGlobal(payload: unknown): void {
         io.emit('nueva_notificacion', payload)
     }
 }
+
+export function emitirNotificacionAPlanta(plantaId: number, payload: unknown): void {
+    if (io) {
+        io.to(`planta_${plantaId}`).emit('nueva_notificacion', payload)
+    }
+}

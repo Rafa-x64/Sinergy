@@ -119,6 +119,26 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/lubricacion',
+    name: 'lubricacion',
+    component: () => import('../modules/lubricacion/views/MatrizLubricacionView.vue'),
+    meta: {
+      requiresAuth: true,
+      hideLayout: false,
+      roles: ['Administrador del Sistema', 'Supervisor / Gerente de Mantenimiento', 'Técnico de Mantenimiento']
+    },
+  },
+  {
+    path: '/lubricacion/reportes',
+    name: 'lubricacion-reportes',
+    component: () => import('../modules/lubricacion/views/ReportesLubricacionView.vue'),
+    meta: {
+      requiresAuth: true,
+      hideLayout: false,
+      roles: ['Administrador del Sistema', 'Supervisor / Gerente de Mantenimiento', 'Técnico de Mantenimiento']
+    },
+  },
+  {
     path: '/notificaciones-globales',
     name: 'notificaciones-globales',
     component: () => import('../modules/notificaciones/views/NotificacionesGlobalesView.vue'),
