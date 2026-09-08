@@ -58,6 +58,21 @@ export interface CrearPuntoLubricacionInput {
   capacidadRecomendada?: number | null
 }
 
+export interface EditarPuntoLubricacionInput {
+  componenteId?: number | null
+  lubricanteId?: number
+  nombrePunto?: string
+  limiteHorasCambio?: number
+  horometroUltimoCambio?: number
+  fechaUltimoCambio?: string
+  capacidadRecomendada?: number | null
+  activo?: boolean
+}
+
+export type ParteALubricar = PuntoLubricacion
+export type CrearParteInput = CrearPuntoLubricacionInput
+export type EditarParteInput = EditarPuntoLubricacionInput
+
 export interface PuntoMatriz {
   id: number
   nombrePunto: string
