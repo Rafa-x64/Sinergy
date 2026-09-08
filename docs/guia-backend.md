@@ -785,3 +785,4 @@ Para agregar una acción adicional (ej: `buscarPorCodigo`):
 - **`Property 'usuario' does not exist on type 'Request'`**: Verificar `tsconfig.json` incluya `"include": ["src/**/*"]`.
 - **Endpoint responde 404 por trailing slash**: Usar arrays en rutas `router.get(['/listar', '/listar/'], ...)`.
 - **`P1001 - Can't reach database server`**: Verificar servicio PostgreSQL corriendo y la URI `DATABASE_URL` en `.env`.
+- **`Authentication failed against the database server (not available)`**: Ocurre cuando la contraseña en `.env` contiene caracteres especiales (`#`, `@`, etc.) y no está envuelta en comillas dobles (lo que provoca que `dotenv` interprete `#` como comentario y trunque el valor), o cuando la URI `DATABASE_URL` no tiene los caracteres especiales codificados con formato porcentaje (`%23`, `%40`). Asegúrate de usar `encodeURIComponent` al construir la conexión y comillas dobles en `.env`.
