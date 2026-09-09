@@ -4,6 +4,7 @@ export interface EventoInspeccionCreada {
   inspeccionId: string
   tecnicoId: number
   codigoInspeccion: string
+  plantaId?: number | null
 }
 
 export interface EventoInspeccionEvaluada {

@@ -16,6 +16,53 @@ El formato sigue el estándar [Keep a Changelog](https://keepachangelog.com/es/1
 
 ## [Unreleased]
 
+### Added
+- **Integración de Rutinas de Lubricación con Bandeja de Aprobaciones (`/inspecciones`)** (`feat: lubricacion-inspeccion-bandeja`):
+  - Al registrar una rutina de lubricación en `POST /api/lubricacion/rutinas`, se genera de forma atómica y transaccional una cabecera en la tabla `inspecciones` (`codigoInspeccion: INSP-LUB-...`, `tipoInspeccion: 'VARIABLES_CRITICAS'`, `estadoInspeccion: 'PENDIENTE'`).
+  - Se crean notificaciones automáticas para los usuarios con rol SUPERVISOR (`INSPECCION_PENDIENTE`).
+  - `BandejaSupervisionPanel.vue`: Ahora identifica las rutinas de lubricación con el chip distintivo `Rutina Lubricación` y permite evaluarlas con el botón "Revisar".
+  - `DetalleInspeccionModal.vue`: Muestra el resumen consolidado multilínea (horómetro, técnico, puntos evaluados, niveles, reposiciones y fugas) y permite la aprobación o rechazo supervisado (`APROBADO` / `RECHAZADO`).
+
+### Fixed / Security
+- **Protección Integral Anti-Negativos y Blindaje de Usuario ("Anti-Fallos")** (`fix: lubricacion-anti-negativos-user-proof`):
+  - **Reposición de Lubricante**:
+    - Bloqueo de teclas `-`, `+`, `e`, `E` en el evento `@keydown`.
+    - Auto-clamp en `@update:model-value` convirtiendo valores negativos a positivos.
+    - Asignación inteligente al marcar el checkbox (preconfigura dosis recomendada o 1, y limpia a 0 al desmarcar).
+    - Validación en cliente (`guardarInspeccion`) y en backend (`lubricacion.controller.ts` y `lubricacion.service.ts`) que exige $> 0$.
+  - **Horómetro de Inspección**:
+    - Bloqueo de caracteres no permitidos (`-`, `+`, `e`, `E`), atributos `min="0"`, `step="any"` y auto-corrección a 0 en cliente y validación estricta $\ge 0$ en backend.
+  - **Límites y Capacidades en Formulario de Partes (`ModalParteLubricar.vue`)**:
+    - Frecuencia límite: Bloqueo de negativos y clamping a $\ge 1$ hr.
+    - Capacidad recomendada: Bloqueo de negativos y clamping a $\ge 0$.
+    - Validaciones nativas en backend en `crearPuntoLubricacion` y `editarPuntoLubricacion`.
+  - Solucionado el error HTTP 500 al guardar una inspección diaria. El frontend enviaba valores no reconocidos (`'LLENO'`, `'MEDIO'`, `'VACIO'`) incompatibles con el enum nativo de PostgreSQL (`OK`, `BAJO`, `CRITICO`, `SOBRELLENADO`, `NO_APLICA`).
+  - Actualizado el frontend (`MatrizLubricacionView.vue` y `lubricacion.types.ts`) para usar opciones claras vinculadas a los valores correctos de la base de datos (`Normal (OK)`, `Bajo`, `Crítico`, `Sobrellenado`, `No Aplica`).
+  - Incorporada función normalizadora defensiva `normalizarNivelLubricante` en `lubricacion.service.ts` para mapear cualquier sinónimo y prevenir excepciones no controladas.
+
+- **`ModalParteLubricar` & `lubricacion.types` — Tipado estricto y resolución de errores Volar/TypeScript** (`fix: lubricacion-types-componente-id`):
+  - Añadido `componenteId` a las interfaces `PuntoMatrizDTO` (backend) y `PuntoMatriz` (frontend), además de incluirlo en la consulta de Prisma de `lubricacion.service.ts`. Resuelve el error `La propiedad 'componenteId' no existe en el tipo 'PuntoMatriz'`.
+  - Corregido el error de tipos de Vuetify (`El tipo 'string | number | ...' no se puede asignar al tipo 'Val<...>'`) al migrar el combobox a `v-autocomplete` estrictamente tipado con `number | null`.
+
+### Added
+- **`ModalParteLubricar` — Creación de Componente Desplegable a Ancho Completo (`cols="12"`) con Botón `+`** (`feat: lubricacion-modal-nuevo-componente-expand`):
+  - Integrado botón `+` exclusivo en el campo "Componente Mecánico" (sin texto redundante debajo) que despliega una tarjeta a todo lo ancho del formulario (`cols="12"`) conservando una altura compacta.
+  - Permite ingresar el nombre del nuevo componente mecánico con amplio espacio horizontal, crearlo en la base de datos vinculado al equipo actual y seleccionarlo de inmediato.
+  - Guarda automáticamente el nuevo componente si el usuario lo escribió en el panel desplegable sin presionar el botón individual antes de guardar la parte.
+
+### Fixed
+- **`ModalParteLubricar` — Filtro de componentes incorrecto** (`fix: lubricacion-componentes-filter`):
+  - Eliminado el filtro `esComponenteMecanicoReal` que excluía componentes válidos (bombas, motores, reductores) cuyo nombre contiene palabras como "PRESIÓN" o "NIVEL". El filtro era redundante porque la API ya filtra por `equipoId`.
+  - El selector de componentes ahora muestra **todos** los componentes mecánicos del equipo seleccionado sin exclusiones.
+
+### Added
+- **`MatrizLubricacionView` — Selector de Alcance Independiente para Inspección** (`feat: lubricacion-inspeccion-alcance`):
+  - El tab de Inspección ahora tiene su propio selector de alcance, completamente independiente del filtro global de la pestaña "Partes a Lubricar".
+  - Permite filtrar por: **Por Planta**, **Por Línea / Ubicación**, o **Por Maquinaria Específica**.
+  - El dropdown de equipo muestra horómetro actual y cantidad de puntos a lubricar configurados para cada máquina.
+  - Nuevo computed `filaEquipoInspeccion` separado de `filaEquipoActual` (tab Partes), eliminando la dependencia entre pestañas.
+  - Al guardar la inspección el selector se limpia automáticamente para facilitar el registro de la siguiente máquina.
+
 ### Fixed
 - **Configuración por Variables de Entorno** (`feat: env-config`):
   - `apps/frontend/.env`: Ahora define `VITE_API_URL=http://localhost:3000/api` eliminando el fallback implícito `/api` que rompía la app en máquinas sin el proxy de Vite.
@@ -38,7 +85,11 @@ El formato sigue el estándar [Keep a Changelog](https://keepachangelog.com/es/1
       2. **Pestaña '(Inspección) de Lubricación'**: Captura operativa diaria de horómetros con validación anti-retroceso, cálculo dinámico de semáforos en el cliente, registro de niveles de aceite, reposición en lts/gal/kg, alerta inmediata de fugas y cambio total de lubricante.
     - **Integración de Reportes en el Dashboard (`PanelReportes.vue`)**:
       - Incorporado reporte normativo **R7: Lubricación**, integrando pestañas para Fugas Detectadas activas y Consumo acumulado de aceites y grasas con filtros de planta y rango de fechas, más descarga en Excel.
-    - **Componentes Auxiliares**: `SemaforoBadge.vue` (chips visuales para `NORMAL`, `PREVENTIVO` y `CRITICO`), `ModalParteLubricar.vue` (modal para crear y editar con selección en cascada de Equipo y Componente, eliminando el campo técnico confuso de horómetro base inicial) y `ModalReemplazoHorometro.vue` (justificación técnica al registrar odómetros menores).
+    - **Componentes Auxiliares**:
+      - `ModalParteLubricar.vue`: Rediseñado con selector reactivo `v-combobox` que permite seleccionar componentes existentes o escribir nuevos directamente. Incorporado filtro inteligente para descartar variables de inspección que hubieran sido importadas erróneamente como componentes (ej: `(psi)`, `(°C)`, `(Amp)`). Incluye selección rápida de frecuencias industriales (`100h`, `250h`, `500h`, etc.), tarjeta de resumen del lubricante y validaciones nativas.
+      - `MatrizLubricacionView.vue`: Estandarizado con el componente transversal `HeaderViews.vue`, fondo `bg-surface-variant` en cabeceras de tarjeta para evitar aspecto descolorido, y reglas CSS con `:deep(thead th)` adaptables: fondo `#f1f5f9` con texto oscuro `#1e293b` en tema claro, y fondo `#1e2635` con texto blanco `#f8fafc` en tema oscuro.
+      - `Menu.vue`: Restaurados los colores vivos en los iconos de cada módulo tanto en la barra móvil como en el drawer de escritorio usando `<template #prepend><v-icon :color="modulo.color">`.
+      - `SemaforoBadge.vue` y `ModalReemplazoHorometro.vue`: Totalmente compatibles con tema claro y oscuro.
     - **Store Pinia y Tipado Estricto**: `lubricacion.store.ts` y `lubricacion.types.ts` completamente tipados sin `any`.
     - **Menú y Navegación**: Menú lateral unificado con acceso directo a `/lubricacion` para Administradores, Supervisores y Técnicos.
 

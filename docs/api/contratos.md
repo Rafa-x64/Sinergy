@@ -1234,7 +1234,7 @@ Busca un tipo de equipo específico por su ID.
 ## Módulo de Notificaciones y WebSockets
 
 ### `GET /api/notificaciones`
-Obtiene las notificaciones dirigidas al usuario autenticado (o todo el registro de auditoría si el usuario posee rol Administrador).
+Obtiene las notificaciones personales dirigidas al usuario autenticado o emisiones generales de sistema (`usuarioId: null`). Para auditoría global del sistema se utiliza `GET /api/notificaciones/globales`.
 
 - **Acceso:** Protegido (`Authorization: Bearer <accessToken>`)
 - **Query Parameters (opcionales):**

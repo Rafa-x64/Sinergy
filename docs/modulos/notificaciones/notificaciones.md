@@ -25,6 +25,17 @@ Combina:
   - Emisión de sockets exclusivamente a nivel broadcast sin salas de rol (descartado por fuga de privacidad entre roles).
 - **Trade-offs**: La unión a múltiples salas en Socket.io añade una mínima sobrecarga en memoria del servidor por socket conectado, pero optimiza sustancialmente el ancho de banda y la pertinencia de las alertas.
 
+### ADR-009: Resolución Jerárquica de Supervisores Destinatarios de Notificaciones
+- **Contexto**: Al registrar una inspección o rutina de lubricación, el sistema insertaba una notificación en base de datos por cada usuario con rol `esSupervisor: true` en la tabla `UsuarioRol`. En entornos con múltiples supervisores, esto generaba N registros idénticos visibles en el *Historial de Actividades* global.
+- **Decisión**: Implementar `notificationService.obtenerSupervisoresDestinatarios(tecnicoId, plantaId?, tx?)` con resolución en cascada:
+  1. **Supervisor directo** (`usuario.supervisorId`): Si el técnico tiene un supervisor asignado y activo, se notifica únicamente a él.
+  2. **Supervisores de la misma planta**: Si el técnico no tiene supervisor directo, se notifica a los supervisores activos vinculados a su misma `plantaId`.
+  3. **Fallback global**: Si ninguna de las condiciones anteriores produce resultados, se notifica a todos los supervisores activos del sistema.
+- **Alternativas descartadas**:
+  - Notificación broadcast a todos los supervisores (descartada por generar registros duplicados en BD y ruido en el panel de auditoría).
+  - Notificación `usuarioId: null` de sistema (descartada porque no permite routing individual por socket).
+- **Trade-offs**: La resolución jerárquica asume que los técnicos tengan correctamente asignado su `supervisorId` o su `plantaId`. Si ambos son `null`, el fallback global actúa como red de seguridad.
+
 ---
 
 ## 3. Matriz de Notificaciones por Rol
@@ -41,8 +52,8 @@ Combina:
 
 ## 4. Endpoints de la API
 
-- `GET /api/notificaciones`: Lista las notificaciones del usuario autenticado (si es Administrador, incluye el consolidado global de auditoría).
-- `GET /api/notificaciones/globales`: Solo Administrador. Historial completo de auditoría y actividades.
+- `GET /api/notificaciones`: Lista las notificaciones personales del usuario autenticado o avisos broadcast.
+- `GET /api/notificaciones/globales`: Solo Administrador. Historial completo de auditoría y actividades del sistema.
 - `PATCH /api/notificaciones/:id/leer`: Marca una notificación específica como leída.
 - `PATCH /api/notificaciones/marcar-todas-leidas`: Marca todas las notificaciones pendientes como leídas.
 - `DELETE /api/notificaciones/:id`: Elimina una notificación del historial.

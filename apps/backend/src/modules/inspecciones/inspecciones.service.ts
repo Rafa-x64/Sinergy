@@ -7,6 +7,7 @@ import type {
   EvaluarInspeccionDTO,
   FiltrosInspeccionDTO
 } from './inspecciones.schemas'
+import { notificationService } from '../notificaciones/notification.service'
 
 export class InspeccionesService {
 
@@ -308,16 +309,17 @@ export class InspeccionesService {
         }))
       })
 
-      // 3. Notificar a los usuarios con rol SUPERVISOR
-      const supervisores = await tx.usuarioRol.findMany({
-        where: { rol: { esSupervisor: true } },
-        select: { usuarioId: true }
-      })
+      // 3. Notificar al supervisor directo (o de la planta) del técnico
+      const supervisorIds = await notificationService.obtenerSupervisoresDestinatarios(
+        elaboradoPorId,
+        dto.plantaId ?? null,
+        tx
+      )
 
-      if (supervisores.length > 0) {
+      if (supervisorIds.length > 0) {
         await tx.notificacion.createMany({
-          data: supervisores.map((s) => ({
-            usuarioId: s.usuarioId,
+          data: supervisorIds.map((sId) => ({
+            usuarioId: sId,
             tipo: 'WARNING',
             categoria: 'INSPECCION_PENDIENTE',
             titulo: 'Nueva Inspección Pendiente',

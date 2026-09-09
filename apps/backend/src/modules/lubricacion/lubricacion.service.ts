@@ -16,7 +16,20 @@ import {
   ReporteFugaDTO,
   ReporteConsumoDTO
 } from './lubricacion.schemas'
-import { Prisma, TipoLubricante, UnidadMedidaLubricante, OrigenLecturaHorometro } from '@prisma/client'
+import { Prisma, TipoLubricante, UnidadMedidaLubricante, OrigenLecturaHorometro, NivelLubricante } from '@prisma/client'
+import { notificationService } from '../notificaciones/notification.service'
+
+function normalizarNivelLubricante(nivel?: string): NivelLubricante {
+  if (!nivel) return NivelLubricante.OK
+  const upper = String(nivel).trim().toUpperCase()
+  if (upper === 'LLENO') return NivelLubricante.OK
+  if (upper === 'MEDIO') return NivelLubricante.BAJO
+  if (upper === 'VACIO') return NivelLubricante.CRITICO
+  if (Object.values(NivelLubricante).includes(upper as NivelLubricante)) {
+    return upper as NivelLubricante
+  }
+  return NivelLubricante.OK
+}
 
 export const lubricacionService = {
   // ─── CATÁLOGO DE LUBRICANTES ───────────────────────────────────────────────
@@ -92,6 +105,16 @@ export const lubricacionService = {
   },
 
   async crearPuntoLubricacion(dto: CrearPuntoLubricacionDTO) {
+    if (dto.limiteHorasCambio <= 0) {
+      throw new AppError('El límite de horas de cambio debe ser mayor a cero', 400)
+    }
+    if (dto.capacidadRecomendada !== undefined && dto.capacidadRecomendada !== null && Number(dto.capacidadRecomendada) < 0) {
+      throw new AppError('La capacidad recomendada no puede ser un número negativo', 400)
+    }
+    if (dto.horometroUltimoCambio !== undefined && dto.horometroUltimoCambio !== null && Number(dto.horometroUltimoCambio) < 0) {
+      throw new AppError('El horómetro del último cambio no puede ser un número negativo', 400)
+    }
+
     const equipo = await prisma.equipo.findUnique({ where: { id: dto.equipoId } })
     if (!equipo) {
       throw new AppError('El equipo especificado no existe', 404)
@@ -133,6 +156,16 @@ export const lubricacionService = {
   },
 
   async editarPuntoLubricacion(id: number, dto: EditarPuntoLubricacionDTO) {
+    if (dto.limiteHorasCambio !== undefined && dto.limiteHorasCambio <= 0) {
+      throw new AppError('El límite de horas de cambio debe ser mayor a cero', 400)
+    }
+    if (dto.capacidadRecomendada !== undefined && dto.capacidadRecomendada !== null && Number(dto.capacidadRecomendada) < 0) {
+      throw new AppError('La capacidad recomendada no puede ser un número negativo', 400)
+    }
+    if (dto.horometroUltimoCambio !== undefined && dto.horometroUltimoCambio !== null && Number(dto.horometroUltimoCambio) < 0) {
+      throw new AppError('El horómetro del último cambio no puede ser un número negativo', 400)
+    }
+
     const punto = await prisma.puntoLubricacion.findUnique({ where: { id } })
     if (!punto) {
       throw new AppError('Punto de lubricación no encontrado', 404)
@@ -192,6 +225,11 @@ export const lubricacionService = {
   // ─── CONTROL DE HORÓMETROS Y ANTI-RETROCESO ─────────────────────────────────
 
   async registrarLecturaHorometro(dto: RegistrarHorometroDTO, usuarioId: number) {
+    const nuevoHorometro = Number(dto.valorHorometro)
+    if (isNaN(nuevoHorometro) || nuevoHorometro < 0) {
+      throw new AppError('El valor del horómetro no puede ser negativo ni inválido', 400)
+    }
+
     const equipo = await prisma.equipo.findUnique({ where: { id: dto.equipoId } })
     if (!equipo) {
       throw new AppError('El equipo especificado no existe', 404)
@@ -202,8 +240,6 @@ export const lubricacionService = {
       where: { equipoId: dto.equipoId },
       orderBy: { id: 'desc' }
     })
-
-    const nuevoHorometro = Number(dto.valorHorometro)
 
     if (ultimaLectura) {
       const ultimoHorometro = Number(ultimaLectura.valorHorometro)
@@ -277,7 +313,7 @@ export const lubricacionService = {
         puntosLubricacion: {
           where: { activo: true },
           include: {
-            componente: { select: { nombre: true } },
+            componente: { select: { id: true, nombre: true } },
             lubricante: true
           }
         },
@@ -316,6 +352,7 @@ export const lubricacionService = {
         return {
           id: p.id,
           nombrePunto: p.nombrePunto,
+          componenteId: p.componenteId ?? null,
           componenteNombre: p.componente?.nombre ?? null,
           lubricante: {
             id: p.lubricante.id,
@@ -421,6 +458,21 @@ export const lubricacionService = {
       throw new AppError('La rutina debe incluir al menos un punto de lubricación evaluado', 400)
     }
 
+    const nuevoHorometro = Number(dto.horometroRegistrado)
+    if (isNaN(nuevoHorometro) || nuevoHorometro < 0) {
+      throw new AppError('El horómetro registrado no puede ser negativo ni inválido', 400)
+    }
+
+    // Validación anti-negativos para cada punto evaluado
+    for (const det of dto.detalles) {
+      if (det.cantidadRepuesta !== undefined && det.cantidadRepuesta !== null && Number(det.cantidadRepuesta) < 0) {
+        throw new AppError('La cantidad repuesta no puede ser un número negativo', 400)
+      }
+      if (det.seRealizoReposicion && (det.cantidadRepuesta === undefined || det.cantidadRepuesta === null || Number(det.cantidadRepuesta) <= 0)) {
+        throw new AppError('Si se indicó reposición de lubricante, la cantidad debe ser mayor a 0', 400)
+      }
+    }
+
     const equipo = await prisma.equipo.findUnique({
       where: { id: dto.equipoId },
       include: {
@@ -439,7 +491,6 @@ export const lubricacionService = {
       orderBy: { id: 'desc' }
     })
 
-    const nuevoHorometro = Number(dto.horometroRegistrado)
     if (ultimaLectura) {
       const ultimoHorometro = Number(ultimaLectura.valorHorometro)
       if (nuevoHorometro < ultimoHorometro && !dto.esReemplazoReloj) {
@@ -470,7 +521,7 @@ export const lubricacionService = {
         }
       })
 
-      // 2. Crear cabecera de la rutina
+      // 2. Crear cabecera de la rutina en el módulo de lubricación
       const rutina = await tx.rutinaLubricacion.create({
         data: {
           codigoRutina,
@@ -490,7 +541,7 @@ export const lubricacionService = {
           data: {
             rutinaId: rutina.id,
             puntoLubricacionId: det.puntoLubricacionId,
-            nivelLubricante: det.nivelLubricante ?? 'OK',
+            nivelLubricante: normalizarNivelLubricante(det.nivelLubricante),
             seRealizoReposicion: Boolean(det.seRealizoReposicion),
             cantidadRepuesta: det.cantidadRepuesta !== undefined && det.cantidadRepuesta !== null
               ? new Prisma.Decimal(det.cantidadRepuesta)
@@ -511,6 +562,81 @@ export const lubricacionService = {
             }
           })
         }
+      }
+
+      // 4. Crear cabecera en la tabla 'inspecciones' para que aparezca en la Bandeja de Aprobaciones
+      const fechaHoy = new Date()
+      const codigoFecha = fechaHoy.toISOString().slice(0, 10).replace(/-/g, '')
+      const prefijoPlanta = equipo.ubicacionTecnica?.plantaId ? `PL${equipo.ubicacionTecnica.plantaId}` : 'GEN'
+      const conteoHoy = await tx.inspeccion.count({
+        where: {
+          codigoInspeccion: { startsWith: `INSP-LUB-${prefijoPlanta}-${codigoFecha}` }
+        }
+      })
+      const secuencial = String(conteoHoy + 1).padStart(4, '0')
+      const codigoInspeccion = `INSP-LUB-${prefijoPlanta}-${codigoFecha}-${secuencial}`
+
+      const resumenPuntos = dto.detalles.map((d) => {
+        const p = equipo.puntosLubricacion.find((item) => item.id === d.puntoLubricacionId)
+        const pNombre = p ? p.nombrePunto : `Punto #${d.puntoLubricacionId}`
+        const partes: string[] = [`Nivel: ${d.nivelLubricante || 'OK'}`]
+        if (d.seRealizoReposicion) {
+          partes.push(`Reposición: ${d.cantidadRepuesta} ${p?.lubricante?.unidadMedida || 'und'}`)
+        }
+        if (d.seRealizoCambioTotal) {
+          partes.push('CAMBIO TOTAL')
+        }
+        if (d.presentaFuga) {
+          partes.push('FUGA DETECTADA')
+        }
+        if (d.observaciones) {
+          partes.push(`Observación: ${d.observaciones}`)
+        }
+        return `• ${pNombre}: ${partes.join(', ')}`
+      }).join('\n')
+
+      const observacionesGenerales = [
+        `[RUTINA DE LUBRICACIÓN Y HORÓMETROS - ${equipo.codigo} - ${equipo.nombre}]`,
+        `Horómetro Registrado: ${nuevoHorometro} hrs${dto.esReemplazoReloj ? ` (REEMPLAZO DE RELOJ JUSTIFICADO: ${dto.justificacionReemplazo})` : ''}`,
+        dto.observaciones ? `Observaciones del Técnico: ${dto.observaciones}` : null,
+        `Resumen de Puntos Evaluados (${dto.detalles.length}):`,
+        resumenPuntos
+      ].filter(Boolean).join('\n')
+
+      const nuevaInspeccion = await tx.inspeccion.create({
+        data: {
+          codigoInspeccion,
+          tipoInspeccion: 'VARIABLES_CRITICAS',
+          plantaId: equipo.ubicacionTecnica?.plantaId ?? null,
+          ubicacionTecnicaId: equipo.ubicacionTecnicaId,
+          tipoEquipoId: equipo.tipoEquipoId,
+          equipoId: dto.equipoId,
+          elaboradoPorId: usuarioId,
+          estadoInspeccion: 'PENDIENTE',
+          observacionesGenerales,
+          fechaRegistro: fechaHoy
+        }
+      })
+
+      // 5. Notificar al supervisor directo (o de la planta) de la nueva inspección pendiente
+      const supervisorIds = await notificationService.obtenerSupervisoresDestinatarios(
+        usuarioId,
+        equipo.ubicacionTecnica?.plantaId ?? null,
+        tx
+      )
+
+      if (supervisorIds.length > 0) {
+        await tx.notificacion.createMany({
+          data: supervisorIds.map((sId) => ({
+            usuarioId: sId,
+            tipo: 'WARNING',
+            categoria: 'INSPECCION_PENDIENTE',
+            titulo: 'Nueva Rutina de Lubricación Pendiente',
+            mensaje: `Se ha registrado la rutina de lubricación ${codigoInspeccion} para el equipo ${equipo.codigo} (${equipo.nombre}) pendiente de revisión.`,
+            entidadAfectada: 'INSPECCION',
+            entidadId: String(nuevaInspeccion.id)
+          }))
+        })
       }
 
       return rutina

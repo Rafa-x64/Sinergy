@@ -110,7 +110,8 @@ export const inspeccionController = {
       eventBus.emit('INSPECCION_CREADA', {
         inspeccionId: String(inspeccionRegistrada.id),
         tecnicoId: elaboradoPorId,
-        codigoInspeccion: inspeccionRegistrada.codigoInspeccion
+        codigoInspeccion: inspeccionRegistrada.codigoInspeccion,
+        plantaId: null // Resuelto internamente por obtenerSupervisoresDestinatarios desde el técnico
       })
 
       eventBus.emit('ACCION_SISTEMA', {
