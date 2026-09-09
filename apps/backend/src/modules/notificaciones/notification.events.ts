@@ -6,21 +6,18 @@ import { NotificacionPayload } from '../../core/eventBus'
 
 export function registrarListenersNotificaciones(): void {
 
-  // Flujo 1: Técnico registra inspección -> Llega al dashboard del Supervisor + Admin al tanto
+  // Flujo 1: Técnico registra inspección -> Llega al supervisor directo (o de planta) + Admin al tanto
   eventBus.on('INSPECCION_CREADA', async (payload: EventoInspeccionCreada) => {
     try {
-      const supervisorId = await notificationService.obtenerSupervisorDeUsuario(payload.tecnicoId)
       const admins = await notificationService.obtenerAdministradores()
 
-      let supervisoresIds: number[] = []
-      if (supervisorId) {
-        supervisoresIds.push(supervisorId)
-      } else {
-        const todosSupervisores = await notificationService.obtenerTodosSupervisores()
-        supervisoresIds = todosSupervisores.map(s => s.id)
-      }
+      // Resolución jerárquica: supervisor directo → supervisores de planta → fallback global
+      const supervisoresIds = await notificationService.obtenerSupervisoresDestinatarios(
+        payload.tecnicoId,
+        payload.plantaId ?? null
+      )
 
-      // 1. Notificar a Supervisor(es)
+      // 1. Notificar al supervisor resuelto
       for (const sId of supervisoresIds) {
         const notifSup = await notificationService.crearNotificacion({
           usuarioId: sId,
@@ -33,16 +30,6 @@ export function registrarListenersNotificaciones(): void {
         })
         emitirNotificacion(sId, notifSup)
       }
-      // Broadcast adicional a la sala de rol de supervisores
-      emitirNotificacionARol('supervisor', {
-        tipo: NotificationType.WARNING,
-        categoria: CategoriaNotificacion.INSPECCION_PENDIENTE,
-        titulo: 'Nueva Inspección por Evaluar',
-        mensaje: `Inspección ${payload.codigoInspeccion} registrada y en espera de revisión.`,
-        entidadAfectada: 'INSPECCION',
-        entidadId: payload.inspeccionId,
-        creadoEn: new Date().toISOString()
-      })
 
       // 2. Notificar a Administradores (Auditoría en tiempo real)
       for (const admin of admins) {
@@ -57,15 +44,6 @@ export function registrarListenersNotificaciones(): void {
         })
         emitirNotificacion(admin.id, notifAdmin)
       }
-      emitirNotificacionARol('admin', {
-        tipo: NotificationType.ALERT,
-        categoria: CategoriaNotificacion.AUDITORIA_SISTEMA,
-        titulo: 'Registro de Inspección',
-        mensaje: `Inspección ${payload.codigoInspeccion} ingresada al sistema.`,
-        entidadAfectada: 'INSPECCION',
-        entidadId: payload.inspeccionId,
-        creadoEn: new Date().toISOString()
-      })
 
     } catch (error) {
       console.error('[Error Notification]: Fallo procesando INSPECCION_CREADA', error)

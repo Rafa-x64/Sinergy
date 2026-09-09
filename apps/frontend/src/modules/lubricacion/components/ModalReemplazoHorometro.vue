@@ -39,7 +39,7 @@ function cancelar() {
 <template>
   <v-dialog :model-value="modelValue" max-width="540" persistent>
     <v-card>
-      <v-card-item class="bg-warning-subtle py-3 border-bottom">
+      <v-card-item class="py-3 border-bottom">
         <template #prepend>
           <v-avatar color="warning" variant="flat" size="36">
             <v-icon color="white">mdi-alert</v-icon>
@@ -56,10 +56,10 @@ function cancelar() {
           El sistema protege la integridad impidiendo el retroceso no justificado.
         </p>
 
-        <div class="d-flex justify-space-between align-center p-3 mb-3 bg-light rounded border">
+        <div class="d-flex justify-space-between align-center pa-3 mb-3 rounded border" style="background-color: rgb(var(--v-theme-surface-variant));">
           <div>
             <div class="text-caption text-muted">Último Horómetro</div>
-            <div class="text-h6 font-weight-bold text-danger">{{ horometroActual.toLocaleString() }} hrs</div>
+            <div class="text-h6 font-weight-bold text-error">{{ horometroActual.toLocaleString() }} hrs</div>
           </div>
           <v-icon color="grey">mdi-arrow-right-bold</v-icon>
           <div>

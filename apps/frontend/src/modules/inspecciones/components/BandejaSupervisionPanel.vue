@@ -114,7 +114,17 @@ const formatearFecha = (f?: string) => {
               </td>
 
               <td class="text-center">
-                <v-chip size="x-small" variant="flat" color="info">
+                <v-chip
+                  v-if="item.codigoInspeccion.startsWith('INSP-LUB') || (item._count?.detalles ?? 0) === 0"
+                  size="x-small"
+                  variant="flat"
+                  color="teal"
+                  class="font-weight-medium"
+                >
+                  <v-icon start size="13">mdi-oil</v-icon>
+                  Rutina Lubricación
+                </v-chip>
+                <v-chip v-else size="x-small" variant="flat" color="info">
                   {{ item._count?.detalles ?? 0 }} variables
                 </v-chip>
               </td>

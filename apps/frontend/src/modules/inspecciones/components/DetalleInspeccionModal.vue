@@ -120,99 +120,122 @@ defineExpose({ abrir, cerrar })
         <div v-if="store.inspeccionActiva.observacionesGenerales" class="mb-4 pa-3 bg-blue-grey-lighten-5 border rounded">
           <div class="text-caption font-weight-bold mb-1" style="color: #5cb85c;">
             <v-icon size="14" color="#5cb85c" class="mr-1">mdi-text-box-outline</v-icon>
-            Observaciones Generales del Técnico:
+            Observaciones Generales y Resumen de la Inspección:
           </div>
-          <p class="text-body-2 mb-0 text-high-emphasis font-italic">
-            "{{ store.inspeccionActiva.observacionesGenerales }}"
-          </p>
+          <div class="text-body-2 mb-0 text-high-emphasis font-weight-regular" style="white-space: pre-wrap; line-height: 1.5;">{{ store.inspeccionActiva.observacionesGenerales }}</div>
         </div>
 
-        <!-- Tabla de Variables Evaluadas -->
-        <h4 class="text-subtitle-2 font-weight-bold text-high-emphasis mb-2">
-          Variables Evaluadas e Indicadores de Rango:
-        </h4>
+        <!-- Caso A: Tabla de Variables Evaluadas (Inspecciones con variables específicas) -->
+        <template v-if="store.inspeccionActiva.detalles && store.inspeccionActiva.detalles.length > 0">
+          <h4 class="text-subtitle-2 font-weight-bold text-high-emphasis mb-2">
+            Variables Evaluadas e Indicadores de Rango:
+          </h4>
 
-        <div class="table-responsive border rounded mb-3">
-          <v-table density="comfortable" hover>
-            <thead>
-              <tr class="table-header-row">
-                <th class="text-left font-weight-bold">Componente / Variable</th>
-                <th class="text-center font-weight-bold">Rango Normativo</th>
-                <th class="text-center font-weight-bold">Valor Medido</th>
-                <th class="text-center font-weight-bold">Evaluación</th>
-                <th class="text-left font-weight-bold">Observación Específica</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="d in store.inspeccionActiva.detalles"
-                :key="d.id"
-                :class="{ 'bg-red-lighten-5': d.fueraDeRango }"
-              >
-                <!-- Componente / Variable -->
-                <td>
-                  <div class="font-weight-bold text-high-emphasis text-body-2">
-                    {{ d.variable?.nombre }}
-                  </div>
-                  <div class="text-caption text-medium-emphasis">
-                    {{ d.variable?.componente?.equipo?.codigo }} — {{ d.variable?.componente?.nombre }}
-                  </div>
-                </td>
+          <div class="table-responsive border rounded mb-3">
+            <v-table density="comfortable" hover>
+              <thead>
+                <tr class="table-header-row">
+                  <th class="text-left font-weight-bold">Componente / Variable</th>
+                  <th class="text-center font-weight-bold">Rango Normativo</th>
+                  <th class="text-center font-weight-bold">Valor Medido</th>
+                  <th class="text-center font-weight-bold">Evaluación</th>
+                  <th class="text-left font-weight-bold">Observación Específica</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="d in store.inspeccionActiva.detalles"
+                  :key="d.id"
+                  :class="{ 'bg-red-lighten-5': d.fueraDeRango }"
+                >
+                  <!-- Componente / Variable -->
+                  <td>
+                    <div class="font-weight-bold text-high-emphasis text-body-2">
+                      {{ d.variable?.nombre }}
+                    </div>
+                    <div class="text-caption text-medium-emphasis">
+                      {{ d.variable?.componente?.equipo?.codigo }} — {{ d.variable?.componente?.nombre }}
+                    </div>
+                  </td>
 
-                <!-- Rango Normativo -->
-                <td class="text-center text-caption text-medium-emphasis">
-                  <template v-if="d.variable?.tipoEvaluacion === 'SELECCION'">
-                    Opciones de Selección
-                  </template>
-                  <template v-else-if="d.variable?.valorMinimo !== null || d.variable?.valorMaximo !== null">
-                    {{ d.variable?.valorMinimo ?? '—' }} a {{ d.variable?.valorMaximo ?? '—' }} {{ d.variable?.unidad || '' }}
-                  </template>
-                  <template v-else>
-                    Sin rango (Ingreso libre)
-                  </template>
-                </td>
+                  <!-- Rango Normativo -->
+                  <td class="text-center text-caption text-medium-emphasis">
+                    <template v-if="d.variable?.tipoEvaluacion === 'SELECCION'">
+                      Opciones de Selección
+                    </template>
+                    <template v-else-if="d.variable?.valorMinimo !== null || d.variable?.valorMaximo !== null">
+                      {{ d.variable?.valorMinimo ?? '—' }} a {{ d.variable?.valorMaximo ?? '—' }} {{ d.variable?.unidad || '' }}
+                    </template>
+                    <template v-else>
+                      Sin rango (Ingreso libre)
+                    </template>
+                  </td>
 
-                <!-- Valor Medido -->
-                <td class="text-center font-weight-bold text-body-2">
-                  <span v-if="d.valorNumerico !== null">
-                    {{ d.valorNumerico }} {{ d.variable?.unidad || '' }}
-                  </span>
-                  <v-chip v-else-if="d.valorSeleccion" size="x-small" variant="tonal" color="#5cb85c" class="font-weight-bold">
-                    {{ d.valorSeleccion }}
-                  </v-chip>
-                  <span v-else class="text-medium-emphasis">—</span>
-                </td>
+                  <!-- Valor Medido -->
+                  <td class="text-center font-weight-bold text-body-2">
+                    <span v-if="d.valorNumerico !== null">
+                      {{ d.valorNumerico }} {{ d.variable?.unidad || '' }}
+                    </span>
+                    <v-chip v-else-if="d.valorSeleccion" size="x-small" variant="tonal" color="#5cb85c" class="font-weight-bold">
+                      {{ d.valorSeleccion }}
+                    </v-chip>
+                    <span v-else class="text-medium-emphasis">—</span>
+                  </td>
 
-                <!-- Estado / Evaluación -->
-                <td class="text-center">
-                  <v-chip
-                    v-if="d.fueraDeRango"
-                    size="x-small"
-                    color="error"
-                    variant="flat"
-                    class="font-weight-bold"
-                  >
-                    Fuera de Rango
-                  </v-chip>
-                  <v-chip
-                    v-else
-                    size="x-small"
-                    color="#5cb85c"
-                    variant="tonal"
-                    class="font-weight-medium"
-                  >
-                    Conforme
-                  </v-chip>
-                </td>
+                  <!-- Estado / Evaluación -->
+                  <td class="text-center">
+                    <v-chip
+                      v-if="d.fueraDeRango"
+                      size="x-small"
+                      color="error"
+                      variant="flat"
+                      class="font-weight-bold"
+                    >
+                      Fuera de Rango
+                    </v-chip>
+                    <v-chip
+                      v-else
+                      size="x-small"
+                      color="#5cb85c"
+                      variant="tonal"
+                      class="font-weight-medium"
+                    >
+                      Conforme
+                    </v-chip>
+                  </td>
 
-                <!-- Observación Específica -->
-                <td class="text-caption text-medium-emphasis">
-                  {{ d.observaciones ? d.observaciones : '—' }}
-                </td>
-              </tr>
-            </tbody>
-          </v-table>
-        </div>
+                  <!-- Observación Específica -->
+                  <td class="text-caption text-medium-emphasis">
+                    {{ d.observaciones ? d.observaciones : '—' }}
+                  </td>
+                </tr>
+              </tbody>
+            </v-table>
+          </div>
+        </template>
+
+        <!-- Caso B: Rutina de Lubricación y Horómetro -->
+        <template v-else>
+          <v-card variant="tonal" color="teal" class="pa-4 rounded-lg border mb-3">
+            <div class="d-flex align-center gap-2 mb-2">
+              <v-icon color="teal" size="24">mdi-oil</v-icon>
+              <h4 class="text-subtitle-2 font-weight-bold text-high-emphasis mb-0">
+                Rutina Operativa de Lubricación y Horómetros
+              </h4>
+            </div>
+            <p class="text-caption text-medium-emphasis mb-3">
+              Esta inspección corresponde a una rutina de lubricación periódica ejecutada por el personal de mantenimiento. Los detalles del horómetro y cada punto intervenido se encuentran consolidados en el resumen superior.
+            </p>
+            <div v-if="store.inspeccionActiva.equipo" class="d-flex align-center gap-2 flex-wrap">
+              <v-chip size="small" color="primary" variant="flat" class="font-weight-bold">
+                Equipo: {{ store.inspeccionActiva.equipo.codigo }} — {{ store.inspeccionActiva.equipo.nombre }}
+              </v-chip>
+              <v-chip v-if="store.inspeccionActiva.ubicacionTecnica" size="small" variant="outlined">
+                Línea: {{ store.inspeccionActiva.ubicacionTecnica.nombre }}
+              </v-chip>
+            </div>
+          </v-card>
+        </template>
 
         <!-- Formulario de Motivo de Rechazo (si se presiona Rechazar) -->
         <v-expand-transition>

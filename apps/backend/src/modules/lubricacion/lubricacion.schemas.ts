@@ -65,6 +65,7 @@ export type EstadoSemaforoLubricacion = 'NORMAL' | 'PREVENTIVO' | 'CRITICO'
 export interface PuntoMatrizDTO {
   id: number
   nombrePunto: string
+  componenteId: number | null
   componenteNombre: string | null
   lubricante: {
     id: number

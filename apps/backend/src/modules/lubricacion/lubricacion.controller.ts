@@ -136,6 +136,12 @@ export const lubricacionController = {
       if (limiteHorasCambio === undefined || typeof limiteHorasCambio !== 'number' || limiteHorasCambio <= 0) {
         return res.status(400).json({ status: 'error', message: 'El límite de horas de cambio debe ser un número mayor a cero' })
       }
+      if (capacidadRecomendada !== undefined && capacidadRecomendada !== null && (typeof capacidadRecomendada !== 'number' || capacidadRecomendada < 0)) {
+        return res.status(400).json({ status: 'error', message: 'La capacidad recomendada no puede ser un número negativo' })
+      }
+      if (horometroUltimoCambio !== undefined && horometroUltimoCambio !== null && (typeof horometroUltimoCambio !== 'number' || horometroUltimoCambio < 0)) {
+        return res.status(400).json({ status: 'error', message: 'El horómetro del último cambio no puede ser un número negativo' })
+      }
 
       const nuevoPunto = await lubricacionService.crearPuntoLubricacion({
         equipoId,
@@ -163,6 +169,17 @@ export const lubricacionController = {
       const id = parsearId(req.params.id)
       if (id === null) {
         return res.status(400).json({ status: 'error', message: 'ID de punto de lubricación inválido' })
+      }
+
+      const { limiteHorasCambio, capacidadRecomendada, horometroUltimoCambio } = req.body
+      if (limiteHorasCambio !== undefined && (typeof limiteHorasCambio !== 'number' || limiteHorasCambio <= 0)) {
+        return res.status(400).json({ status: 'error', message: 'El límite de horas de cambio debe ser mayor a cero' })
+      }
+      if (capacidadRecomendada !== undefined && capacidadRecomendada !== null && (typeof capacidadRecomendada !== 'number' || capacidadRecomendada < 0)) {
+        return res.status(400).json({ status: 'error', message: 'La capacidad recomendada no puede ser negativa' })
+      }
+      if (horometroUltimoCambio !== undefined && horometroUltimoCambio !== null && (typeof horometroUltimoCambio !== 'number' || horometroUltimoCambio < 0)) {
+        return res.status(400).json({ status: 'error', message: 'El horómetro no puede ser negativo' })
       }
 
       const actualizado = await lubricacionService.editarPuntoLubricacion(id, req.body)
@@ -307,7 +324,10 @@ export const lubricacionController = {
         if (!det.puntoLubricacionId || typeof det.puntoLubricacionId !== 'number') {
           return res.status(400).json({ status: 'error', message: 'Cada detalle debe incluir un ID de punto de lubricación válido' })
         }
-        if (det.seRealizoReposicion && (det.cantidadRepuesta === undefined || det.cantidadRepuesta <= 0)) {
+        if (det.cantidadRepuesta !== undefined && det.cantidadRepuesta !== null && (typeof det.cantidadRepuesta !== 'number' || det.cantidadRepuesta < 0)) {
+          return res.status(400).json({ status: 'error', message: 'La cantidad repuesta no puede ser un número negativo' })
+        }
+        if (det.seRealizoReposicion && (det.cantidadRepuesta === undefined || det.cantidadRepuesta === null || det.cantidadRepuesta <= 0)) {
           return res.status(400).json({ status: 'error', message: 'Si se marcó reposición, debe indicar una cantidad mayor a cero' })
         }
       }

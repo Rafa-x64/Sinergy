@@ -1,6 +1,6 @@
 export type TipoLubricante = 'ACEITE' | 'GRASA' | 'REFRIGERANTE' | 'LIQUIDO_FRENOS' | 'OTRO'
 
-export type NivelLubricante = 'LLENO' | 'MEDIO' | 'BAJO' | 'VACIO' | 'NO_APLICA'
+export type NivelLubricante = 'OK' | 'BAJO' | 'CRITICO' | 'SOBRELLENADO' | 'NO_APLICA'
 
 export type UnidadMedidaLubricante = 'GALONES' | 'LITROS' | 'KILOGRAMOS' | 'LIBRAS' | 'TUBOS' | 'MILILITROS'
 
@@ -76,6 +76,7 @@ export type EditarParteInput = EditarPuntoLubricacionInput
 export interface PuntoMatriz {
   id: number
   nombrePunto: string
+  componenteId?: number | null
   componenteNombre: string | null
   lubricante: {
     id: number

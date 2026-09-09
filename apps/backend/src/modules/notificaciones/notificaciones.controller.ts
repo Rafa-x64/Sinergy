@@ -23,7 +23,7 @@ export const notificacionesController = {
         limite: limite ? parseInt(String(limite), 10) : 50
       }
 
-      const notificaciones = await notificationService.obtenerNotificacionesPorUsuario(usuarioId, filtros, esAdmin)
+      const notificaciones = await notificationService.obtenerNotificacionesPorUsuario(usuarioId, filtros)
 
       return res.status(200).json({
         status: 'ok',
@@ -105,10 +105,7 @@ export const notificacionesController = {
         return res.status(401).json({ status: 'error', message: 'Usuario no autenticado' })
       }
 
-      const roles: string[] = req.usuario?.roles || []
-      const esAdmin = roles.some(r => r.toLowerCase().includes('admin'))
-
-      await notificationService.marcarTodasComoLeidas(usuarioId, esAdmin)
+      await notificationService.marcarTodasComoLeidas(usuarioId)
 
       return res.status(200).json({
         status: 'ok',

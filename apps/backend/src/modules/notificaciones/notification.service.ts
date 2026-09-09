@@ -17,15 +17,13 @@ export const notificationService = {
     })
   },
 
-  async obtenerNotificacionesPorUsuario(usuarioId: number, filtros?: FiltrosNotificacionDTO, esAdmin: boolean = false) {
-    const where: Prisma.NotificacionWhereInput = esAdmin
-      ? {}
-      : {
-        OR: [
-          { usuarioId },
-          { usuarioId: null } // Notificaciones broadcast/sistema
-        ]
-      }
+  async obtenerNotificacionesPorUsuario(usuarioId: number, filtros?: FiltrosNotificacionDTO) {
+    const where: Prisma.NotificacionWhereInput = {
+      OR: [
+        { usuarioId },
+        { usuarioId: null } // Notificaciones broadcast/sistema
+      ]
+    }
 
     if (filtros?.leido !== undefined) {
       where.leido = filtros.leido
@@ -93,15 +91,13 @@ export const notificationService = {
     })
   },
 
-  async marcarTodasComoLeidas(usuarioId: number, esAdmin: boolean = false) {
+  async marcarTodasComoLeidas(usuarioId: number) {
     return await prisma.notificacion.updateMany({
       where: {
-        ...(esAdmin ? {} : {
-          OR: [
-            { usuarioId },
-            { usuarioId: null }
-          ]
-        }),
+        OR: [
+          { usuarioId },
+          { usuarioId: null }
+        ],
         leido: false
       },
       data: { leido: true }
@@ -134,10 +130,7 @@ export const notificationService = {
         rolesUsuario: {
           some: {
             rol: {
-              nombre: {
-                contains: 'Supervisor',
-                mode: 'insensitive'
-              }
+              esSupervisor: true
             }
           }
         }
@@ -163,6 +156,64 @@ export const notificationService = {
       },
       select: { id: true }
     })
+  },
+
+  /**
+   * Resuelve el destinatario supervisor de una notificación con jerarquía directa.
+   * Garantiza SIEMPRE 1 único destinatario para evitar duplicados en el historial.
+   *
+   * Cascada:
+   *   1. Supervisor directo del técnico (usuario.supervisorId) si está activo.
+   *   2. Primer supervisor activo de la misma planta del técnico.
+   *   3. Primer supervisor activo global (fallback de seguridad).
+   */
+  async obtenerSupervisoresDestinatarios(
+    tecnicoId: number,
+    plantaId?: number | null,
+    clientePrisma: Prisma.TransactionClient | typeof prisma = prisma
+  ): Promise<number[]> {
+    const tecnico = await clientePrisma.usuario.findUnique({
+      where: { id: tecnicoId },
+      select: { id: true, supervisorId: true, plantaId: true }
+    })
+
+    // 1. Supervisor directo
+    if (tecnico?.supervisorId) {
+      const supervisorDirecto = await clientePrisma.usuario.findFirst({
+        where: { id: tecnico.supervisorId, activo: true },
+        select: { id: true }
+      })
+      if (supervisorDirecto) {
+        return [supervisorDirecto.id]
+      }
+    }
+
+    // 2. Primer supervisor de la misma planta
+    const targetPlantaId = plantaId ?? tecnico?.plantaId
+    if (targetPlantaId) {
+      const supervisorPlanta = await clientePrisma.usuario.findFirst({
+        where: {
+          activo: true,
+          plantaId: targetPlantaId,
+          rolesUsuario: { some: { rol: { esSupervisor: true } } }
+        },
+        select: { id: true }
+      })
+      if (supervisorPlanta) {
+        return [supervisorPlanta.id]
+      }
+    }
+
+    // 3. Fallback: primer supervisor global activo
+    const supervisorGlobal = await clientePrisma.usuario.findFirst({
+      where: {
+        activo: true,
+        rolesUsuario: { some: { rol: { esSupervisor: true } } }
+      },
+      select: { id: true }
+    })
+
+    return supervisorGlobal ? [supervisorGlobal.id] : []
   },
 
   async crearNotificacionesMasivas(data: Prisma.NotificacionCreateManyInput[]): Promise<Prisma.BatchPayload> {
