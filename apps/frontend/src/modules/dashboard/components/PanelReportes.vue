@@ -3,48 +3,34 @@ import { ref, onMounted } from "vue"
 import * as XLSX from "xlsx"
 import api from "@/core/api"
 import { useDashboardStore } from "../dashboard.store"
+import { useLubricacionStore } from "@/modules/lubricacion/store/lubricacion.store"
 import { exportarTablaPDF } from "../utils/pdfExport"
 
 const store = useDashboardStore()
+const lubStore = useLubricacionStore()
 
 // Sub-pestaña de reportes (R1 a R6 + RLUB)
 const reporteSeleccionado = ref<"r1" | "r2" | "r3" | "r4" | "r5" | "r6" | "rlub">("r1")
 
 // Filtros y estado para R7: Lubricación
-const rlubSubTab = ref<"fugas" | "consumo">("fugas")
+const rlubSubTab = ref<"fugas" | "consumo" | "historial">("fugas")
 const rlubPlantaId = ref<number | undefined>(undefined)
 const rlubFechaDesde = ref<string>("")
 const rlubFechaHasta = ref<string>("")
-const rlubCargando = ref(false)
 const rlubDescargandoExcel = ref(false)
 
-interface FugaReporteDashboardItem {
-  rutinaId: string
-  codigoRutina: string
-  fechaEjecucion: string
-  equipoId: number
-  equipoCodigo: string
-  equipoNombre: string
-  plantaNombre: string
-  ubicacionNombre: string
-  puntoId: number
-  puntoNombre: string
-  lubricanteNombre: string
-  observaciones: string | null
-}
+// Detalles expandidos/collapse del historial de rutinas
+const rlubHistorialExpandido = ref<Set<number>>(new Set())
 
-interface ConsumoReporteDashboardItem {
-  lubricanteId: number
-  lubricanteCodigo: string
-  lubricanteNombre: string
-  tipo: string
-  unidadMedida: string
-  totalRepuesto: number
-  intervenciones: number
+function toggleHistorialFila(id: number) {
+  const nuevo = new Set(rlubHistorialExpandido.value)
+  if (nuevo.has(id)) {
+    nuevo.delete(id)
+  } else {
+    nuevo.add(id)
+  }
+  rlubHistorialExpandido.value = nuevo
 }
-
-const rlubFugas = ref<FugaReporteDashboardItem[]>([])
-const rlubConsumo = ref<ConsumoReporteDashboardItem[]>([])
 
 // Filtros para R1
 const r1PlantaId = ref<number | undefined>(undefined)
@@ -452,38 +438,26 @@ function imprimirTarjetaRonda() {
 // R7: REPORTE DE LUBRICACIÓN, FUGAS Y CONSUMOS
 // ═══════════════════════════════════════════════════════════════
 async function cargarRLub() {
-  rlubCargando.value = true
-  try {
-    const paramsFugas: Record<string, number | string> = {}
-    if (rlubPlantaId.value) paramsFugas.plantaId = rlubPlantaId.value
-
-    const paramsConsumo: Record<string, number | string> = {}
-    if (rlubPlantaId.value) paramsConsumo.plantaId = rlubPlantaId.value
-    if (rlubFechaDesde.value) paramsConsumo.fechaDesde = rlubFechaDesde.value
-    if (rlubFechaHasta.value) paramsConsumo.fechaHasta = rlubFechaHasta.value
-
-    const [resF, resC] = await Promise.allSettled([
-      api.get("/lubricacion/reportes/fugas", { params: paramsFugas }),
-      api.get("/lubricacion/reportes/consumo", { params: paramsConsumo })
-    ])
-
-    if (resF.status === "fulfilled" && resF.value.data?.status === "ok") {
-      rlubFugas.value = resF.value.data.data || []
-    }
-    if (resC.status === "fulfilled" && resC.value.data?.status === "ok") {
-      rlubConsumo.value = resC.value.data.data || []
-    }
-  } finally {
-    rlubCargando.value = false
+  const filtros = {
+    plantaId: rlubPlantaId.value || undefined,
+    fechaDesde: rlubFechaDesde.value || undefined,
+    fechaHasta: rlubFechaHasta.value || undefined
   }
+  // Los tres reportes (fugas, consumo, historial) se cargan en paralelo
+  // cuyos resultados quedan directamente en el estado del store.
+  await Promise.allSettled([
+    lubStore.cargarReporteFugas(filtros),
+    lubStore.cargarReporteConsumo(filtros),
+    lubStore.cargarHistorialRutinas({ ...filtros, limite: 200 })
+  ])
 }
 
 function exportarRLubExcel() {
   if (rlubSubTab.value === "fugas") {
-    if (!rlubFugas.value.length) return
+    if (!lubStore.reporteFugas.length) return
     rlubDescargandoExcel.value = true
     try {
-      const filas = rlubFugas.value.map(f => ({
+      const filas = lubStore.reporteFugas.map(f => ({
         "Fecha": new Date(f.fechaEjecucion).toLocaleDateString("es-ES"),
         "Rutina": f.codigoRutina,
         "Código Equipo": f.equipoCodigo,
@@ -501,11 +475,11 @@ function exportarRLubExcel() {
     } finally {
       rlubDescargandoExcel.value = false
     }
-  } else {
-    if (!rlubConsumo.value.length) return
+  } else if (rlubSubTab.value === "consumo") {
+    if (!lubStore.reporteConsumo.length) return
     rlubDescargandoExcel.value = true
     try {
-      const filas = rlubConsumo.value.map(c => ({
+      const filas = lubStore.reporteConsumo.map(c => ({
         "Código": c.lubricanteCodigo,
         "Lubricante": c.lubricanteNombre,
         "Tipo": c.tipo,
@@ -517,6 +491,36 @@ function exportarRLubExcel() {
       const wb = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(wb, ws, "Consumo_Lubricantes")
       XLSX.writeFile(wb, `Reporte_Consumo_Lubricantes_${new Date().toISOString().slice(0, 10)}.xlsx`)
+    } finally {
+      rlubDescargandoExcel.value = false
+    }
+  } else {
+    if (!lubStore.historialRutinas.length) return
+    rlubDescargandoExcel.value = true
+    try {
+      const filas = lubStore.historialRutinas.flatMap(h => h.detalles.map(d => ({
+        "Fecha": new Date(h.fechaEjecucion).toLocaleDateString("es-ES"),
+        "Rutina": h.codigoRutina,
+        "Código Equipo": h.equipoCodigo,
+        "Equipo": h.equipoNombre,
+        "Planta": h.plantaNombre,
+        "Ubicación": h.ubicacionNombre,
+        "Técnico": h.elaboradoPor,
+        "Horómetro": h.horometroRegistrado,
+        "Parte": d.puntoNombre,
+        "Lubricante": d.lubricanteNombre,
+        "Unidad": d.unidadMedida,
+        "Nivel": d.nivelLubricante,
+        "Reposición": d.seRealizoReposicion ? "Sí" : "No",
+        "Cant. Repuesta": d.cantidadRepuesta ?? "",
+        "Cambio Total": d.seRealizoCambioTotal ? "Sí" : "No",
+        "Fuga": d.presentaFuga ? "Sí" : "No",
+        "Observaciones": d.observaciones || ""
+      })))
+      const ws = XLSX.utils.json_to_sheet(filas)
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, "Historial_Rutinas")
+      XLSX.writeFile(wb, `Reporte_Historial_Rutinas_${new Date().toISOString().slice(0, 10)}.xlsx`)
     } finally {
       rlubDescargandoExcel.value = false
     }
@@ -989,43 +993,33 @@ onMounted(() => {
 
       <div v-else-if="store.reporteEjecutivo" class="reporte-ejecutivo-panel">
         <!-- 5 KPIs Principales -->
-        <v-row dense class="mb-4">
-          <v-col cols="12" sm="6" md="4" lg="2-4">
-            <v-card variant="tonal" color="primary" class="pa-4 text-center rounded-xl border">
-              <div class="text-caption text-medium-emphasis font-weight-medium">Flota Total</div>
-              <div class="text-h4 font-weight-bold my-1 text-slate-800">{{ store.reporteEjecutivo.kpis.flotaTotal }}</div>
-              <div class="text-caption text-medium-emphasis">{{ store.reporteEjecutivo.kpis.operativos }} Operativos</div>
-            </v-card>
-          </v-col>
-          <v-col cols="12" sm="6" md="4" lg="2-4">
-            <v-card variant="tonal" color="success" class="pa-4 text-center rounded-xl border">
-              <div class="text-caption text-medium-emphasis font-weight-medium">Disponibilidad</div>
-              <div class="text-h4 font-weight-bold my-1 text-success">{{ store.reporteEjecutivo.kpis.disponibilidad }}%</div>
-              <div class="text-caption font-weight-bold text-success">{{ store.reporteEjecutivo.kpis.tendencia }} vs mes ant.</div>
-            </v-card>
-          </v-col>
-          <v-col cols="12" sm="6" md="4" lg="2-4">
-            <v-card variant="tonal" color="info" class="pa-4 text-center rounded-xl border">
-              <div class="text-caption text-medium-emphasis font-weight-medium">Inspecciones</div>
-              <div class="text-h4 font-weight-bold my-1 text-info">{{ store.reporteEjecutivo.kpis.inspeccionesRealizadas }}</div>
-              <div class="text-caption text-medium-emphasis">{{ store.reporteEjecutivo.kpis.tasaAprobacion }}% Aprobadas</div>
-            </v-card>
-          </v-col>
-          <v-col cols="12" sm="6" md="6" lg="2-4">
-            <v-card variant="tonal" color="error" class="pa-4 text-center rounded-xl border">
-              <div class="text-caption text-medium-emphasis font-weight-medium">No-Conformidades</div>
-              <div class="text-h4 font-weight-bold my-1 text-error">{{ store.reporteEjecutivo.kpis.totalNoConformidades }}</div>
-              <div class="text-caption text-medium-emphasis">Variables críticas</div>
-            </v-card>
-          </v-col>
-          <v-col cols="12" sm="12" md="6" lg="2-4">
-            <v-card variant="tonal" color="warning" class="pa-4 text-center rounded-xl border">
-              <div class="text-caption text-medium-emphasis font-weight-medium">Inoperatividad Est.</div>
-              <div class="text-h4 font-weight-bold my-1 text-warning">{{ store.reporteEjecutivo.kpis.horasInoperatividad }} hrs</div>
-              <div class="text-caption text-medium-emphasis">Acumuladas en el mes</div>
-            </v-card>
-          </v-col>
-        </v-row>
+        <div class="d-flex flex-wrap gap-3 mb-4">
+          <v-card variant="tonal" color="primary" class="pa-4 text-center rounded-xl border flex-grow-1" style="flex-basis: 18%; min-width: 170px;">
+            <div class="text-caption text-medium-emphasis font-weight-medium">Flota Total</div>
+            <div class="text-h4 font-weight-bold my-1 text-slate-800">{{ store.reporteEjecutivo.kpis.flotaTotal }}</div>
+            <div class="text-caption text-medium-emphasis">{{ store.reporteEjecutivo.kpis.operativos }} Operativos</div>
+          </v-card>
+          <v-card variant="tonal" color="success" class="pa-4 text-center rounded-xl border flex-grow-1" style="flex-basis: 18%; min-width: 170px;">
+            <div class="text-caption text-medium-emphasis font-weight-medium">Disponibilidad</div>
+            <div class="text-h4 font-weight-bold my-1 text-success">{{ store.reporteEjecutivo.kpis.disponibilidad }}%</div>
+            <div class="text-caption font-weight-bold text-success">{{ store.reporteEjecutivo.kpis.tendencia }} vs mes ant.</div>
+          </v-card>
+          <v-card variant="tonal" color="info" class="pa-4 text-center rounded-xl border flex-grow-1" style="flex-basis: 18%; min-width: 170px;">
+            <div class="text-caption text-medium-emphasis font-weight-medium">Inspecciones</div>
+            <div class="text-h4 font-weight-bold my-1 text-info">{{ store.reporteEjecutivo.kpis.inspeccionesRealizadas }}</div>
+            <div class="text-caption text-medium-emphasis">{{ store.reporteEjecutivo.kpis.tasaAprobacion }}% Aprobadas</div>
+          </v-card>
+          <v-card variant="tonal" color="error" class="pa-4 text-center rounded-xl border flex-grow-1" style="flex-basis: 18%; min-width: 170px;">
+            <div class="text-caption text-medium-emphasis font-weight-medium">No-Conformidades</div>
+            <div class="text-h4 font-weight-bold my-1 text-error">{{ store.reporteEjecutivo.kpis.totalNoConformidades }}</div>
+            <div class="text-caption text-medium-emphasis">Variables críticas</div>
+          </v-card>
+          <v-card variant="tonal" color="warning" class="pa-4 text-center rounded-xl border flex-grow-1" style="flex-basis: 18%; min-width: 170px;">
+            <div class="text-caption text-medium-emphasis font-weight-medium">Inoperatividad Est.</div>
+            <div class="text-h4 font-weight-bold my-1 text-warning">{{ store.reporteEjecutivo.kpis.horasInoperatividad }} hrs</div>
+            <div class="text-caption text-medium-emphasis">Acumuladas en el mes</div>
+          </v-card>
+        </div>
 
         <!-- Top 3 Equipos con Desvíos + Tabla Desglose por Planta -->
         <v-row dense>
@@ -1294,8 +1288,8 @@ onMounted(() => {
     <v-card v-if="reporteSeleccionado === 'rlub'" class="elevation-1 rounded-xl pa-4 pa-sm-5 bg-surface border">
       <div class="d-flex flex-column flex-sm-row align-start align-sm-center justify-space-between gap-2 mb-4">
         <div>
-          <div class="text-subtitle-1 font-weight-bold text-primary">R7. Reporte de Lubricación, Consumo y Fugas</div>
-          <div class="text-caption text-medium-emphasis">Control analítico de fugas activas no resueltas y volumen de lubricantes consumidos</div>
+          <div class="text-subtitle-1 font-weight-bold text-primary">R7. Reporte de Lubricación, Consumo y Rutinas</div>
+          <div class="text-caption text-medium-emphasis">Control analítico de fugas activas, volumen de lubricantes consumidos e historial de rutinas ejecutadas</div>
         </div>
         <div class="d-flex flex-wrap gap-2">
           <v-btn
@@ -1311,7 +1305,7 @@ onMounted(() => {
             color="primary"
             variant="outlined"
             prepend-icon="mdi-refresh"
-            :loading="rlubCargando"
+            :loading="lubStore.cargandoReportes"
             @click="cargarRLub"
           >
             Actualizar
@@ -1360,21 +1354,31 @@ onMounted(() => {
         </v-col>
       </v-row>
 
-      <!-- Sub-pestañas Fugas vs Consumo -->
+      <!-- Sub-pestañas Fugas vs Consumo vs Historial -->
       <v-tabs v-model="rlubSubTab" color="primary" density="compact" class="mb-3">
         <v-tab value="fugas">
           <v-icon start size="18">mdi-water-alert</v-icon>
-          Fugas Detectadas ({{ rlubFugas.length }})
+          Fugas Detectadas ({{ lubStore.reporteFugas.length }})
         </v-tab>
         <v-tab value="consumo">
           <v-icon start size="18">mdi-gas-station</v-icon>
-          Consumo de Lubricantes ({{ rlubConsumo.length }})
+          Consumo de Lubricantes ({{ lubStore.reporteConsumo.length }})
+        </v-tab>
+        <v-tab value="historial">
+          <v-icon start size="18">mdi-clipboard-text-clock-outline</v-icon>
+          Historial de Rutinas ({{ lubStore.historialRutinas.length }})
         </v-tab>
       </v-tabs>
 
+      <!-- Indicador de carga global de reportes de lubricación -->
+      <div v-if="lubStore.cargandoReportes" class="text-center py-6">
+        <v-progress-circular indeterminate color="primary" size="28" />
+        <div class="text-caption mt-2 text-medium-emphasis">Cargando reportes de lubricación...</div>
+      </div>
+
       <!-- Tabla de Fugas -->
-      <div v-if="rlubSubTab === 'fugas'" class="table-responsive">
-        <div v-if="rlubFugas.length === 0" class="text-center py-6 text-muted">
+      <div v-else-if="rlubSubTab === 'fugas'" class="table-responsive">
+        <div v-if="lubStore.reporteFugas.length === 0" class="text-center py-6 text-muted">
           <v-icon size="40" color="success" class="mb-1">mdi-check-circle-outline</v-icon>
           <div class="text-subtitle-2 font-weight-bold">No se registran fugas activas de lubricante</div>
         </div>
@@ -1391,7 +1395,7 @@ onMounted(() => {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="f in rlubFugas" :key="`${f.rutinaId}-${f.puntoId}`">
+            <tr v-for="f in lubStore.reporteFugas" :key="`${f.rutinaId}-${f.puntoId}`">
               <td class="text-caption font-weight-medium">{{ new Date(f.fechaEjecucion).toLocaleDateString() }}</td>
               <td><span class="badge bg-secondary text-white">{{ f.codigoRutina }}</span></td>
               <td><strong>{{ f.equipoCodigo }}</strong> - {{ f.equipoNombre }}</td>
@@ -1407,8 +1411,8 @@ onMounted(() => {
       </div>
 
       <!-- Tabla de Consumo -->
-      <div v-if="rlubSubTab === 'consumo'" class="table-responsive">
-        <div v-if="rlubConsumo.length === 0" class="text-center py-6 text-muted">
+      <div v-else-if="rlubSubTab === 'consumo'" class="table-responsive">
+        <div v-if="lubStore.reporteConsumo.length === 0" class="text-center py-6 text-muted">
           <v-icon size="40" color="grey" class="mb-1">mdi-oil-level</v-icon>
           <div class="text-subtitle-2">Sin reposiciones de lubricante en el período</div>
         </div>
@@ -1424,7 +1428,7 @@ onMounted(() => {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="c in rlubConsumo" :key="c.lubricanteId">
+            <tr v-for="c in lubStore.reporteConsumo" :key="c.lubricanteId">
               <td class="font-weight-bold">{{ c.lubricanteCodigo }}</td>
               <td>{{ c.lubricanteNombre }}</td>
               <td><span class="badge bg-light text-dark border">{{ c.tipo }}</span></td>
@@ -1436,6 +1440,113 @@ onMounted(() => {
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- Tabla de Historial de Rutinas -->
+      <div v-else class="table-responsive">
+        <div v-if="lubStore.historialRutinas.length === 0" class="text-center py-6 text-muted">
+          <v-icon size="40" color="grey" class="mb-1">mdi-clipboard-text-clock-outline</v-icon>
+          <div class="text-subtitle-2">No se registraron rutinas de lubricación en el período</div>
+        </div>
+        <div v-else>
+          <div class="d-flex flex-wrap gap-2 mb-3">
+            <v-chip size="small" color="primary" variant="tonal">Rutinas: <strong>{{ lubStore.historialRutinas.length }}</strong></v-chip>
+            <v-chip size="small" color="info" variant="tonal">
+              Período: {{ rlubFechaDesde || 'Inicio' }} — {{ rlubFechaHasta || 'Hoy' }}
+            </v-chip>
+          </div>
+          <table class="table table-sm table-hover border">
+            <thead class="bg-light">
+              <tr>
+                <th></th>
+                <th>Fecha</th>
+                <th>Rutina</th>
+                <th>Equipo</th>
+                <th>Planta / Ubicación</th>
+                <th class="text-end">Horómetro</th>
+                <th>Técnico</th>
+                <th class="text-center">Puntos</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template v-for="h in lubStore.historialRutinas" :key="h.id">
+                <tr style="cursor: pointer;" @click="toggleHistorialFila(h.id)">
+                  <td class="text-center">
+                    <v-icon size="18" color="primary">
+                      {{ rlubHistorialExpandido.has(h.id) ? 'mdi-chevron-up' : 'mdi-chevron-down' }}
+                    </v-icon>
+                  </td>
+                  <td class="text-caption font-weight-medium">{{ new Date(h.fechaEjecucion).toLocaleDateString() }}</td>
+                  <td><span class="badge bg-secondary text-white">{{ h.codigoRutina }}</span></td>
+                  <td><strong>{{ h.equipoCodigo }}</strong> - {{ h.equipoNombre }}</td>
+                  <td class="text-caption">{{ h.plantaNombre }} &bull; {{ h.ubicacionNombre }}</td>
+                  <td class="text-end font-weight-bold font-mono">{{ h.horometroRegistrado }}</td>
+                  <td class="text-caption">{{ h.elaboradoPor }}</td>
+                  <td class="text-center">
+                    <span class="badge bg-primary text-white">{{ h.totalPuntosEvaluados }}</span>
+                  </td>
+                </tr>
+                <tr v-if="rlubHistorialExpandido.has(h.id)">
+                  <td colspan="8" class="bg-light p-0">
+                    <div class="p-3">
+                      <div class="d-flex flex-wrap gap-2 mb-2">
+                        <v-chip v-if="h.observaciones" size="x-small" color="warning" variant="tonal" prepend-icon="mdi-comment-text-outline">
+                          {{ h.observaciones }}
+                        </v-chip>
+                      </div>
+                      <table class="table table-sm border mb-0 bg-white">
+                        <thead>
+                          <tr>
+                            <th>Punto</th>
+                            <th>Lubricante</th>
+                            <th class="text-center">Nivel</th>
+                            <th class="text-center">Reposición</th>
+                            <th class="text-end">Cantidad</th>
+                            <th class="text-center">Cambio Total</th>
+                            <th class="text-center">Fuga</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="d in h.detalles" :key="d.id">
+                            <td class="font-weight-medium">{{ d.puntoNombre }}</td>
+                            <td>
+                              {{ d.lubricanteNombre }}
+                              <span class="text-muted text-caption">({{ d.unidadMedida }})</span>
+                            </td>
+                            <td class="text-center">
+                              <span
+                                class="badge"
+                                :class="d.nivelLubricante === 'OK' ? 'bg-success text-white' : d.nivelLubricante === 'BAJO' ? 'bg-warning text-dark' : d.nivelLubricante === 'CRITICO' ? 'bg-danger text-white' : 'bg-secondary text-white'"
+                              >
+                                {{ d.nivelLubricante }}
+                              </span>
+                            </td>
+                            <td class="text-center">
+                              <v-icon v-if="d.seRealizoReposicion" size="18" color="success">mdi-check-circle</v-icon>
+                              <v-icon v-else size="18" color="grey">mdi-minus-circle-outline</v-icon>
+                            </td>
+                            <td class="text-end font-mono">{{ d.cantidadRepuesta ?? '—' }}</td>
+                            <td class="text-center">
+                              <v-icon v-if="d.seRealizoCambioTotal" size="18" color="info">mdi-check-circle</v-icon>
+                              <v-icon v-else size="18" color="grey">mdi-minus-circle-outline</v-icon>
+                            </td>
+                            <td class="text-center">
+                              <v-icon v-if="d.presentaFuga" size="18" color="error">mdi-water-alert</v-icon>
+                              <v-icon v-else size="18" color="grey">mdi-check-circle</v-icon>
+                            </td>
+                          </tr>
+                          <tr v-if="h.detalles.length === 0">
+                            <td colspan="7" class="text-center text-muted">Sin puntos evaluados</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
       </div>
     </v-card>
   </div>

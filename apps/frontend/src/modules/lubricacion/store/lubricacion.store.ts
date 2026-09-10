@@ -20,10 +20,13 @@ export interface FiltrosMatrizParam {
   equipoId?: number
 }
 
-export interface FiltrosConsumoParam {
+export interface FiltrosReporteParam {
+  plantaId?: number
+  ubicacionTecnicaId?: number
+  equipoId?: number
   fechaDesde?: string
   fechaHasta?: string
-  plantaId?: number
+  limite?: number
 }
 
 export interface RegistrarHorometroParam {
@@ -163,7 +166,7 @@ export const useLubricacionStore = defineStore('lubricacion', () => {
   }
 
   // Acciones: Reportes Analíticos
-  async function cargarReporteFugas(filtros?: FiltrosMatrizParam): Promise<ReporteFugaItem[]> {
+  async function cargarReporteFugas(filtros?: FiltrosReporteParam): Promise<ReporteFugaItem[]> {
     cargandoReportes.value = true
     try {
       const res = await api.get('/lubricacion/reportes/fugas', { params: filtros })
@@ -177,7 +180,7 @@ export const useLubricacionStore = defineStore('lubricacion', () => {
     }
   }
 
-  async function cargarReporteConsumo(filtros?: FiltrosConsumoParam): Promise<ReporteConsumoItem[]> {
+  async function cargarReporteConsumo(filtros?: FiltrosReporteParam): Promise<ReporteConsumoItem[]> {
     cargandoReportes.value = true
     try {
       const res = await api.get('/lubricacion/reportes/consumo', { params: filtros })
@@ -191,7 +194,7 @@ export const useLubricacionStore = defineStore('lubricacion', () => {
     }
   }
 
-  async function cargarHistorialRutinas(filtros?: { equipoId?: number; limite?: number }): Promise<HistorialRutinaItem[]> {
+  async function cargarHistorialRutinas(filtros?: FiltrosReporteParam): Promise<HistorialRutinaItem[]> {
     cargandoReportes.value = true
     try {
       const res = await api.get('/lubricacion/rutinas/historial', { params: filtros })

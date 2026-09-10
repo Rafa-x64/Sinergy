@@ -4,7 +4,7 @@ export type NivelLubricante = 'OK' | 'BAJO' | 'CRITICO' | 'SOBRELLENADO' | 'NO_A
 
 export type UnidadMedidaLubricante = 'GALONES' | 'LITROS' | 'KILOGRAMOS' | 'LIBRAS' | 'TUBOS' | 'MILILITROS'
 
-export type OrigenLecturaHorometro = 'RUTINA_LUBRICACION' | 'INSPECCION' | 'MANUAL' | 'TELEMETRIA'
+export type OrigenLecturaHorometro = 'RUTINA_LUBRICACION' | 'INSPECCION_OPERATIVA' | 'LECTURA_MANUAL' | 'CAMBIO_ACEITE'
 
 export type EstadoSemaforoLubricacion = 'NORMAL' | 'PREVENTIVO' | 'CRITICO'
 
@@ -170,37 +170,27 @@ export interface ReporteConsumoItem {
 }
 
 export interface HistorialRutinaItem {
-  id: string
+  id: number
   codigoRutina: string
+  plantaNombre: string
+  ubicacionNombre: string
+  equipoCodigo: string
+  equipoNombre: string
+  elaboradoPor: string
   fechaEjecucion: string
   horometroRegistrado: number
   observaciones: string | null
-  ejecutadoPor: {
-    id: number
-    nombre: string
-    apellido: string
-    correo: string
-  }
-  equipo: {
-    id: number
-    codigo: string
-    nombre: string
-  }
+  totalPuntosEvaluados: number
   detalles: {
-    id: string
+    id: number
+    puntoNombre: string
+    lubricanteNombre: string
+    unidadMedida: string
     nivelLubricante: NivelLubricante
     seRealizoReposicion: boolean
-    cantidadRepuesta: number
+    cantidadRepuesta: number | null
     seRealizoCambioTotal: boolean
     presentaFuga: boolean
     observaciones: string | null
-    puntoLubricacion: {
-      id: number
-      nombrePunto: string
-      lubricante: {
-        nombre: string
-        unidadMedida: string
-      }
-    }
   }[]
 }
