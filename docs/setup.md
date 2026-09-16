@@ -91,70 +91,109 @@ VITE_APP_NAME=Sinergy
 
 ### Backend
 
-El archivo `apps/backend/.env` ya fue creado con `prisma init`. Édita la variable `DATABASE_URL` con tus credenciales reales:
+Edita `apps/backend/.env` con las credenciales que correspondan a tu entorno.
+
+#### Caso A — Base de datos LOCAL (`localhost`)
 
 ```env
-# Variables individuales para el pool nativo de PG y PrismaPg adapter
 DB_HOST=localhost
 DB_PORT=5432
 DB_USER=postgres
-DB_PASSWORD="tu_password_aqui"
-DB_NAME=sinergy_db
+DB_PASSWORD="tu_password_local"
+DB_NAME=Sinergy_produccion
 
-# Formato URI completo (si la contraseña tiene caracteres especiales como # o @, usa comillas y codificación URL)
-DATABASE_URL="postgresql://postgres:tu_password_aqui@localhost:5432/sinergy_db?schema=public"
+# Comentar DATABASE_URL: prisma.config.ts la construye automáticamente usando las variables anteriores
+# DATABASE_URL="..."
 
-# Puerto del servidor Express
 PORT=3000
-
-# Entorno
 NODE_ENV=development
 ```
 
+#### Caso B — Base de datos REMOTA (servidor externo en red, ej: `10.10.7.5`)
+
+```env
+DB_HOST=10.10.7.5
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD="Tub.#2026#ric@"
+DB_NAME=Sinergy_produccion
+
+# En este caso SÍ se debe definir DATABASE_URL con la contraseña codificada en URL:
+# Los caracteres especiales se codifican: # → %23   @ → %40   : → %3A
+DATABASE_URL="postgresql://postgres:Tub.%232026%23ric%40@10.10.7.5:5432/Sinergy_produccion?schema=public"
+
+PORT=3000
+NODE_ENV=development
+```
+
+> [!IMPORTANT]
+> Cuando la base es remota, **siempre define `DATABASE_URL` explícitamente** con los caracteres especiales de la contraseña codificados en URL (`encodeURIComponent`). Los más comunes: `#` → `%23`, `@` → `%40`, `:` → `%3A`.
+> Cuando la base es local, **comenta o elimina `DATABASE_URL`** y `prisma.config.ts` la construirá automáticamente.
+
 > [!WARNING]
-> Si la contraseña de PostgreSQL contiene caracteres especiales como `#`, `@`, `:`, `/`, debes **envolver el valor entre comillas dobles** en `.env` (ej: `DB_PASSWORD="mi#clave@2026"`). De lo contrario, la librería `dotenv` interpretará `#` como inicio de un comentario y truncará la contraseña, provocando errores de autenticación.
+> Si la contraseña contiene `#`, `@` u otros caracteres especiales, envuelve el valor entre comillas dobles en `.env` (ej: `DB_PASSWORD="mi#clave@2026"`). De lo contrario, `dotenv` interpretará `#` como inicio de comentario y truncará la contraseña.
 
 > [!CAUTION]
-> Nunca subas archivos `.env` al repositorio. El `.gitignore` ya los excluye. Antes de hacer un `git add .`, ejecuta `git status` y verifica que no aparecen los `.env`.
+> Nunca subas archivos `.env` al repositorio. El `.gitignore` ya los excluye. Antes de hacer `git add .`, verifica con `git status` que los `.env` no aparezcan en la lista.
 
 ---
 
 ## 5. Configurar y Restaurar la Base de Datos
 
-Primero, crea la base de datos en PostgreSQL si aún no existe. Puedes hacerlo desde la terminal o desde pgAdmin:
+### 5.1 Crear la Base de Datos con Collation Correcta
 
-### 5.1 Crear la Base de Datos
+> [!IMPORTANT]
+> **Crear la base de datos con el collation correcto es crítico para evitar corrupción de caracteres acentuados** (ej: `é` aparece como `Ã©`). El servidor PostgreSQL de producción usa `Spanish_Venezuela.1252` como collation regional de Windows. Para garantizar que los acentos y caracteres especiales del español se almacenen y muestren correctamente en UTF-8, la base de datos **debe crearse con `LC_COLLATE='C'`** (collation neutral).
 
-#### Opción A — Desde PowerShell / Bash (`psql`)
+#### Opción A — Desde `psql` (Recomendada)
 
+**En servidor LOCAL:**
 ```powershell
-psql -U postgres -c "CREATE DATABASE Sinergy_produccion;"
+psql -U postgres -c "CREATE DATABASE Sinergy_produccion ENCODING 'UTF8' LC_COLLATE='C' LC_CTYPE='C' TEMPLATE template0;"
+```
+
+**En servidor REMOTO (`10.10.7.5`):**
+```powershell
+$env:PGPASSWORD='Tub.#2026#ric@'; psql -h 10.10.7.5 -p 5432 -U postgres -c "CREATE DATABASE Sinergy_produccion ENCODING 'UTF8' LC_COLLATE='C' LC_CTYPE='C' TEMPLATE template0;"
 ```
 
 #### Opción B — Desde pgAdmin
 
 1. Abre pgAdmin y conéctate al servidor.
 2. Haz clic derecho en `Databases` → `Create` → `Database`.
-3. Nombre: `Sinergy_produccion`. Guarda.
+3. Nombre: `Sinergy_produccion`.
+4. Pestaña **Definition**: Encoding → `UTF8`, Collation → `C`, Character type → `C`.
+5. Guarda.
 
 ---
 
 ### 5.2 Restaurar el Volcado de Producción (`Sinergy_produccion_backup.sql`)
 
-El repositorio incluye el volcado completo de la base de datos de producción en `apps/backend/prisma/Sinergy_produccion_backup.sql` (formato SQL texto en UTF-8 estándar).
+El repositorio incluye el volcado completo en `apps/backend/prisma/Sinergy_produccion_backup.sql` (UTF-8 sin BOM).
 
-Para restaurarlo en tu PostgreSQL local o servidor:
+> [!CAUTION]
+> **El flag `--set=client_encoding=UTF8` es obligatorio** al restaurar desde Windows. Sin él, `psql` usa la codificación regional del sistema operativo (`WIN1252` en Windows en español), lo que corrompe los caracteres con acento (`á`, `é`, `ó`, `ñ`, etc.) convirtiéndolos en secuencias ilegibles.
 
+#### En servidor LOCAL:
 ```powershell
-# En Windows (PowerShell):
-$env:PGPASSWORD='tu_password_aqui'; psql -U postgres -d Sinergy_produccion -f apps\backend\prisma\Sinergy_produccion_backup.sql
+$env:PGPASSWORD='tu_password'; psql -h localhost -U postgres -d Sinergy_produccion --set=client_encoding=UTF8 -f apps\backend\prisma\Sinergy_produccion_backup.sql
+```
 
-# En Linux (Bash / Fish):
-PGPASSWORD='tu_password_aqui' psql -U postgres -d Sinergy_produccion -f apps/backend/prisma/Sinergy_produccion_backup.sql
+#### En servidor REMOTO (`10.10.7.5`):
+```powershell
+$env:PGPASSWORD='Tub.#2026#ric@'; psql -h 10.10.7.5 -p 5432 -U postgres -d Sinergy_produccion --set=client_encoding=UTF8 -f apps\backend\prisma\Sinergy_produccion_backup.sql
+```
+
+#### En Linux (Bash / Fish) — servidor remoto:
+```bash
+PGPASSWORD='Tub.#2026#ric@' psql -h 10.10.7.5 -p 5432 -U postgres -d Sinergy_produccion --set=client_encoding=UTF8 -f apps/backend/prisma/Sinergy_produccion_backup.sql
 ```
 
 > [!NOTE]
-> El archivo `Sinergy_produccion_backup.sql` está normalizado en codificación UTF-8 sin BOM, por lo que se ejecuta de forma inmediata en cualquier terminal sin provocar errores de caracteres o fallos de lectura.
+> Si tras el restore los acentos siguen corruptos en pgAdmin, la causa es que la base fue creada con collation `Spanish_Venezuela.1252`. La única solución en ese caso es:
+> 1. Eliminar la base: `DROP DATABASE Sinergy_produccion;`
+> 2. Recrearla con `LC_COLLATE='C'` y `TEMPLATE template0` (ver Paso 5.1).
+> 3. Volver a ejecutar el restore con `--set=client_encoding=UTF8`.
 
 ---
 
