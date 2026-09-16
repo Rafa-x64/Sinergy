@@ -661,3 +661,43 @@ backend/src/
     ├── controllers/InspeccionController.ts
     └── routes/inspeccionRoutes.ts
 ```
+
+---
+
+## Decisiones Arquitectónicas (ADR)
+
+### ADR-01: Arquitectura Modular Feature-Based (vs DDD Clásico)
+* **Contexto:** La migración requería un balance entre desacoplamiento y velocidad de desarrollo para Rafa y el equipo.
+* **Decisión:** Agrupar código por características o dominios verticales (`src/modules/<modulo>/`) conteniendo en una sola carpeta sus rutas, controladores, servicios y DTOs/schemas de TypeScript.
+* **Por qué:** Reduce drásticamente la fricción cognitiva al no saltar entre múltiples carpetas distantes (Domain, Application, Infrastructure) para un solo cambio de endpoint.
+* **Alternativas Descartadas:** DDD-Lite con inversión de dependencias estricta y clases abstractas para cada CRUD simple.
+* **Trade-offs:** Menor pureza académica a cambio de máxima mantenibilidad y legibilidad práctica.
+
+---
+
+### ADR-02: Doble Token JWT (Access Token en Memoria + Refresh Token en HttpOnly Cookie)
+* **Contexto:** Necesidad de seguridad robusta contra ataques XSS y CSRF en el almacenamiento de credenciales.
+* **Decisión:** El Access Token (vida corta: 15 min) reside exclusivamente en la memoria reactiva del store de Pinia (`auth.store.ts`). El Refresh Token (vida larga: 7 días) se gestiona a través de una cookie con banderas `HttpOnly`, `SameSite=Lax` y `Secure`.
+* **Por qué:** Impide que scripts maliciosos inyectados puedan leer el token persistente desde `localStorage` o `sessionStorage`.
+* **Trade-offs:** Al recargar la página (F5), se debe ejecutar una llamada de arranque a `/api/auth/refresh` para reconstruir la sesión activa.
+
+---
+
+### ADR-03: Coexistencia Bootstrap 5 + Vuetify 3 y Aislamiento de Overlays en Modo Oscuro
+* **Contexto:** El proyecto utiliza Vuetify 3 para componentes enriquecidos (árboles, tabs, selects, diálogos) y Bootstrap 5 para grillas y utilidades. En modo oscuro surgían colisiones con pseudo-elementos (`::before`), bordes toscos y el temido bug de "pantalla vacía" por scrims opacos.
+* **Decisión:** 
+  1. Configuración de temas mediante `createVuetify` con definiciones limpias (`sinergyLightTheme` y `sinergyDarkTheme`).
+  2. Sincronización del atributo `data-bs-theme="dark"` en `<html>` desde `App.vue` para alinear Bootstrap con la paleta industrial de Vuetify.
+  3. Prohibición estricta de sobrescribir pseudo-elementos globales (`::before`) o forzar fondos globales en `.v-sheet` o `.v-card` con `!important`.
+  4. Uso exclusivo de variables CSS nativas (`--v-field-border-opacity: 0.12` en reposo y `0.7` en foco) para controlar la sutileza visual de los contornos.
+* **Por qué:** Permite que el motor de renderizado de portales de Vuetify (`v-overlay-container`) calcule correctamente la geometría y opacidad de menús flotantes sin tapar la aplicación.
+* **Trade-offs:** Exige documentar y respetar las variables de tema en lugar de aplicar parches CSS apresurados.
+
+---
+
+### ADR-04: Reseteo Inmediato de Estado Reactivo en Navegación Jerárquica
+* **Contexto:** En vistas con árboles o selectores multinivel (como Variables Críticas o Lubricación), al pasar de un nodo con datos a uno vacío, la interfaz mostraba los datos previos durante la latencia de red o de forma indefinida si la respuesta venía vacía.
+* **Decisión:** Vaciar inmediatamente las variables reactivas dependientes (`items.value = []`) tanto al disparar la acción de selección como al inicio de la función asíncrona y en sus bloques de captura de error (`catch`).
+* **Por qué:** Garantiza una experiencia de usuario determinista y previene errores donde el técnico confunda componentes o registre valores sobre el equipo equivocado.
+* **Trade-offs:** El usuario percibe un micro-parpadeo hacia el estado vacío antes de que lleguen los nuevos datos, lo cual es preferible a mostrar información desactualizada.
+

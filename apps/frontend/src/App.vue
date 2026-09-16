@@ -30,6 +30,21 @@ onMounted(() => {
   if (temaGuardado && (temaGuardado === 'sinergyLightTheme' || temaGuardado === 'sinergyDarkTheme')) {
     theme.global.name.value = temaGuardado
   }
+
+  // Desactivar globalmente el popup de autocompletado nativo del navegador en todos los inputs
+  document.addEventListener(
+    'focusin',
+    (e) => {
+      const target = e.target as HTMLElement
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+        target.setAttribute('autocomplete', 'off')
+        target.setAttribute('spellcheck', 'false')
+        target.setAttribute('data-lpignore', 'true')
+        target.setAttribute('data-form-type', 'other')
+      }
+    },
+    true
+  )
 })
 </script>
 
