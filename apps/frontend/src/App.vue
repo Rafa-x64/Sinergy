@@ -1,11 +1,36 @@
 <script setup lang="ts">
 import { RouterView, useRoute } from 'vue-router'
-import { computed } from 'vue'
+import { computed, watch, onMounted } from 'vue'
+import { useTheme } from 'vuetify'
 import Menu from './components/Menu.vue'
 import ThemeToggle from './components/ThemeToggle.vue'
 
 const route = useRoute()
 const ocultarLayout = computed(() => !!route.meta.hideLayout)
+const theme = useTheme()
+
+// Sincronizar data-bs-theme y clase dark-theme en <html> para que Bootstrap y Vuetify armonicen
+watch(
+  () => theme.global.name.value,
+  (nuevoTema) => {
+    const esOscuro = nuevoTema === 'sinergyDarkTheme'
+    document.documentElement.setAttribute('data-bs-theme', esOscuro ? 'dark' : 'light')
+    if (esOscuro) {
+      document.documentElement.classList.add('dark-theme')
+    } else {
+      document.documentElement.classList.remove('dark-theme')
+    }
+    localStorage.setItem('sinergy_theme', nuevoTema)
+  },
+  { immediate: true }
+)
+
+onMounted(() => {
+  const temaGuardado = localStorage.getItem('sinergy_theme')
+  if (temaGuardado && (temaGuardado === 'sinergyLightTheme' || temaGuardado === 'sinergyDarkTheme')) {
+    theme.global.name.value = temaGuardado
+  }
+})
 </script>
 
 <template>

@@ -10,6 +10,7 @@ import 'bootstrap-vue-next/dist/bootstrap-vue-next.css' //  ¡Correcto!// ApexCh
 import VueApexCharts from 'vue3-apexcharts'
 // Toastification
 import 'vue-toastification/dist/index.css' // ✅
+import './assets/theme.css' // ✅ Sinergy Global Theme & Dark Mode
 import { Toast, toastOptions } from './plugins/toast'
 
 // FontAwesome

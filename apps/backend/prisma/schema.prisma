@@ -456,11 +456,7 @@ model Notificacion {
 // CAPA 6: LUBRICACIÓN Y HORÓMETROS
 // -----------------------------------------------------------------------------
 
-enum TipoLubricante {
-  ACEITE
-  GRASA
-  OTRO
-}
+
 
 enum NivelLubricante {
   OK
@@ -470,11 +466,7 @@ enum NivelLubricante {
   NO_APLICA
 }
 
-enum UnidadMedidaLubricante {
-  LITROS
-  KILOGRAMOS
-  GALONES
-}
+
 
 enum OrigenLecturaHorometro {
   RUTINA_LUBRICACION
@@ -488,9 +480,9 @@ model CatalogoLubricante {
   codigo       String                 @unique @db.VarChar(50)
   nombre       String                 @db.VarChar(150)
   marca        String?                @db.VarChar(100)
-  tipo         TipoLubricante
+  tipo         String             @db.VarChar(100)
   viscosidad   String?                @db.VarChar(50)
-  unidadMedida UnidadMedidaLubricante @default(LITROS) @map("unidad_medida")
+  unidadMedida    String                 @default("Litros") @map("unidad_medida") @db.VarChar(50)
   activo       Boolean                @default(true)
   creadoEn     DateTime               @default(now()) @map("creado_en")
 

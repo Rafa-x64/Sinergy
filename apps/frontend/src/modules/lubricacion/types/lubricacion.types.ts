@@ -1,8 +1,6 @@
-export type TipoLubricante = 'ACEITE' | 'GRASA' | 'REFRIGERANTE' | 'LIQUIDO_FRENOS' | 'OTRO'
 
 export type NivelLubricante = 'OK' | 'BAJO' | 'CRITICO' | 'SOBRELLENADO' | 'NO_APLICA'
 
-export type UnidadMedidaLubricante = 'GALONES' | 'LITROS' | 'KILOGRAMOS' | 'LIBRAS' | 'TUBOS' | 'MILILITROS'
 
 export type OrigenLecturaHorometro = 'RUTINA_LUBRICACION' | 'INSPECCION_OPERATIVA' | 'LECTURA_MANUAL' | 'CAMBIO_ACEITE'
 
@@ -13,9 +11,9 @@ export interface CatalogoLubricante {
   codigo: string
   nombre: string
   marca?: string | null
-  tipo: TipoLubricante
+  tipo: string
   viscosidad?: string | null
-  unidadMedida: UnidadMedidaLubricante
+  unidadMedida: string
   activo: boolean
   creadoEn: string
 }
@@ -24,9 +22,9 @@ export interface CrearLubricanteInput {
   codigo: string
   nombre: string
   marca?: string
-  tipo: TipoLubricante
+  tipo: string
   viscosidad?: string
-  unidadMedida?: UnidadMedidaLubricante
+  unidadMedida?: string
 }
 
 export interface PuntoLubricacion {
