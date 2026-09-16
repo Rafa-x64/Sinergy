@@ -8,6 +8,8 @@
     "build:frontend": "pnpm --filter @sinergy/frontend build",
     "build:backend": "pnpm --filter @sinergy/backend build",
     "build": "pnpm build:frontend && pnpm build:backend",
+    "db:generate": "pnpm --filter @sinergy/backend prisma:generate",
+    "db:deploy": "pnpm --filter @sinergy/backend prisma:deploy",
     "tunnel": "pnpm exec tunnelmole --port 3000",
     "dev:tunnel": "concurrently -c \"bgBlue.bold,bgMagenta.bold,bgGreen.bold\" -n \"FRONTEND,BACKEND,TUNNEL\" \"pnpm dev:frontend\" \"pnpm dev:backend\" \"pnpm tunnel\""
   },

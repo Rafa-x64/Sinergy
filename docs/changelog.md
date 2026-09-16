@@ -17,6 +17,12 @@ El formato sigue el estándar [Keep a Changelog](https://keepachangelog.com/es/1
 ## [Unreleased]
 
 ### Fixed
+- **Despliegue Resiliente de Migraciones y Resolución Automática de Baseline (Error P3005)** (`fix: prisma-migrate-baseline-and-deploy`):
+  - **Script de Despliegue Inteligente (`apps/backend/scripts/deploy-migrations.js`)**: Automatiza el flujo de `prisma migrate deploy` capturando el error `P3005` (`The database schema is not empty`) cuando se despliega sobre una base de datos restaurada de un volcado o preexistente. Aplica automáticamente la línea base (baseline) mediante `prisma migrate resolve --applied 20260916120000_db_produccion_inicial` y reanuda el despliegue sin bloquear el pipeline.
+  - **Comandos de Workspace**: Incorporados scripts `pnpm db:deploy` y `pnpm db:generate` en la raíz del monorepo, y `prisma:deploy`, `prisma:baseline` y `prisma:generate` en `apps/backend/package.json`.
+  - **Normalización UTF-8 de Volcados SQL**: Transcodificado el archivo `apps/backend/prisma/Sinergy_produccion_backup.sql` y `apps/backend/migration.sql` de UTF-16 (Big/Little Endian con BOM) a UTF-8 estándar sin BOM, garantizando compatibilidad nativa con `psql` tanto en Windows como en entornos Linux (Arch/CachyOS) y reduciendo el tamaño en disco a la mitad.
+  - **Documentación de Despliegue y Sincronización**: Actualizado `docs/setup.md` con instrucciones guiadas para la restauración de la base de datos vía `psql`, resolución manual y automática de baseline, y el protocolo paso a paso para forzar un reseteo limpio del entorno sincronizado con `origin/main` (`git reset --hard` + `git clean -fd`).
+
 - **Modo Oscuro Integral y Estabilización del Sistema de Overlays de Vuetify 3** (`fix: dark-mode-overlay-and-contrast`):
   - **Eliminación de colisión con Scrims y Portales**: Se removieron overrides CSS invasivos (`display: none` en pseudo-elementos `::before`, reseteos globales de z-index y fondos forzados en `.v-sheet` / `.v-card`) que rompían el renderizado de portales de Vuetify (`v-overlay`). Resuelve el bug crítico donde al desplegar un menú, autocompletado o campana de notificaciones en modo oscuro, la pantalla completa quedaba vacía/oscura.
   - **Calibración de Bordes y Contornos de Campos**: Se configuró la variable nativa `--v-field-border-opacity: 0.12` en reposo y `0.7` al recibir foco (`.v-field--focused`), erradicando las líneas grises gruesas y bordes pesados sin comprometer la accesibilidad del control.
