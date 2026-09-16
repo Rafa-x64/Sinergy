@@ -1,8 +1,9 @@
 /* ═══════════════════════════════════════════════════════════════════
-   Sinergy Global Theme & Dark Mode Refinements
+   Sinergy Global Theme
+   — Solo ajustes que Vuetify no puede resolver internamente —
    ═══════════════════════════════════════════════════════════════════ */
 
-/* ─── Variables Base & Bootstrap Harmonization ───────────────────────── */
+/* ─── Variables CSS de Bootstrap Harmonization ──────────────────────── */
 :root {
   --app-bg: #f8fafc;
   --app-surface: #ffffff;
@@ -10,7 +11,6 @@
   --app-text-primary: #1e293b;
   --app-text-secondary: #64748b;
   --app-primary: #4f46e5;
-  --app-primary-light: #e0e7ff;
 }
 
 [data-bs-theme="dark"],
@@ -18,20 +18,15 @@
 .dark-theme {
   --app-bg: #0b0f19;
   --app-surface: #131b2e;
-  --app-surface-variant: #1a253c;
-  --app-elevated: #1e2b45;
-  --app-border: rgba(255, 255, 255, 0.08);
-  --app-border-hover: rgba(255, 255, 255, 0.15);
+  --app-border: rgba(255, 255, 255, 0.06);
   --app-text-primary: #f8fafc;
   --app-text-secondary: #94a3b8;
   --app-primary: #818cf8;
-  --app-primary-glow: rgba(99, 102, 241, 0.15);
 
-  /* Override Bootstrap CSS Variables in Dark Mode */
+  /* Sincronizar variables de Bootstrap con el tema oscuro */
   --bs-body-bg: #0b0f19 !important;
   --bs-body-color: #f8fafc !important;
   --bs-border-color: rgba(255, 255, 255, 0.08) !important;
-  --bs-border-color-translucent: rgba(255, 255, 255, 0.06) !important;
   --bs-primary: #818cf8 !important;
   --bs-primary-rgb: 129, 140, 248 !important;
   --bs-secondary-color: #94a3b8 !important;
@@ -39,129 +34,58 @@
   --bs-emphasis-color: #ffffff !important;
 }
 
-/* ─── Scrollbars Modernos y Elegantes (Globales) ───────────────────────── */
+/* ─── Scrollbars globales ───────────────────────────────────────────── */
 * {
   scrollbar-width: thin;
   scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
 }
 
-::-webkit-scrollbar {
-  width: 7px;
-  height: 7px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
+::-webkit-scrollbar { width: 7px; height: 7px; }
+::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
   background: rgba(148, 163, 184, 0.25);
   border-radius: 9999px;
   transition: background 0.2s ease;
 }
+::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.45); }
 
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.45);
-}
+.v-theme--sinergyDarkTheme ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); }
+.v-theme--sinergyDarkTheme ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); }
 
-[data-bs-theme="dark"] ::-webkit-scrollbar-thumb,
-.v-theme--sinergyDarkTheme ::-webkit-scrollbar-thumb,
-.dark-theme ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-}
-
-[data-bs-theme="dark"] ::-webkit-scrollbar-thumb:hover,
-.v-theme--sinergyDarkTheme ::-webkit-scrollbar-thumb:hover,
-.dark-theme ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.28);
-}
-
-/* ─── Bootstrap Border Utility Overrides in Dark Mode ──────────────────── */
-[data-bs-theme="dark"] .border,
-.v-theme--sinergyDarkTheme .border,
-.dark-theme .border {
-  border-color: rgba(255, 255, 255, 0.08) !important;
-}
-
-[data-bs-theme="dark"] .border-top,
-.v-theme--sinergyDarkTheme .border-top,
-.dark-theme .border-top {
-  border-top-color: rgba(255, 255, 255, 0.08) !important;
-}
-
-[data-bs-theme="dark"] .border-bottom,
-.v-theme--sinergyDarkTheme .border-bottom,
-.dark-theme .border-bottom {
-  border-bottom-color: rgba(255, 255, 255, 0.08) !important;
-}
-
-[data-bs-theme="dark"] .border-start,
-.v-theme--sinergyDarkTheme .border-start,
-.dark-theme .border-start {
-  border-left-color: rgba(255, 255, 255, 0.08) !important;
-}
-
-[data-bs-theme="dark"] .border-end,
-.v-theme--sinergyDarkTheme .border-end,
-.dark-theme .border-end {
-  border-right-color: rgba(255, 255, 255, 0.08) !important;
-}
-
-/* ─── Vuetify Card & Elevation Polish in Dark Mode ─────────────────────── */
-.v-theme--sinergyDarkTheme .v-card {
-  background-color: #131b2e !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5) !important;
-}
-
-.v-theme--sinergyDarkTheme .v-navigation-drawer {
-  background-color: #0d1322 !important;
-  border-right-color: rgba(255, 255, 255, 0.07) !important;
-}
-
-.v-theme--sinergyDarkTheme .v-navigation-drawer .v-divider {
-  border-color: rgba(255, 255, 255, 0.07) !important;
-}
-
-/* ─── Vuetify Tables in Dark Mode ──────────────────────────────────────── */
-.v-theme--sinergyDarkTheme .v-table {
-  background-color: transparent !important;
-  color: #f1f5f9 !important;
-}
-
-.v-theme--sinergyDarkTheme .v-table > .v-table__wrapper > table > thead > tr > th {
-  background-color: #162035 !important;
-  color: #e2e8f0 !important;
-  font-weight: 600 !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-}
-
-.v-theme--sinergyDarkTheme .v-table > .v-table__wrapper > table > tbody > tr > td {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
-}
-
-.v-theme--sinergyDarkTheme .v-table--hover > .v-table__wrapper > table > tbody > tr:hover td {
-  background-color: rgba(255, 255, 255, 0.035) !important;
-}
-
-/* ─── Vuetify Form Fields in Dark Mode ─────────────────────────────────── */
-.v-theme--sinergyDarkTheme .v-field--variant-outlined .v-field__outline {
-  --v-field-border-opacity: 0.18;
-}
-
-.v-theme--sinergyDarkTheme .v-field--focused .v-field__outline {
-  --v-field-border-opacity: 0.8;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
-}
-
-/* ─── Text Primary Contrast in Dark Mode ───────────────────────────────── */
+/* ─── Text-primary en modo oscuro (Vuetify lo usa diferente) ────────── */
 [data-bs-theme="dark"] .text-primary,
 .v-theme--sinergyDarkTheme .text-primary,
 .dark-theme .text-primary {
   color: #818cf8 !important;
 }
 
-/* ─── Chips & Badges in Dark Mode ──────────────────────────────────────── */
-.v-theme--sinergyDarkTheme .v-chip {
-  letter-spacing: 0.3px;
+/* ─── Toastification siempre encima de modales ──────────────────────── */
+/* (Esta regla ya existe en App.vue pero se centraliza aquí)             */
+.Vue-Toastification__container { z-index: 999999 !important; }
+
+/* ─── Navigation Drawer: zonas superior e inferior al mismo color ───── */
+/* Vuetify divide el drawer en __prepend y __append que pueden quedar    */
+/* con un tono distinto al cuerpo central del drawer.                   */
+.v-theme--sinergyDarkTheme .v-navigation-drawer__prepend,
+.v-theme--sinergyDarkTheme .v-navigation-drawer__append {
+  background-color: inherit !important;
 }
+
+/* ─── Borde derecho del navigation drawer: eliminado ────────────────── */
+.v-theme--sinergyDarkTheme .v-navigation-drawer {
+  border-right: none !important;
+}
+
+/* ─── Reducir intensidad del borde de campos en modo oscuro ─────────── */
+/* Vuetify usa --v-field-border-opacity para controlar la opacidad.     */
+/* El valor por defecto (~0.38) es demasiado visible en fondos oscuros. */
+.v-theme--sinergyDarkTheme .v-field--variant-outlined .v-field__outline {
+  --v-field-border-opacity: 0.12;
+}
+
+.v-theme--sinergyDarkTheme .v-field--focused.v-field--variant-outlined .v-field__outline {
+  --v-field-border-opacity: 0.7;
+}
+
+/* ─── Chips ─────────────────────────────────────────────────────────── */
+.v-theme--sinergyDarkTheme .v-chip { letter-spacing: 0.3px; }

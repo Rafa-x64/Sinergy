@@ -277,11 +277,12 @@ export const useVariablesStore = defineStore('variables', () => {
 
   async function cargarVariablesComponente(componenteId: number): Promise<RespuestaApi<VariableInstancia[]>> {
     cargandoVariables.value = true
+    variablesComponente.value = []
     try {
       const { data } = await api.get<RespuestaApi<VariableInstancia[]>>('/variables-criticas/listar', {
         params: { componenteId, activa: true }
       })
-      if (data.status === 'ok' && data.data) {
+      if (data.status === 'ok' && Array.isArray(data.data)) {
         variablesComponente.value = data.data
 
         const conteoActual = data.data.length
@@ -294,9 +295,12 @@ export const useVariablesStore = defineStore('variables', () => {
             componenteSeleccionado.value.componente._count.variables = conteoActual
           }
         }
+      } else {
+        variablesComponente.value = []
       }
       return data
     } catch (error: unknown) {
+      variablesComponente.value = []
       const err = error as AxiosError<RespuestaApi>
       const mensaje = err.response?.data?.message ?? 'Error al cargar las variables del componente'
       return {
@@ -325,6 +329,7 @@ export const useVariablesStore = defineStore('variables', () => {
 
   async function seleccionarComponente(contexto: ContextoComponenteSeleccionado) {
     componenteSeleccionado.value = contexto
+    variablesComponente.value = []
     await cargarVariablesComponente(contexto.componente.id)
   }
 

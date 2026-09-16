@@ -329,13 +329,6 @@ export const variableCriticaController = {
         activa: activoFiltro
       })
 
-      if (variables.length === 0) {
-        return res.status(404).json({
-          status: 'error',
-          message: 'No se encontraron variables que coincidan con los criterios de búsqueda'
-        })
-      }
-
       return res.status(200).json({
         status: 'ok',
         message: 'Lista de variables críticas obtenida correctamente',

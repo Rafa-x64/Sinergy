@@ -297,7 +297,7 @@ const ejecutarBusquedaEquipos = async () => {
             <span>{{ item.raw.codigo ? `${item.raw.codigo} - ${item.raw.nombre}` : item.raw.nombre }}</span>
           </template>
           <template #item="{ props: itemProps, item }">
-            <v-list-item v-bind="itemProps" :subtitle="item.raw.codigo" />
+            <v-list-item v-bind="{ ...itemProps, title: undefined }" :subtitle="item.raw.codigo" />
           </template>
         </v-select>
 

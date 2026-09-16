@@ -542,3 +542,38 @@ Sigue estos 5 pasos ordenados para crear el módulo `proveedores`:
 * **Formulario de edición no refresca sus campos al cambiar de ítem:** Asegúrate de incluir `{ deep: true }` en el `watch` sobre `props.datosIniciales` dentro de `*Form.vue`.
 * **Pestaña de edición abierta sin datos seleccionados:** Verifica que `idAEditar` se reinicie a `null` dentro del `watch(pestañaActiva)` al conmutar a `'lista'` o `'registrar'`.
 * **Encabezados de tabla rotos en múltiples líneas:** Revisa que el CSS `:deep(.v-data-table th)` contenga `white-space: nowrap !important`.
+* **Fuga de estado al navegar entre nodos jerárquicos:** Si seleccionas un componente en un árbol o lista y luego cambias a otro que no posee elementos (ej. variables críticas o puntos de lubricación), el estado en el store debe limpiarse inmediatamente (`items.value = []`) al invocar la acción y antes de la promesa HTTP. De lo contrario, la vista retendrá visualmente los datos del nodo anterior.
+* **Pantalla en blanco / Scrim opaco al desplegar selects o menús en Dark Mode:** Ocurre cuando se agregan reglas CSS globales como `.v-sheet::before { display: none }` o z-index forzados. Vuetify 3 utiliza pseudo-elementos y el portal `v-overlay-container` para calcular la posición y opacidad de los menús. Nunca manipules los pseudo-elementos internos de Vuetify globalmente.
+
+---
+
+## 7. Sistema de Temas, Modo Oscuro y Coexistencia con Vuetify 3
+
+### 7.1 Regla de Oro: Overlays, Portales y Scrims
+Vuetify 3 renderiza los componentes flotantes (`v-menu`, `v-select`, `v-autocomplete`, `v-tooltip`, `v-dialog`) fuera del árbol DOM normal utilizando teleports hacia `<div class="v-overlay-container">`.
+* **Prohibido:** Modificar `::before` o `::after` de manera genérica en `.v-sheet`, `.v-card` o `.v-overlay`.
+* **Prohibido:** Forzar fondos o bordes con `!important` en todas las instancias de `v-card` o `v-sheet` en archivos CSS globales, ya que esto anula los estilos calculados dinámicamente para los menús flotantes.
+
+### 7.2 Calibración Limpia de Bordes en Modo Oscuro
+Para reducir la dureza visual de los campos sin romper la accesibilidad ni generar saltos de renderizado (`layout shift`), se utiliza la variable CSS nativa de Vuetify en `src/assets/theme.css`:
+
+```css
+/* Reducir intensidad del borde de campos en reposo sin eliminar la estructura */
+.v-theme--sinergyDarkTheme .v-field--variant-outlined .v-field__outline {
+  --v-field-border-opacity: 0.12;
+}
+
+/* Resaltar contorno de manera elegante únicamente al enfocar */
+.v-theme--sinergyDarkTheme .v-field--focused.v-field--variant-outlined .v-field__outline {
+  --v-field-border-opacity: 0.7;
+}
+```
+
+### 7.3 Eliminación de Rayas Grises en Hojas Elevadas (`AppTabs`)
+En modo oscuro, Vuetify aplica una capa blanca semitransparente según el nivel de elevación (`elevation="2"`). Cuando varias hojas se apilan (como en `AppTabs`), esta elevación genera una franja o "raya gris" visible.
+* **Solución estándar:** Declarar `elevation="0"` explícitamente en el componente `v-sheet` contenedor y en el contenido de las pestañas (`v-tabs-window-item`).
+
+### 7.4 Coexistencia Vuetify 3 + Bootstrap 5
+`App.vue` sincroniza el tema global con el atributo `data-bs-theme`:
+* `theme.global.name.value === 'sinergyDarkTheme'` establece `document.documentElement.setAttribute('data-bs-theme', 'dark')`.
+* `src/assets/theme.css` sincroniza las variables `--bs-body-bg`, `--bs-surface`, `--bs-border-color` para que componentes mixtos (tablas, clases de utilidad) armonicen visualmente con el tema oscuro industrial.

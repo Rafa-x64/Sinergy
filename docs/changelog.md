@@ -16,6 +16,25 @@ El formato sigue el estándar [Keep a Changelog](https://keepachangelog.com/es/1
 
 ## [Unreleased]
 
+### Fixed
+- **Modo Oscuro Integral y Estabilización del Sistema de Overlays de Vuetify 3** (`fix: dark-mode-overlay-and-contrast`):
+  - **Eliminación de colisión con Scrims y Portales**: Se removieron overrides CSS invasivos (`display: none` en pseudo-elementos `::before`, reseteos globales de z-index y fondos forzados en `.v-sheet` / `.v-card`) que rompían el renderizado de portales de Vuetify (`v-overlay`). Resuelve el bug crítico donde al desplegar un menú, autocompletado o campana de notificaciones en modo oscuro, la pantalla completa quedaba vacía/oscura.
+  - **Calibración de Bordes y Contornos de Campos**: Se configuró la variable nativa `--v-field-border-opacity: 0.12` en reposo y `0.7` al recibir foco (`.v-field--focused`), erradicando las líneas grises gruesas y bordes pesados sin comprometer la accesibilidad del control.
+  - **Homogeneización del Menú Lateral (`v-navigation-drawer`)**: Se removieron los colores azul marino oscuro desfasados (`#0d1322`) de las secciones superior (`__prepend` / SinergyChip) e inferior (`__append` / datos de usuario); el drawer ahora utiliza el color de superficie unificado (`surface`: `#131B2E`) en todo su cuerpo.
+  - **Eliminación de Rayas Grises en Pestañas (`AppTabs.vue`)**: Configurada la propiedad `elevation="0"` en las hojas base de las pestañas para eliminar las bandas superpuestas que generaba el cálculo de elevación de Vuetify en modo oscuro.
+
+- **Variables Críticas — Reseteo Defensivo de Estado Vacío** (`fix: variables-criticas-empty-state-reset`):
+  - Se corrigió el bug de persistencia en `variables.store.ts`: al alternar entre un componente con variables hacia uno sin variables, la interfaz mostraba erróneamente los datos del componente anterior.
+  - Se implementó la limpieza inmediata `variablesComponente.value = []` tanto al invocar `seleccionarComponente` como al inicio de `cargarVariablesComponente` y dentro de los bloques de captura de error (`catch`).
+
+- **Matriz de Lubricación — Catálogo Maestro de Plantas en Filtros** (`fix: lubricacion-catalogo-plantas-filtro`):
+  - Se corrigió la propiedad computada `plantasDisponibles` en `MatrizLubricacionView.vue` para que consulte prioritariamente el catálogo maestro de plantas (`plantasStore.plantas`). Anteriormente derivaba la lista solo de las filas preexistentes en la matriz de lubricación, impidiendo seleccionar plantas sin rutinas previas (ej. mostraba únicamente "Planta de Inyección").
+
+### Changed
+- **Depuración de Tooltips y Limpieza Visual de Controles** (`style: clean-field-inputs-tooltips-borders`):
+  - Retirada sistemática de tooltips en campos de texto plano (`v-text-field`), selectores (`v-select`) y autocompletados (`v-autocomplete`), restringiendo los tooltips exclusivamente a botones de acción tipo icono (expandir árbol, acciones CRUD).
+  - Eliminación de clases de borde duro de Bootstrap (`.border`, `.border-bottom`, `.border-top`) en tarjetas y encabezados de `MatrizLubricacionView.vue` para mantener la estética minimalista y sin líneas de división disruptivas en ambos temas.
+
 ### Added
 - **Integración de Rutinas de Lubricación con Bandeja de Aprobaciones (`/inspecciones`)** (`feat: lubricacion-inspeccion-bandeja`):
   - Al registrar una rutina de lubricación en `POST /api/lubricacion/rutinas`, se genera de forma atómica y transaccional una cabecera en la tabla `inspecciones` (`codigoInspeccion: INSP-LUB-...`, `tipoInspeccion: 'VARIABLES_CRITICAS'`, `estadoInspeccion: 'PENDIENTE'`).

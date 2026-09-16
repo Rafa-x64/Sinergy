@@ -81,15 +81,17 @@ const plantaAlcanceId = ref<number | null>(null)
 const lineaAlcance = ref<string | null>(null)  // nombre de ubicación (viene en plantaNombre / ubicacionNombre)
 const equipoInspeccionId = ref<number | null>(null)
 
-// Plantas únicas disponibles en la matriz
+// Plantas disponibles para selección (catálogo maestro de plantas registradas)
 const plantasDisponibles = computed(() => {
+  if (plantasStore.plantas.length > 0) {
+    return plantasStore.plantas.map(p => ({ id: p.id, nombre: p.nombre }))
+  }
   const nombres = new Set<string>()
   const resultado: { id: number; nombre: string }[] = []
   lubricacionStore.matriz.forEach((f: FilaMatrizLubricacion) => {
-    const plantaObj = plantasStore.plantas.find(p => p.nombre.toLowerCase() === f.plantaNombre.toLowerCase())
-    if (plantaObj && !nombres.has(f.plantaNombre)) {
+    if (!nombres.has(f.plantaNombre)) {
       nombres.add(f.plantaNombre)
-      resultado.push({ id: plantaObj.id, nombre: f.plantaNombre })
+      resultado.push({ id: resultado.length + 1, nombre: f.plantaNombre })
     }
   })
   return resultado
@@ -466,7 +468,7 @@ async function guardarInspeccion() {
     </div>
 
     <!-- Barra de Pestañas Principales -->
-    <v-tabs v-model="pestanaActiva" color="primary" class="mb-4 border-bottom">
+    <v-tabs v-model="pestanaActiva" color="primary" class="mb-4">
       <v-tab value="partes">
         <v-icon start>mdi-table-edit</v-icon>
         Partes a Lubricar (Matriz Excel)
@@ -487,7 +489,7 @@ async function guardarInspeccion() {
       <!-- ═══════════════════════════════════════════════════════════════════ -->
       <v-window-item value="partes">
         <!-- Barra de Selección de Planta y Maquinaria (Específica de Matriz de Partes) -->
-        <v-card class="mb-4 elevation-1 border">
+        <v-card class="mb-4 elevation-1">
           <v-card-text class="py-3">
             <v-row dense align="center">
               <v-col cols="12" sm="4" md="3">
@@ -519,8 +521,8 @@ async function guardarInspeccion() {
                   hide-details
                   auto-select-first
                 >
-                  <template #item="{ props, item }">
-                    <v-list-item v-bind="props">
+                  <template #item="{ props: itemProps, item }">
+                    <v-list-item v-bind="{ ...itemProps, title: undefined }">
                       <template #title>
                         <span class="font-weight-bold">{{ item.raw.equipoCodigo }}</span> - {{ item.raw.equipoNombre }}
                       </template>
@@ -541,8 +543,8 @@ async function guardarInspeccion() {
           </v-card-text>
         </v-card>
 
-        <v-card class="elevation-1 border mb-4">
-          <v-card-item class="py-3 border-bottom">
+        <v-card class="elevation-1 mb-4">
+          <v-card-item class="py-3">
             <div class="d-flex flex-column flex-sm-row justify-space-between align-start align-sm-center gap-2">
               <div>
                 <v-card-title class="text-subtitle-1 font-weight-bold mb-0">
@@ -728,8 +730,8 @@ async function guardarInspeccion() {
       <v-window-item value="inspeccion">
 
         <!-- ── Selector de Alcance de Inspección (independiente del filtro global) ── -->
-        <v-card class="elevation-2 border mb-4 rounded-lg">
-          <v-card-item class="py-3 border-bottom">
+        <v-card class="elevation-2 mb-4 rounded-lg">
+          <v-card-item class="py-3">
             <div class="d-flex align-center gap-2">
               <v-avatar color="primary" variant="tonal" size="40">
                 <v-icon size="22" color="primary">mdi-filter-cog-outline</v-icon>
@@ -827,7 +829,7 @@ async function guardarInspeccion() {
                   :no-data-text="lubricacionStore.cargandoMatriz ? 'Cargando...' : 'Sin equipos con puntos de lubricación configurados'"
                 >
                   <template #item="{ props: itemProps, item }">
-                    <v-list-item v-bind="itemProps">
+                    <v-list-item v-bind="{ ...itemProps, title: undefined }">
                       <template #title>
                         <span class="font-weight-bold">{{ item.raw.equipoCodigo }}</span>
                         — {{ item.raw.equipoNombre }}
@@ -938,8 +940,8 @@ async function guardarInspeccion() {
         </v-card>
 
         <!-- Tabla Operativa de Inspección -->
-        <v-card class="elevation-1 border mb-4">
-          <v-card-item class="py-3 border-bottom">
+        <v-card class="elevation-1 mb-4">
+          <v-card-item class="py-3">
             <v-card-title class="text-subtitle-1 font-weight-bold d-flex align-center justify-space-between flex-wrap gap-2">
               <span>Inspección Diaria de Partes ({{ detallesInspeccion.length }})</span>
               <div class="d-flex gap-2 flex-wrap">
@@ -1140,7 +1142,7 @@ async function guardarInspeccion() {
           </v-card-text>
 
           <!-- Pie con Guardado Transaccional de la Inspección -->
-          <v-card-actions v-if="detallesInspeccion.length > 0" class="px-4 py-3 border-top">
+          <v-card-actions v-if="detallesInspeccion.length > 0" class="px-4 py-3">
             <v-row dense align="center" class="w-100">
               <v-col cols="12" md="7">
                 <v-text-field
@@ -1196,7 +1198,7 @@ async function guardarInspeccion() {
     <!-- Diálogo Confirmación de Eliminación -->
     <v-dialog v-model="dialogEliminarVisible" max-width="450">
       <v-card>
-        <v-card-item class="py-3 border-bottom">
+        <v-card-item class="py-3">
           <template #prepend>
             <v-icon color="error">mdi-alert-circle</v-icon>
           </template>

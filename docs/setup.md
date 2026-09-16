@@ -138,31 +138,63 @@ Si pide contraseña, ingresa la que configuraste al instalar PostgreSQL.
 
 ---
 
-## 6. Ejecutar las Migraciones
+## 6. Configurar Prisma, Generar el Cliente y Ejecutar Migraciones
 
-Una vez que la base de datos existe y `DATABASE_URL` está correctamente configurado:
+El backend de Sinergy utiliza **Prisma ORM 7** con el adaptador desacoplado `@prisma/adapter-pg` sobre un pool nativo de `pg` (`node-postgres`), proporcionando máxima velocidad y compatibilidad en entornos Node.js modernos.
+
+### 6.1 Generación del Cliente Prisma (`@prisma/client`)
+
+Cada vez que se clona el proyecto, se instalan dependencias o se modifica `apps/backend/prisma/schema.prisma`, es obligatorio compilar los tipos fuertemente tipados de TypeScript para el cliente:
 
 ```powershell
 # Desde la raíz del monorepo
+pnpm --filter @sinergy/backend prisma:generate
+
+# O navegando directamente al backend:
 cd apps\backend
-npx prisma migrate dev --name init
+npx prisma generate
 ```
 
-Esto:
-1. Lee el `schema.prisma` y genera el SQL de las migraciones.
-2. Aplica las migraciones a `sinergy_db`.
-3. Genera el cliente TypeScript de Prisma (`@prisma/client`).
+> [!NOTE]
+> El cliente generado se exporta como singleton en `apps/backend/src/core/prisma.ts`, inyectando el adaptador `PrismaPg` y registrando logs de queries en modo desarrollo.
 
-Verifica que las tablas fueron creadas:
+### 6.2 Aplicar la Migración Inicial (`DB_PRODUCCION_INICIAL`)
+
+La base de datos cuenta con una migración completa y consolidada para producción:
+
+#### Opción 1 — Mediante Prisma Migrate (Recomendada):
+Aplica las migraciones registradas en `apps/backend/prisma/migrations/`:
 
 ```powershell
+cd apps\backend
+npx prisma migrate deploy
+```
+
+> Para entornos de desarrollo donde desees que Prisma vigile cambios en el esquema:
+> ```powershell
+> npx prisma migrate dev
+> ```
+
+#### Opción 2 — Mediante Script SQL Directo (`DB_PRODUCCION_INICIAL.sql`):
+Si estás desplegando en un servidor sin la CLI de Node/Prisma o prefieres inyección directa vía PostgreSQL:
+
+```powershell
+psql -U postgres -d sinergy_db -f apps\backend\prisma\DB_PRODUCCION_INICIAL.sql
+```
+
+### 6.3 Exploración Visual con Prisma Studio
+
+Para inspeccionar o insertar datos iniciales en las tablas visualmente desde el navegador:
+
+```powershell
+cd apps\backend
 npx prisma studio
 ```
 
-Esto abre Prisma Studio en `http://localhost:5555`, donde puedes navegar visualmente por las tablas.
+Prisma Studio se iniciará en `http://localhost:5555`.
 
 > [!IMPORTANT]
-> Vuelve a la raíz del monorepo cuando termines: `cd ..\..`
+> Recuerda volver a la raíz del monorepo al finalizar: `cd ..\..`
 
 ---
 
