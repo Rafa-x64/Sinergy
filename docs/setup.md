@@ -167,26 +167,27 @@ $env:PGPASSWORD='Tub.#2026#ric@'; psql -h 10.10.7.5 -p 5432 -U postgres -c "CREA
 
 ---
 
-### 5.2 Restaurar el Volcado de Producción (`Sinergy_produccion_backup.sql`)
+### 5.2 Restaurar el Volcado de Producción
 
-El repositorio incluye el volcado completo en `apps/backend/prisma/Sinergy_produccion_backup.sql` (UTF-8 sin BOM).
+> [!IMPORTANT]
+> Los archivos de backup (`.sql`) **no están en el repositorio** por seguridad — contienen datos de producción. Obtén el backup del servidor de backups o del administrador del sistema antes de continuar.
 
 > [!CAUTION]
 > **El flag `--set=client_encoding=UTF8` es obligatorio** al restaurar desde Windows. Sin él, `psql` usa la codificación regional del sistema operativo (`WIN1252` en Windows en español), lo que corrompe los caracteres con acento (`á`, `é`, `ó`, `ñ`, etc.) convirtiéndolos en secuencias ilegibles.
 
 #### En servidor LOCAL:
 ```powershell
-$env:PGPASSWORD='tu_password'; psql -h localhost -U postgres -d Sinergy_produccion --set=client_encoding=UTF8 -f apps\backend\prisma\Sinergy_produccion_backup.sql
+$env:PGPASSWORD='tu_password'; psql -h localhost -U postgres -d Sinergy_produccion --set=client_encoding=UTF8 -f C:\ruta\al\backup.sql
 ```
 
 #### En servidor REMOTO (`10.10.7.5`):
 ```powershell
-$env:PGPASSWORD='Tub.#2026#ric@'; psql -h 10.10.7.5 -p 5432 -U postgres -d Sinergy_produccion --set=client_encoding=UTF8 -f apps\backend\prisma\Sinergy_produccion_backup.sql
+$env:PGPASSWORD='Tub.#2026#ric@'; psql -h 10.10.7.5 -p 5432 -U postgres -d Sinergy_produccion --set=client_encoding=UTF8 -f C:\ruta\al\backup.sql
 ```
 
 #### En Linux (Bash / Fish) — servidor remoto:
 ```bash
-PGPASSWORD='Tub.#2026#ric@' psql -h 10.10.7.5 -p 5432 -U postgres -d Sinergy_produccion --set=client_encoding=UTF8 -f apps/backend/prisma/Sinergy_produccion_backup.sql
+PGPASSWORD='Tub.#2026#ric@' psql -h 10.10.7.5 -p 5432 -U postgres -d Sinergy_produccion --set=client_encoding=UTF8 -f /ruta/al/backup.sql
 ```
 
 > [!NOTE]
@@ -236,28 +237,28 @@ pnpm prisma:deploy
 ```
 
 #### ¿Cómo funciona este comando internamente?
-1. Ejecuta `prisma migrate deploy`.
-2. **Si la base de datos es nueva (vacía):** Aplica la migración inicial `20260916120000_db_produccion_inicial` y crea la tabla interna `_prisma_migrations`.
-3. **Si la base de datos fue restaurada de un volcado (Error P3005):** Prisma detecta que ya existen tablas y aborta por seguridad (`The database schema is not empty`). El script captura el error P3005 y ejecuta automáticamente el **baseline**:
+1. Carga el `.env` del backend automáticamente.
+2. Valida que `DATABASE_URL` esté definida antes de conectar (mensaje de error claro si falta).
+3. Ejecuta `prisma migrate deploy --config prisma.config.ts`.
+4. **Si la base de datos es nueva (vacía):** Aplica la migración inicial `20260916120000_db_produccion_inicial` y crea la tabla interna `_prisma_migrations`.
+5. **Si la base de datos fue restaurada de un volcado (Error P3005):** Prisma detecta que ya existen tablas y aborta por seguridad (`The database schema is not empty`). El script captura el error P3005 y ejecuta automáticamente el **baseline**:
    ```powershell
-   npx prisma migrate resolve --applied 20260916120000_db_produccion_inicial
+   npx prisma migrate resolve --applied 20260916120000_db_produccion_inicial --config prisma.config.ts
    ```
    Esto registra la estructura existente en `_prisma_migrations` sin intentar re-crear tablas existentes, garantizando que el despliegue termine en verde y permitiendo que migraciones futuras se apliquen secuencialmente.
 
 #### Resolución Manual de Baseline (Si ejecutas Prisma CLI directo):
-Si ejecutas directamente `npx prisma migrate deploy` en un entorno recién restaurado y recibes el error `P3005`, ejecuta el baseline manualmente:
+Si ejecutas directamente `npx prisma migrate deploy` y recibes el error `P3005`, ejecuta el baseline manualmente desde `apps/backend`:
 
 ```powershell
-# En apps/backend:
-pnpm prisma:baseline
-# o:
-npx prisma migrate resolve --applied 20260916120000_db_produccion_inicial
+# Siempre incluir --config para que Prisma cargue la URL correctamente:
+npx prisma migrate resolve --applied 20260916120000_db_produccion_inicial --config prisma.config.ts
 ```
 
 Y luego verifica el estado:
 
 ```powershell
-npx prisma migrate status
+npx prisma migrate status --config prisma.config.ts
 ```
 Debe devolver: `Database schema is up to date!`.
 

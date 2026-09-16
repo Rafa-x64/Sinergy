@@ -1,5 +1,13 @@
 node_modules
+dist
+
 # Keep environment variables out of version control
 .env
 
+# Archivos generados por Prisma
 /src/generated/prisma
+
+# Backups de base de datos — contienen datos de producción, nunca al repo.
+# Almacenarlos en un sistema de backup externo (S3, servidor de backups, etc.)
+prisma/*.sql
+prisma/*_backup*.sql
