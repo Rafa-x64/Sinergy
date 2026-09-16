@@ -8,12 +8,13 @@ Instrucciones paso a paso para instalar, configurar y poner en marcha el sistema
 - [Clonar el repositorio](#2-clonar-el-repositorio)
 - [Instalar dependencias](#3-instalar-dependencias)
 - [Configurar variables de entorno](#4-configurar-variables-de-entorno)
-- [Configurar la base de datos](#5-configurar-la-base-de-datos)
-- [Ejecutar las migraciones](#6-ejecutar-las-migraciones)
+- [Configurar y restaurar la base de datos](#5-configurar-y-restaurar-la-base-de-datos)
+- [Configurar Prisma, Generar el Cliente y Ejecutar Migraciones](#6-configurar-prisma-generar-el-cliente-y-ejecutar-migraciones)
 - [Arrancar el sistema](#7-arrancar-el-sistema)
 - [Verificar la instalación](#8-verificar-la-instalación)
-- [Extensiones recomendadas de VS Code](#9-extensiones-recomendadas-de-vs-code)
-- [Solución de problemas comunes](#10-solución-de-problemas-comunes)
+- [Procedimiento de Despliegue y Sincronización Limpia con Main](#9-procedimiento-de-despliegue-y-sincronización-limpia-con-main)
+- [Extensiones recomendadas de VS Code](#10-extensiones-recomendadas-de-vs-code)
+- [Solución de problemas comunes](#11-solución-de-problemas-comunes)
 
 ---
 
@@ -118,23 +119,42 @@ NODE_ENV=development
 
 ---
 
-## 5. Configurar la Base de Datos
+## 5. Configurar y Restaurar la Base de Datos
 
-Primero, crea la base de datos en PostgreSQL. Puedes hacerlo desde la terminal o desde pgAdmin:
+Primero, crea la base de datos en PostgreSQL si aún no existe. Puedes hacerlo desde la terminal o desde pgAdmin:
 
-### Opción A — Desde PowerShell (psql)
+### 5.1 Crear la Base de Datos
+
+#### Opción A — Desde PowerShell / Bash (`psql`)
 
 ```powershell
-psql -U postgres -c "CREATE DATABASE sinergy_db;"
+psql -U postgres -c "CREATE DATABASE Sinergy_produccion;"
 ```
 
-Si pide contraseña, ingresa la que configuraste al instalar PostgreSQL.
+#### Opción B — Desde pgAdmin
 
-### Opción B — Desde pgAdmin
-
-1. Abre pgAdmin y conéctate al servidor local.
+1. Abre pgAdmin y conéctate al servidor.
 2. Haz clic derecho en `Databases` → `Create` → `Database`.
-3. Nombre: `sinergy_db`. Guarda.
+3. Nombre: `Sinergy_produccion`. Guarda.
+
+---
+
+### 5.2 Restaurar el Volcado de Producción (`Sinergy_produccion_backup.sql`)
+
+El repositorio incluye el volcado completo de la base de datos de producción en `apps/backend/prisma/Sinergy_produccion_backup.sql` (formato SQL texto en UTF-8 estándar).
+
+Para restaurarlo en tu PostgreSQL local o servidor:
+
+```powershell
+# En Windows (PowerShell):
+$env:PGPASSWORD='tu_password_aqui'; psql -U postgres -d Sinergy_produccion -f apps\backend\prisma\Sinergy_produccion_backup.sql
+
+# En Linux (Bash / Fish):
+PGPASSWORD='tu_password_aqui' psql -U postgres -d Sinergy_produccion -f apps/backend/prisma/Sinergy_produccion_backup.sql
+```
+
+> [!NOTE]
+> El archivo `Sinergy_produccion_backup.sql` está normalizado en codificación UTF-8 sin BOM, por lo que se ejecuta de forma inmediata en cualquier terminal sin provocar errores de caracteres o fallos de lectura.
 
 ---
 
@@ -147,40 +167,60 @@ El backend de Sinergy utiliza **Prisma ORM 7** con el adaptador desacoplado `@pr
 Cada vez que se clona el proyecto, se instalan dependencias o se modifica `apps/backend/prisma/schema.prisma`, es obligatorio compilar los tipos fuertemente tipados de TypeScript para el cliente:
 
 ```powershell
-# Desde la raíz del monorepo
-pnpm --filter @sinergy/backend prisma:generate
+# Desde la raíz del monorepo (Recomendado):
+pnpm db:generate
 
 # O navegando directamente al backend:
 cd apps\backend
-npx prisma generate
+pnpm prisma:generate
 ```
 
 > [!NOTE]
 > El cliente generado se exporta como singleton en `apps/backend/src/core/prisma.ts`, inyectando el adaptador `PrismaPg` y registrando logs de queries en modo desarrollo.
 
-### 6.2 Aplicar la Migración Inicial (`DB_PRODUCCION_INICIAL`)
+### 6.2 Despliegue de Migraciones en Producción / Staging
 
-La base de datos cuenta con una migración completa y consolidada para producción:
+Sinergy cuenta con un pipeline de migraciones automatizado y resiliente que detecta si la base de datos es nueva o si fue restaurada de un backup previo:
 
-#### Opción 1 — Mediante Prisma Migrate (Recomendada):
-Aplica las migraciones registradas en `apps/backend/prisma/migrations/`:
+#### Comando Universal de Despliegue (Recomendado):
 
-```powershell
-cd apps\backend
-npx prisma migrate deploy
-```
-
-> Para entornos de desarrollo donde desees que Prisma vigile cambios en el esquema:
-> ```powershell
-> npx prisma migrate dev
-> ```
-
-#### Opción 2 — Mediante Script SQL Directo (`DB_PRODUCCION_INICIAL.sql`):
-Si estás desplegando en un servidor sin la CLI de Node/Prisma o prefieres inyección directa vía PostgreSQL:
+Desde la **raíz del monorepo**:
 
 ```powershell
-psql -U postgres -d sinergy_db -f apps\backend\prisma\DB_PRODUCCION_INICIAL.sql
+pnpm db:deploy
 ```
+
+O desde `apps/backend`:
+
+```powershell
+pnpm prisma:deploy
+```
+
+#### ¿Cómo funciona este comando internamente?
+1. Ejecuta `prisma migrate deploy`.
+2. **Si la base de datos es nueva (vacía):** Aplica la migración inicial `20260916120000_db_produccion_inicial` y crea la tabla interna `_prisma_migrations`.
+3. **Si la base de datos fue restaurada de un volcado (Error P3005):** Prisma detecta que ya existen tablas y aborta por seguridad (`The database schema is not empty`). El script captura el error P3005 y ejecuta automáticamente el **baseline**:
+   ```powershell
+   npx prisma migrate resolve --applied 20260916120000_db_produccion_inicial
+   ```
+   Esto registra la estructura existente en `_prisma_migrations` sin intentar re-crear tablas existentes, garantizando que el despliegue termine en verde y permitiendo que migraciones futuras se apliquen secuencialmente.
+
+#### Resolución Manual de Baseline (Si ejecutas Prisma CLI directo):
+Si ejecutas directamente `npx prisma migrate deploy` en un entorno recién restaurado y recibes el error `P3005`, ejecuta el baseline manualmente:
+
+```powershell
+# En apps/backend:
+pnpm prisma:baseline
+# o:
+npx prisma migrate resolve --applied 20260916120000_db_produccion_inicial
+```
+
+Y luego verifica el estado:
+
+```powershell
+npx prisma migrate status
+```
+Debe devolver: `Database schema is up to date!`.
 
 ### 6.3 Exploración Visual con Prisma Studio
 
@@ -270,7 +310,77 @@ Ambos deben completarse sin errores.
 
 ---
 
-## 9. Extensiones Recomendadas de VS Code
+## 9. Procedimiento de Despliegue y Sincronización Limpia con Main
+
+Cuando necesites actualizar un entorno de desarrollo, staging o producción descartando cualquier modificación local, archivo temporal o conflicto de ramas para dejar el proyecto **exactamente idéntico al estado de la rama `main` en remoto**, sigue este procedimiento ordenado:
+
+> [!CAUTION]
+> Los comandos `git reset --hard` y `git clean -fd` destruyen cualquier cambio no comiteado y archivos locales que no estén en el repositorio ni ignorados por `.gitignore`. Asegúrate de tener respaldados tus archivos `.env` antes de ejecutar este proceso.
+
+### Paso 1: Asegurar variables de entorno
+
+Verifica que tus archivos `.env` (`apps/backend/.env` y `apps/frontend/.env`) no estén comprometidos. Dado que están en `.gitignore`, `git reset` no los eliminará, pero es buena práctica mantener una copia de respaldo (`.env.backup`).
+
+### Paso 2: Traer los últimos cambios remotos y forzar reset a `main`
+
+Ejecuta desde la raíz del monorepo:
+
+```powershell
+# 1. Obtener todas las referencias remotas
+git fetch origin
+
+# 2. Asegurarse de estar en la rama main
+git checkout main
+
+# 3. Forzar el árbol de trabajo a coincidir exactamente con origin/main
+git reset --hard origin/main
+
+# 4. Eliminar archivos y carpetas huérfanas o no rastreadas (f: force, d: directorios)
+git clean -fd
+```
+
+> **En Linux (Arch / CachyOS / Ubuntu):**
+> ```bash
+> git fetch origin && git checkout main && git reset --hard origin/main && git clean -fd
+> ```
+
+### Paso 3: Reinstalar dependencias del workspace
+
+```powershell
+pnpm install --ignore-scripts
+```
+
+### Paso 4: Generar el cliente de Prisma y ejecutar el despliegue de migraciones
+
+```powershell
+# Compilar cliente tipado de Prisma
+pnpm db:generate
+
+# Ejecutar despliegue de migraciones (resuelve baseline automáticamente si es necesario)
+pnpm db:deploy
+```
+
+### Paso 5: Compilar artefactos de producción
+
+```powershell
+pnpm build
+```
+
+El frontend quedará compilado en `apps/frontend/dist` y el backend en `apps/backend/dist`.
+
+### Paso 6: Iniciar los servicios
+
+```powershell
+# Para desarrollo:
+pnpm dev
+
+# Para producción (backend compilado):
+pnpm --filter @sinergy/backend start
+```
+
+---
+
+## 10. Extensiones Recomendadas de VS Code
 
 Instala las siguientes extensiones para una experiencia de desarrollo óptima:
 
@@ -295,7 +405,7 @@ Extensions: Show Recommended Extensions
 
 ---
 
-## 10. Solución de Problemas Comunes
+## 11. Solución de Problemas Comunes
 
 ### `ERR_PNPM_IGNORED_BUILDS` al instalar
 
@@ -385,4 +495,32 @@ DB_PASSWORD="tu#password@completo"
 ```powershell
 $env:PGPASSWORD='tu_password'; psql -h 10.10.7.5 -p 5432 -U postgres -d Sinergy_produccion -c "SELECT 1;"
 ```
+
+---
+
+### `Error: P3005 The database schema is not empty` al ejecutar migraciones
+
+**Causa:**
+Ocurre al ejecutar `prisma migrate deploy` sobre una base de datos que fue restaurada desde un volcado (`Sinergy_produccion_backup.sql`) o que ya contenía tablas creadas previamente, pero que aún no tiene la tabla de auditoría `_prisma_migrations`. Por seguridad, Prisma se rehúsa a aplicar migraciones DDL sobre esquemas con tablas no registradas para evitar sobrescrituras accidentales.
+
+**Diagnóstico y Solución:**
+1. Ejecuta el comando automatizado de despliegue:
+   ```powershell
+   # Desde la raíz del monorepo:
+   pnpm db:deploy
+   ```
+   El script `apps/backend/scripts/deploy-migrations.js` detectará automáticamente el error `P3005` y aplicará el baseline sin intervención manual.
+
+2. Si deseas resolver el baseline manualmente vía CLI:
+   ```powershell
+   cd apps\backend
+   npx prisma migrate resolve --applied 20260916120000_db_produccion_inicial
+   npx prisma migrate deploy
+   ```
+3. Verifica que el estado de migraciones quede al día:
+   ```powershell
+   npx prisma migrate status
+   # Salida esperada: Database schema is up to date!
+   ```
+
 

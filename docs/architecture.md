@@ -701,3 +701,16 @@ backend/src/
 * **Por qué:** Garantiza una experiencia de usuario determinista y previene errores donde el técnico confunda componentes o registre valores sobre el equipo equivocado.
 * **Trade-offs:** El usuario percibe un micro-parpadeo hacia el estado vacío antes de que lleguen los nuevos datos, lo cual es preferible a mostrar información desactualizada.
 
+---
+
+### ADR-05: Despliegue Idempotente de Migraciones y Baselining Automático en Prisma ORM
+* **Contexto:** Al realizar despliegues en servidores de producción o pruebas donde la base de datos se restaura a partir de un volcado SQL nativo (`Sinergy_produccion_backup.sql`) o donde ya existen tablas pero no la tabla interna de auditoría `_prisma_migrations`, la ejecución de `prisma migrate deploy` falla con el error `P3005: The database schema is not empty`.
+* **Decisión:** 
+  1. Implementar un orquestador de despliegue (`apps/backend/scripts/deploy-migrations.js`) invocado transversalmente por el comando `pnpm db:deploy`.
+  2. Detectar el error `P3005` y resolver automáticamente la línea base (baseline) ejecutando `prisma migrate resolve --applied 20260916120000_db_produccion_inicial`.
+  3. Re-ejecutar `prisma migrate deploy` para garantizar que cualquier migración incremental futura se aplique de forma secuencial y sin fricciones.
+  4. Mantener los volcados de base de datos (`.sql`) estrictamente codificados en UTF-8 sin BOM para asegurar compatibilidad universal con `psql` en Windows y distribuciones Linux (Arch / CachyOS).
+* **Por qué:** Evita caídas del pipeline de integración continua (CI/CD) o intervenciones manuales tediosas durante el aprovisionamiento de entornos réplica o despliegues en producción.
+* **Trade-offs:** Requiere que la migración inicial consolidada coincida fielmente con el estado estructural del volcado de producción respaldado.
+
+
