@@ -163,32 +163,74 @@ const filaEquipoActual = computed<FilaMatrizLubricacion | undefined>(() => {
   return lubricacionStore.matriz.find((f: FilaMatrizLubricacion) => f.equipoId === equipoSeleccionadoId.value)
 })
 
+// Almacén temporal de borradores de inspección por equipo (mantiene el horómetro y datos únicos de cada máquina al cambiar de equipo)
+interface BorradorInspeccionEquipo {
+  nuevoHorometro: number
+  esReemplazoReloj: boolean
+  justificacionReemplazo: string
+  observacionesRutina: string
+  detalles: FilaDetalleInspeccion[]
+}
+
+const borradoresPorEquipo = ref<Record<number, BorradorInspeccionEquipo>>({})
+const equipoAnteriorId = ref<number | null>(null)
+
+// Guardar el estado actual del equipo anterior antes de cambiar
+function guardarBorradorEquipoActual(idEquipo: number | null) {
+  if (!idEquipo) return
+  borradoresPorEquipo.value[idEquipo] = {
+    nuevoHorometro: nuevoHorometro.value,
+    esReemplazoReloj: esReemplazoReloj.value,
+    justificacionReemplazo: justificacionReemplazo.value,
+    observacionesRutina: observacionesRutina.value,
+    detalles: JSON.parse(JSON.stringify(detallesInspeccion.value))
+  }
+}
+
 // Sincronizar formulario de inspección cuando cambia el equipo de inspección
 watch(
   () => filaEquipoInspeccion.value,
-  (equipo) => {
-    if (equipo) {
-      nuevoHorometro.value = equipo.horometroActual
-      esReemplazoReloj.value = false
-      justificacionReemplazo.value = ''
-      observacionesRutina.value = ''
+  (equipo, equipoPrevio) => {
+    // Si veníamos de otro equipo, guardamos su borrador
+    if (equipoPrevio) {
+      guardarBorradorEquipoActual(equipoPrevio.equipoId)
+    }
 
-      detallesInspeccion.value = equipo.puntos.map((p: PuntoMatriz) => ({
-        puntoId: p.id,
-        nombrePunto: p.nombrePunto,
-        componenteNombre: p.componenteNombre,
-        lubricante: p.lubricante,
-        limiteHorasCambio: p.limiteHorasCambio,
-        horometroUltimoCambio: p.horometroUltimoCambio,
-        capacidadRecomendada: p.capacidadRecomendada,
-        nivelLubricante: 'OK',
-        seRealizoReposicion: false,
-        cantidadRepuesta: 0,
-        seRealizoCambioTotal: false,
-        presentaFuga: false,
-        observacionesFuga: '',
-        observacionesGenerales: ''
-      }))
+    if (equipo) {
+      equipoAnteriorId.value = equipo.equipoId
+
+      // Si ya teníamos un borrador para esta máquina específica, lo restauramos
+      const borrador = borradoresPorEquipo.value[equipo.equipoId]
+      if (borrador) {
+        nuevoHorometro.value = borrador.nuevoHorometro
+        esReemplazoReloj.value = borrador.esReemplazoReloj
+        justificacionReemplazo.value = borrador.justificacionReemplazo
+        observacionesRutina.value = borrador.observacionesRutina
+        detallesInspeccion.value = borrador.detalles
+      } else {
+        // Inicializar con el horómetro único actual de esta máquina
+        nuevoHorometro.value = equipo.horometroActual
+        esReemplazoReloj.value = false
+        justificacionReemplazo.value = ''
+        observacionesRutina.value = ''
+
+        detallesInspeccion.value = equipo.puntos.map((p: PuntoMatriz) => ({
+          puntoId: p.id,
+          nombrePunto: p.nombrePunto,
+          componenteNombre: p.componenteNombre,
+          lubricante: p.lubricante,
+          limiteHorasCambio: p.limiteHorasCambio,
+          horometroUltimoCambio: p.horometroUltimoCambio,
+          capacidadRecomendada: p.capacidadRecomendada,
+          nivelLubricante: 'OK',
+          seRealizoReposicion: false,
+          cantidadRepuesta: 0,
+          seRealizoCambioTotal: false,
+          presentaFuga: false,
+          observacionesFuga: '',
+          observacionesGenerales: ''
+        }))
+      }
     } else {
       detallesInspeccion.value = []
     }
@@ -380,8 +422,10 @@ async function guardarInspeccion() {
   }
 
   try {
+    const idGuardado = filaEquipoInspeccion.value.equipoId
     await lubricacionStore.registrarRutina(payload)
     toast.success('Inspección de lubricación registrada con éxito.')
+    delete borradoresPorEquipo.value[idGuardado]
     equipoInspeccionId.value = null
     await lubricacionStore.cargarMatriz()
   } catch (err: unknown) {
@@ -576,7 +620,7 @@ async function guardarInspeccion() {
 
                     <!-- Parte a Lubricar -->
                     <td>
-                      <span class="font-weight-bold text-body-2 text-primary">
+                      <span class="font-weight-bold text-body-2 nombre-punto-destacado">
                         {{ parte.nombrePunto }}
                       </span>
                     </td>
@@ -1191,7 +1235,16 @@ async function guardarInspeccion() {
   width: 100%;
 }
 
-/* Encabezados de tabla de lubricación: Modo Claro por defecto (coherente con el resto del sistema) */
+.nombre-punto-destacado {
+  color: #4338ca;
+}
+
+:global(.v-theme--sinergyDarkTheme) .nombre-punto-destacado,
+.v-theme--sinergyDarkTheme .nombre-punto-destacado {
+  color: #818cf8 !important;
+}
+
+/* Encabezados de tabla de lubricación: Modo Claro */
 .tabla-excel-lubricacion :deep(thead th),
 .tabla-inspeccion-lubricacion :deep(thead th),
 .tabla-scroll-wrapper :deep(thead th) {
@@ -1200,28 +1253,28 @@ async function guardarInspeccion() {
   letter-spacing: 0.03em !important;
   text-transform: uppercase !important;
   white-space: nowrap !important;
-  background-color: #f1f5f9 !important;
-  color: #1e293b !important;
-  border-bottom: 2px solid #cbd5e1 !important;
+  background-color: #f8fafc !important;
+  color: #334155 !important;
+  border-bottom: 2px solid #e2e8f0 !important;
 }
 
-/* Modo Oscuro: cuando la clase de tema oscuro está activa */
+/* Modo Oscuro: encabezados refinados y elegantes */
 :global(.v-theme--sinergyDarkTheme) .tabla-excel-lubricacion :deep(thead th),
 :global(.v-theme--sinergyDarkTheme) .tabla-inspeccion-lubricacion :deep(thead th),
 :global(.v-theme--sinergyDarkTheme) .tabla-scroll-wrapper :deep(thead th),
 .v-theme--sinergyDarkTheme .tabla-excel-lubricacion :deep(thead th),
 .v-theme--sinergyDarkTheme .tabla-inspeccion-lubricacion :deep(thead th),
 .v-theme--sinergyDarkTheme .tabla-scroll-wrapper :deep(thead th) {
-  background-color: #1e2635 !important;
-  color: #f8fafc !important;
-  border-bottom: 2px solid #334155 !important;
+  background-color: #162035 !important;
+  color: #e2e8f0 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
 /* Celdas del cuerpo de la tabla */
 .tabla-excel-lubricacion :deep(tbody td),
 .tabla-inspeccion-lubricacion :deep(tbody td) {
   font-size: 0.875rem !important;
-  border-bottom: 1px solid rgba(var(--v-border-color), 0.15) !important;
+  border-bottom: 1px solid #f1f5f9 !important;
 }
 
 :global(.v-theme--sinergyDarkTheme) .tabla-excel-lubricacion :deep(tbody td),
@@ -1229,6 +1282,7 @@ async function guardarInspeccion() {
 .v-theme--sinergyDarkTheme .tabla-excel-lubricacion :deep(tbody td),
 .v-theme--sinergyDarkTheme .tabla-inspeccion-lubricacion :deep(tbody td) {
   color: #f1f5f9 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
 }
 
 .celda-input {
@@ -1238,10 +1292,10 @@ async function guardarInspeccion() {
 }
 
 .fila-critica {
-  background-color: rgba(var(--v-theme-error), 0.06);
+  background-color: rgba(244, 63, 94, 0.08) !important;
 }
 
 .fila-fuga {
-  background-color: rgba(var(--v-theme-warning), 0.08);
+  background-color: rgba(245, 158, 11, 0.09) !important;
 }
 </style>

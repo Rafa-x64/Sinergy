@@ -1,21 +1,21 @@
-import { TipoLubricante, NivelLubricante, UnidadMedidaLubricante, OrigenLecturaHorometro } from '@prisma/client'
+import { NivelLubricante, OrigenLecturaHorometro } from '@prisma/client'
 
 // DTO para registrar un lubricante en el catálogo maestro
 export interface CrearLubricanteDTO {
   codigo: string
   nombre: string
   marca?: string
-  tipo: TipoLubricante
+  tipo: string
   viscosidad?: string
-  unidadMedida?: UnidadMedidaLubricante
+  unidadMedida?: string
 }
 
 export interface EditarLubricanteDTO {
   nombre?: string
   marca?: string
-  tipo?: TipoLubricante
+  tipo?: string
   viscosidad?: string
-  unidadMedida?: UnidadMedidaLubricante
+  unidadMedida?: string
   activo?: boolean
 }
 

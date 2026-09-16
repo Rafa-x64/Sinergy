@@ -12,7 +12,6 @@ import {
   RegistrarRutinaDTO,
   FiltroReportesDTO
 } from './lubricacion.schemas'
-import { TipoLubricante } from '@prisma/client'
 
 export const lubricacionController = {
   // ─── CATÁLOGO DE LUBRICANTES ───────────────────────────────────────────────
@@ -47,11 +46,8 @@ export const lubricacionController = {
       if (!nombre || typeof nombre !== 'string' || !nombre.trim()) {
         return res.status(400).json({ status: 'error', message: 'El nombre del lubricante es requerido' })
       }
-      if (!tipo || !Object.values(TipoLubricante).includes(tipo)) {
-        return res.status(400).json({
-          status: 'error',
-          message: `El tipo de lubricante es inválido. Valores permitidos: ${Object.values(TipoLubricante).join(', ')}`
-        })
+      if (!tipo || typeof tipo !== 'string' || !tipo.trim()) {
+        return res.status(400).json({ status: 'error', message: 'El tipo de lubricante es requerido' })
       }
 
       const nuevo = await lubricacionService.crearLubricante({

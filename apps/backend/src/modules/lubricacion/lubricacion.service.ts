@@ -16,7 +16,7 @@ import {
   ReporteFugaDTO,
   ReporteConsumoDTO
 } from './lubricacion.schemas'
-import { Prisma, TipoLubricante, UnidadMedidaLubricante, OrigenLecturaHorometro, NivelLubricante } from '@prisma/client'
+import { Prisma, OrigenLecturaHorometro, NivelLubricante } from '@prisma/client'
 import { notificationService } from '../notificaciones/notification.service'
 
 function normalizarNivelLubricante(nivel?: string): NivelLubricante {
@@ -58,7 +58,7 @@ export const lubricacionService = {
         marca: dto.marca ? dto.marca.trim() : null,
         tipo: dto.tipo,
         viscosidad: dto.viscosidad ? dto.viscosidad.trim() : null,
-        unidadMedida: dto.unidadMedida ?? UnidadMedidaLubricante.LITROS,
+        unidadMedida: dto.unidadMedida ?? 'Litros',
         activo: true
       }
     })
@@ -398,49 +398,49 @@ export const lubricacionService = {
         codigo: 'MOBIL-DTE-24',
         nombre: 'Mobil DTE 24',
         marca: 'Mobil',
-        tipo: TipoLubricante.ACEITE,
+        tipo: 'Aceite Hidráulico',
         viscosidad: 'ISO VG 32',
-        unidadMedida: UnidadMedidaLubricante.LITROS
+        unidadMedida: 'Litros'
       },
       {
         codigo: 'MOBIL-DTE-25',
         nombre: 'Mobil DTE 25',
         marca: 'Mobil',
-        tipo: TipoLubricante.ACEITE,
+        tipo: 'Aceite Hidráulico',
         viscosidad: 'ISO VG 46',
-        unidadMedida: UnidadMedidaLubricante.LITROS
+        unidadMedida: 'Litros'
       },
       {
         codigo: 'MOBIL-DTE-26',
         nombre: 'Mobil DTE 26',
         marca: 'Mobil',
-        tipo: TipoLubricante.ACEITE,
+        tipo: 'Aceite Hidráulico',
         viscosidad: 'ISO VG 68',
-        unidadMedida: UnidadMedidaLubricante.LITROS
+        unidadMedida: 'Litros'
       },
       {
         codigo: 'MOBILGEAR-600-220',
         nombre: 'Mobilgear 600 XP 220',
         marca: 'Mobil',
-        tipo: TipoLubricante.ACEITE,
+        tipo: 'Aceite para Engranajes',
         viscosidad: 'ISO VG 220',
-        unidadMedida: UnidadMedidaLubricante.LITROS
+        unidadMedida: 'Litros'
       },
       {
         codigo: 'SHELL-GADUS-S2',
         nombre: 'Shell Gadus S2 V220 2',
         marca: 'Shell',
-        tipo: TipoLubricante.GRASA,
+        tipo: 'Grasa Extrema Presión',
         viscosidad: 'NLGI 2',
-        unidadMedida: UnidadMedidaLubricante.KILOGRAMOS
+        unidadMedida: 'Kg'
       },
       {
         codigo: 'MOBILITH-SHC-220',
         nombre: 'Mobilith SHC 220',
         marca: 'Mobil',
-        tipo: TipoLubricante.GRASA,
+        tipo: 'Grasa Extrema Presión',
         viscosidad: 'NLGI 2',
-        unidadMedida: UnidadMedidaLubricante.KILOGRAMOS
+        unidadMedida: 'Kg'
       }
     ]
 
