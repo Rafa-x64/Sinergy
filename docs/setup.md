@@ -109,18 +109,18 @@ PORT=3000
 NODE_ENV=development
 ```
 
-#### Caso B — Base de datos REMOTA (servidor externo en red, ej: `10.10.7.5`)
+#### Caso B — Base de datos REMOTA (servidor externo en red, ej: `<IP_SERVIDOR_REMOTO>`)
 
 ```env
-DB_HOST=10.10.7.5
+DB_HOST=<IP_SERVIDOR_REMOTO>
 DB_PORT=5432
 DB_USER=postgres
-DB_PASSWORD="Tub.#2026#ric@"
+DB_PASSWORD="<tu_password_con_especiales>"
 DB_NAME=Sinergy_produccion
 
 # En este caso SÍ se debe definir DATABASE_URL con la contraseña codificada en URL:
 # Los caracteres especiales se codifican: # → %23   @ → %40   : → %3A
-DATABASE_URL="postgresql://postgres:Tub.%232026%23ric%40@10.10.7.5:5432/Sinergy_produccion?schema=public"
+DATABASE_URL="postgresql://postgres:<password_url_encoded>@<IP_SERVIDOR_REMOTO>:5432/Sinergy_produccion?schema=public"
 
 PORT=3000
 NODE_ENV=development
@@ -152,9 +152,9 @@ NODE_ENV=development
 psql -U postgres -c "CREATE DATABASE Sinergy_produccion ENCODING 'UTF8' LC_COLLATE='C' LC_CTYPE='C' TEMPLATE template0;"
 ```
 
-**En servidor REMOTO (`10.10.7.5`):**
+**En servidor REMOTO (`<IP_SERVIDOR_REMOTO>`):**
 ```powershell
-$env:PGPASSWORD='Tub.#2026#ric@'; psql -h 10.10.7.5 -p 5432 -U postgres -c "CREATE DATABASE Sinergy_produccion ENCODING 'UTF8' LC_COLLATE='C' LC_CTYPE='C' TEMPLATE template0;"
+$env:PGPASSWORD='<tu_password>'; psql -h <IP_SERVIDOR_REMOTO> -p 5432 -U postgres -c "CREATE DATABASE Sinergy_produccion ENCODING 'UTF8' LC_COLLATE='C' LC_CTYPE='C' TEMPLATE template0;"
 ```
 
 #### Opción B — Desde pgAdmin
@@ -180,14 +180,14 @@ $env:PGPASSWORD='Tub.#2026#ric@'; psql -h 10.10.7.5 -p 5432 -U postgres -c "CREA
 $env:PGPASSWORD='tu_password'; psql -h localhost -U postgres -d Sinergy_produccion --set=client_encoding=UTF8 -f C:\ruta\al\backup.sql
 ```
 
-#### En servidor REMOTO (`10.10.7.5`):
+#### En servidor REMOTO (`<IP_SERVIDOR_REMOTO>`):
 ```powershell
-$env:PGPASSWORD='Tub.#2026#ric@'; psql -h 10.10.7.5 -p 5432 -U postgres -d Sinergy_produccion --set=client_encoding=UTF8 -f C:\ruta\al\backup.sql
+$env:PGPASSWORD='<tu_password>'; psql -h <IP_SERVIDOR_REMOTO> -p 5432 -U postgres -d Sinergy_produccion --set=client_encoding=UTF8 -f C:\ruta\al\backup.sql
 ```
 
 #### En Linux (Bash / Fish) — servidor remoto:
 ```bash
-PGPASSWORD='Tub.#2026#ric@' psql -h 10.10.7.5 -p 5432 -U postgres -d Sinergy_produccion --set=client_encoding=UTF8 -f /ruta/al/backup.sql
+PGPASSWORD='<tu_password>' psql -h <IP_SERVIDOR_REMOTO> -p 5432 -U postgres -d Sinergy_produccion --set=client_encoding=UTF8 -f /ruta/al/backup.sql
 ```
 
 > [!NOTE]
@@ -533,7 +533,7 @@ DB_PASSWORD="tu#password@completo"
 2. Comprueba que `DATABASE_URL` use caracteres URL-encoded para la contraseña (`encodeURIComponent`).
 3. Comprueba conectividad directa con `psql` para descartar bloqueos de usuario o pg_hba:
 ```powershell
-$env:PGPASSWORD='tu_password'; psql -h 10.10.7.5 -p 5432 -U postgres -d Sinergy_produccion -c "SELECT 1;"
+$env:PGPASSWORD='<tu_password>'; psql -h <IP_SERVIDOR_REMOTO> -p 5432 -U postgres -d Sinergy_produccion -c "SELECT 1;"
 ```
 
 ---
