@@ -1,3 +1,7 @@
+-- Encoding: UTF-8
+-- Este archivo debe mantenerse en UTF-8. No editar con editores que cambien el encoding.
+SET client_encoding = 'UTF8';
+
 -- CreateSchema
 CREATE SCHEMA IF NOT EXISTS "public";
 
@@ -280,7 +284,7 @@ CREATE TABLE "notifications" (
     "usuario_id" INTEGER,
     "tipo" "NotificationType" NOT NULL,
     "categoria" "CategoriaNotificacion" NOT NULL DEFAULT 'AUDITORIA_SISTEMA',
-    "titulo" VARCHAR(150) NOT NULL DEFAULT 'Notificaci├│n del Sistema',
+    "titulo" VARCHAR(150) NOT NULL DEFAULT 'Notificación del Sistema',
     "mensaje" TEXT NOT NULL,
     "entidad_afectada" VARCHAR(50),
     "entidad_id" VARCHAR(100),
