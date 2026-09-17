@@ -471,14 +471,14 @@ async function guardarInspeccion() {
     <v-tabs v-model="pestanaActiva" color="primary" class="mb-4">
       <v-tab value="partes">
         <v-icon start>mdi-table-edit</v-icon>
-        Partes a Lubricar (Matriz Excel)
+        Partes a Lubricar
         <v-chip v-if="filaEquipoActual" size="x-small" class="ms-2" color="primary" variant="tonal">
           {{ filaEquipoActual.puntos.length }}
         </v-chip>
       </v-tab>
       <v-tab value="inspeccion">
         <v-icon start>mdi-clipboard-check-outline</v-icon>
-        (Inspección) de Lubricación
+        Inspección de Lubricación
       </v-tab>
     </v-tabs>
 
