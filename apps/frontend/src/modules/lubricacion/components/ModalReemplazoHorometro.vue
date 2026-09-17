@@ -56,13 +56,14 @@ function cancelar() {
           El sistema protege la integridad impidiendo el retroceso no justificado.
         </p>
 
-        <div class="d-flex justify-space-between align-center pa-3 mb-3 rounded border" style="background-color: rgb(var(--v-theme-surface-variant));">
-          <div>
+        <div class="d-flex flex-column flex-sm-row justify-space-between align-center pa-3 mb-3 rounded border gap-2" style="background-color: rgb(var(--v-theme-surface-variant));">
+          <div class="text-center text-sm-start">
             <div class="text-caption text-muted">Último Horómetro</div>
             <div class="text-h6 font-weight-bold text-error">{{ horometroActual.toLocaleString() }} hrs</div>
           </div>
-          <v-icon color="grey">mdi-arrow-right-bold</v-icon>
-          <div>
+          <v-icon color="grey" class="d-none d-sm-block">mdi-arrow-right-bold</v-icon>
+          <v-icon color="grey" class="d-block d-sm-none">mdi-arrow-down-bold</v-icon>
+          <div class="text-center text-sm-end">
             <div class="text-caption text-muted">Nuevo Valor Ingresado</div>
             <div class="text-h6 font-weight-bold text-primary">{{ nuevoHorometro.toLocaleString() }} hrs</div>
           </div>
@@ -74,7 +75,7 @@ function cancelar() {
           placeholder="Ej: Reemplazo por daño mecánico en tacómetro, reloj nuevo instalado a cero."
           rows="3"
           variant="outlined"
-          density="comfortable"
+          density="compact"
           :error-messages="errorTexto"
           hint="Esta justificación quedará registrada de forma auditable en el sistema"
           persistent-hint
@@ -83,12 +84,12 @@ function cancelar() {
 
       <v-divider class="my-0" />
 
-      <v-card-actions class="px-4 py-3">
-        <v-spacer />
-        <v-btn variant="text" color="grey-darken-1" @click="cancelar">
+      <v-card-actions class="px-3 px-sm-4 py-3 d-flex flex-column-reverse flex-sm-row gap-2">
+        <v-spacer class="d-none d-sm-block" />
+        <v-btn variant="text" color="grey-darken-1" class="w-100 w-sm-auto" @click="cancelar">
           Cancelar y Corregir
         </v-btn>
-        <v-btn color="warning" variant="flat" @click="confirmar">
+        <v-btn color="warning" variant="flat" class="w-100 w-sm-auto text-none font-weight-bold" @click="confirmar">
           Confirmar Reemplazo de Reloj
         </v-btn>
       </v-card-actions>
