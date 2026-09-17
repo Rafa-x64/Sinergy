@@ -89,3 +89,68 @@
 
 /* ─── Chips ─────────────────────────────────────────────────────────── */
 .v-theme--sinergyDarkTheme .v-chip { letter-spacing: 0.3px; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Responsividad Global y Optimización de Controles Móviles (<= 600px)
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 600px) {
+  /* Escala base más compacta */
+  :root {
+    font-size: 14px;
+  }
+
+  /* Reducir altura y padding de controles Vuetify (inputs, selects, textareas) */
+  .v-field--density-comfortable {
+    --v-field-padding-bottom: 4px;
+    --v-field-padding-top: 4px;
+  }
+
+  .v-field__input {
+    min-height: 38px !important;
+    font-size: 0.875rem !important;
+    padding-top: 6px !important;
+    padding-bottom: 6px !important;
+  }
+
+  .v-input--density-compact .v-field__input {
+    min-height: 34px !important;
+    font-size: 0.8125rem !important;
+  }
+
+  /* Botones adaptables */
+  .v-btn {
+    letter-spacing: 0.02em;
+  }
+
+  .v-btn--size-large {
+    font-size: 0.875rem !important;
+    min-height: 40px !important;
+    padding: 0 16px !important;
+  }
+
+  /* Tablas responsivas más compactas */
+  .v-table {
+    font-size: 0.8125rem !important;
+  }
+
+  .v-table .v-table__wrapper table thead th {
+    font-size: 0.75rem !important;
+    padding: 6px 8px !important;
+    height: 38px !important;
+  }
+
+  .v-table .v-table__wrapper table tbody td {
+    font-size: 0.8125rem !important;
+    padding: 6px 8px !important;
+    height: auto !important;
+  }
+
+  /* Contenedores y tarjetas */
+  .v-card-text {
+    padding: 12px !important;
+  }
+
+  .v-card-actions {
+    padding: 8px 12px !important;
+  }
+}

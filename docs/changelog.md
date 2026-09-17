@@ -17,6 +17,12 @@ El formato sigue el estándar [Keep a Changelog](https://keepachangelog.com/es/1
 ## [Unreleased]
 
 ### Fixed
+- **Responsividad Móvil Global y Optimización de Controles (`fix: responsive-mobile-controls-lubricacion`)**:
+  - **Botón de Guardado y Acciones de Inspección**: Ajustado el botón *"Registrar Inspección de Lubricación"* en `MatrizLubricacionView.vue` a un diseño adaptable (`w-100` en móviles, `size="default"`, `text-wrap` sin mayúsculas rígidas), eliminando el desbordamiento horizontal en pantallas pequeñas.
+  - **Compactación y Escala Móvil Global (`theme.css`)**: Implementadas reglas CSS responsivas bajo `@media (max-width: 600px)` para compactar la altura mínima de inputs, autocompletados y selectores (`min-height: 34px - 38px`), reducir paddings en tablas (`6px 8px`) y botones, y ajustar la tipografía base, beneficiando a todos los módulos del sistema de manera transversal.
+  - **Densidad de Formularios y Modales**: Refactorizados los componentes `ModalParteLubricar.vue` y `ModalReemplazoHorometro.vue` con `density="compact"` y botones apilables verticalmente en móvil, evitando scroll horizontal forzado.
+  - **Campo de Horómetro Dinámico**: Contenedor flexible para el valor de horómetro y chip de estado de tacómetro con soporte de `flex-wrap`.
+
 - **Despliegue Resiliente de Migraciones y Resolución Automática de Baseline (Error P3005)** (`fix: prisma-migrate-baseline-and-deploy`):
   - **Script de Despliegue Inteligente (`apps/backend/scripts/deploy-migrations.js`)**: Automatiza el flujo de `prisma migrate deploy` capturando el error `P3005` (`The database schema is not empty`) cuando se despliega sobre una base de datos restaurada de un volcado o preexistente. Aplica automáticamente la línea base (baseline) mediante `prisma migrate resolve --applied 20260916120000_db_produccion_inicial` y reanuda el despliegue sin bloquear el pipeline.
   - **Comandos de Workspace**: Incorporados scripts `pnpm db:deploy` y `pnpm db:generate` en la raíz del monorepo, y `prisma:deploy`, `prisma:baseline` y `prisma:generate` en `apps/backend/package.json`.

@@ -304,7 +304,7 @@ function cerrar() {
               label="Equipo / Máquina *"
               placeholder="Seleccione o busque equipo..."
               variant="outlined"
-              density="comfortable"
+              density="compact"
               item-title="title"
               item-value="value"
               auto-select-first
@@ -328,7 +328,7 @@ function cerrar() {
               label="Componente Mecánico"
               placeholder="Seleccione existente..."
               variant="outlined"
-              density="comfortable"
+              density="compact"
               clearable
               item-title="title"
               item-value="value"
@@ -361,7 +361,7 @@ function cerrar() {
               label="Parte o Punto a Lubricar *"
               placeholder="Ej: Rodamientos, Chumacera, Cárter"
               variant="outlined"
-              density="comfortable"
+              density="compact"
               prepend-inner-icon="mdi-target"
               hint="Nombre identificativo de la parte a intervenir."
               persistent-hint
@@ -426,7 +426,7 @@ function cerrar() {
               label="Lubricante Asignado *"
               placeholder="Buscar por marca, código o viscosidad..."
               variant="outlined"
-              density="comfortable"
+              density="compact"
               item-title="title"
               item-value="value"
               auto-select-first
@@ -467,7 +467,7 @@ function cerrar() {
               min="1"
               label="Frecuencia Límite (Horas) *"
               variant="outlined"
-              density="comfortable"
+              density="compact"
               prepend-inner-icon="mdi-clock-outline"
               suffix="hrs"
               hint="Horas de trabajo permitidas para el ciclo."
@@ -503,7 +503,7 @@ function cerrar() {
               label="Capacidad Recomendada (Opcional)"
               placeholder="Ej: 0.5, 3.5"
               variant="outlined"
-              density="comfortable"
+              density="compact"
               prepend-inner-icon="mdi-cup-water"
               :suffix="lubricanteSeleccionado ? lubricanteSeleccionado.unidadMedida.toLowerCase() : 'und'"
               hint="Dosis recomendada para reponer o rellenar."

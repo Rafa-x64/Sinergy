@@ -437,7 +437,7 @@ async function guardarInspeccion() {
 </script>
 
 <template>
-  <v-container fluid class="pa-4 pa-md-6">
+  <v-container fluid class="pa-2 pa-sm-4 pa-md-6">
     <!-- Encabezado de Página -->
     <div class="d-flex flex-column flex-md-row justify-space-between align-start align-md-center mb-4 gap-3">
       <div>
@@ -884,8 +884,8 @@ async function guardarInspeccion() {
               </div>
 
               <!-- Input Reactivo de Horómetro -->
-              <div class="d-flex align-center gap-3 w-100 w-md-auto">
-                <div style="min-width: 240px;">
+              <div class="d-flex align-center gap-2 flex-wrap w-100 w-md-auto">
+                <div class="flex-grow-1 flex-md-grow-0" style="min-width: 180px; max-width: 100%;">
                   <v-text-field
                     v-model.number="nuevoHorometro"
                     type="number"
@@ -1049,20 +1049,20 @@ async function guardarInspeccion() {
                         :items="opcionesNivelLubricante"
                         item-title="title"
                         item-value="value"
-                        density="comfortable"
+                        density="compact"
                         variant="outlined"
                         hide-details
-                        style="min-width: 150px;"
+                        style="min-width: 135px;"
                       />
                     </td>
 
                     <!-- Reposición -->
                     <td class="celda-input">
-                      <div class="d-flex align-center gap-2">
+                      <div class="d-flex align-center gap-1">
                         <v-checkbox
                           v-model="detalle.seRealizoReposicion"
                           hide-details
-                          density="comfortable"
+                          density="compact"
                           color="primary"
                           @update:model-value="(val) => {
                             if (!val) {
@@ -1078,10 +1078,10 @@ async function guardarInspeccion() {
                           type="number"
                           min="0.01"
                           step="0.01"
-                          density="comfortable"
+                          density="compact"
                           variant="outlined"
                           hide-details
-                          style="min-width: 105px; max-width: 125px;"
+                          style="min-width: 95px; max-width: 115px;"
                           :suffix="detalle.lubricante.unidadMedida.slice(0, 3).toLowerCase()"
                           @keydown="(e: KeyboardEvent) => { if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') e.preventDefault() }"
                           @update:model-value="(val) => { if (val !== null && val !== undefined && Number(val) < 0) detalle.cantidadRepuesta = Math.abs(Number(val)) }"
@@ -1096,17 +1096,17 @@ async function guardarInspeccion() {
                           v-model="detalle.presentaFuga"
                           color="error"
                           hide-details
-                          density="comfortable"
+                          density="compact"
                           :label="detalle.presentaFuga ? 'Fuga detectada' : 'Sin fuga'"
                         />
                         <v-text-field
                           v-if="detalle.presentaFuga"
                           v-model="detalle.observacionesFuga"
                           placeholder="Detalle de fuga *"
-                          density="comfortable"
+                          density="compact"
                           variant="outlined"
                           hide-details
-                          style="min-width: 160px;"
+                          style="min-width: 150px;"
                         />
                       </div>
                     </td>
@@ -1118,7 +1118,7 @@ async function guardarInspeccion() {
                         label="Cambio Total"
                         color="info"
                         hide-details
-                        density="comfortable"
+                        density="compact"
                         hint="Reinicia horas"
                         persistent-hint
                       />
@@ -1129,10 +1129,10 @@ async function guardarInspeccion() {
                       <v-text-field
                         v-model="detalle.observacionesGenerales"
                         placeholder="Notas..."
-                        density="comfortable"
+                        density="compact"
                         variant="outlined"
                         hide-details
-                        style="min-width: 180px;"
+                        style="min-width: 160px;"
                       />
                     </td>
                   </tr>
@@ -1142,9 +1142,9 @@ async function guardarInspeccion() {
           </v-card-text>
 
           <!-- Pie con Guardado Transaccional de la Inspección -->
-          <v-card-actions v-if="detallesInspeccion.length > 0" class="px-4 py-3">
-            <v-row dense align="center" class="w-100">
-              <v-col cols="12" md="7">
+          <v-card-actions v-if="detallesInspeccion.length > 0" class="px-3 px-sm-4 py-3">
+            <v-row dense align="center" class="w-100 ma-0">
+              <v-col cols="12" md="7" class="pa-1">
                 <v-text-field
                   v-model="observacionesRutina"
                   label="Observaciones Generales de la Inspección"
@@ -1154,12 +1154,14 @@ async function guardarInspeccion() {
                   hide-details
                 />
               </v-col>
-              <v-col cols="12" md="5" class="d-flex justify-end gap-2">
+              <v-col cols="12" md="5" class="pa-1 d-flex justify-stretch justify-md-end">
                 <v-btn
                   color="primary"
                   variant="flat"
-                  size="large"
+                  size="default"
                   prepend-icon="mdi-content-save-check"
+                  class="w-100 w-md-auto text-wrap py-2 text-none font-weight-bold"
+                  style="min-height: 40px; height: auto;"
                   :loading="lubricacionStore.guardandoRutina"
                   @click="guardarInspeccion"
                 >
@@ -1299,5 +1301,12 @@ async function guardarInspeccion() {
 
 .fila-fuga {
   background-color: rgba(245, 158, 11, 0.09) !important;
+}
+
+@media (max-width: 600px) {
+  .celda-input {
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+  }
 }
 </style>
