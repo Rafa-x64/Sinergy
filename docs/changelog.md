@@ -17,6 +17,12 @@ El formato sigue el estándar [Keep a Changelog](https://keepachangelog.com/es/1
 ## [Unreleased]
 
 ### Fixed
+- **Deduplicación y Sincronización Idempotente de Variables Críticas (`fix: deduplicacion-sincronizacion-variables-criticas`)**:
+  - **Deduplicación de Plantillas en Origen**: Se normalizan los nombres de variables y se da prioridad a la plantilla específica del componente sobre la genérica (`nombreComponente = null`), evitando generar múltiples variables idénticas para un mismo concepto.
+  - **Saneamiento Automático de Duplicados en Base de Datos**: Al sincronizar un componente, el servicio detecta si existían duplicados previos en la BD, conserva una única instancia canónica activa y desactiva (`activa = false`) las réplicas sobrantes.
+  - **Sanitización de Opciones de Selección (`skipDuplicates`)**: Se deduplican las claves de opciones de selección (`sanitizarOpcionesVariable`) antes de invocar `tx.opcionSeleccion.createMany` con `skipDuplicates: true`, previniendo errores de violación de restricción única (`uq_variable_clave`) y rollbacks en la transacción de sincronización.
+  - **Sincronización Segura en Creación de Plantillas (`crearPlantilla`)**: Se verifica previamente si el componente ya posee una variable con ese nombre para actualizar su enlace (`plantillaId`) en lugar de insertar una nueva fila duplicada.
+
 - **Responsividad Móvil Global y Optimización de Controles (`fix: responsive-mobile-controls-lubricacion`)**:
   - **Botón de Guardado y Acciones de Inspección**: Ajustado el botón *"Registrar Inspección de Lubricación"* en `MatrizLubricacionView.vue` a un diseño adaptable (`w-100` en móviles, `size="default"`, `text-wrap` sin mayúsculas rígidas), eliminando el desbordamiento horizontal en pantallas pequeñas.
   - **Compactación y Escala Móvil Global (`theme.css`)**: Implementadas reglas CSS responsivas bajo `@media (max-width: 600px)` para compactar la altura mínima de inputs, autocompletados y selectores (`min-height: 34px - 38px`), reducir paddings en tablas (`6px 8px`) y botones, y ajustar la tipografía base, beneficiando a todos los módulos del sistema de manera transversal.

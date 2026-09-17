@@ -54,9 +54,11 @@ onMounted(() => {
 
     <v-main>
       <RouterView />
+      <!-- footer para cambio de tema
       <v-footer v-if="!ocultarLayout">
         <ThemeToggle></ThemeToggle>
       </v-footer>
+      -->
     </v-main>
   </v-app>
 </template>
