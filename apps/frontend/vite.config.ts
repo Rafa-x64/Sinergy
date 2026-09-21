@@ -37,22 +37,10 @@ export default defineConfig(({ mode }) => {
       },
     },
     build: {
-      chunkSizeWarningLimit: 600,
-      rollupOptions: {
-        output: {
-          manualChunks(id: string) {
-            if (id.includes('node_modules')) {
-              if (id.includes('echarts') || id.includes('apexcharts') || id.includes('chart.js')) {
-                return 'vendor-charts'
-              }
-              if (id.includes('xlsx') || id.includes('jspdf') || id.includes('html2canvas')) {
-                return 'vendor-docs'
-              }
-              return 'vendor'
-            }
-          },
-        },
-      },
+      // Vite resuelve el code-splitting automaticamente sin riesgo de dependencias circulares.
+      // El manualChunks previo generaba: Circular chunk vendor-charts -> vendor -> vendor-charts
+      // lo que causaba ReferenceError en runtime al cargar la app compilada.
+      chunkSizeWarningLimit: 1500,
     },
   }
 })
