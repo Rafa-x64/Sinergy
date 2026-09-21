@@ -11,6 +11,7 @@ param(
 
 # Pre-computar rutas absolutas para evitar problemas de interpolacion en Start-Process
 $ROOT         = $PSScriptRoot
+$BACKEND_DIR  = Join-Path $ROOT "apps\backend"
 $BACKEND_ENTRY = Join-Path $ROOT "apps\backend\dist\src\index.js"
 $FRONTEND_DIR  = Join-Path $ROOT "apps\frontend"
 
@@ -39,6 +40,7 @@ Write-Host ""
 # ─── Backend: generar script temporal y ejecutarlo en nueva ventana ───────────
 $backendScript = Join-Path $env:TEMP "sinergy-backend.ps1"
 Set-Content -Path $backendScript -Value @"
+Set-Location "$BACKEND_DIR"
 `$env:PORT = '$BackendPort'
 node "$BACKEND_ENTRY"
 "@

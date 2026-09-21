@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import './core/env';
 import httpServer from './core/server';
 import prisma from './core/prisma';
 
