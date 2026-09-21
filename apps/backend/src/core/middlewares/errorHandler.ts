@@ -10,12 +10,17 @@ export const errorHandler = (err: Error, req: Request, res: Response, next: Next
     message = err.message;
   }
   
+  if (statusCode >= 500) {
+    console.error(`[SERVER ERROR] ${req.method} ${req.originalUrl}:`, err);
+  }
+
   // En desarrollo mostramos el stack solo para errores de servidor (500+), ocultándolo en errores del cliente (4xx)
   const isDev = process.env.NODE_ENV !== 'production';
   const showStack = isDev && statusCode >= 500;
 
   res.status(statusCode).json({
     status: 'error',
-    message
+    message,
+    ...(showStack && { stack: err.stack }),
   });
 };
