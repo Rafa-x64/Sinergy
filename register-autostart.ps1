@@ -13,7 +13,7 @@
 # ============================================================
 
 param(
-    [int]$BackendPort  = 3080,
+    [int]$BackendPort  = 3010,
     [int]$FrontendPort = 4173
 )
 
