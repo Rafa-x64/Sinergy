@@ -301,17 +301,48 @@ pnpm dev:frontend
 pnpm dev:backend
 ```
 
-### Producción
+### Producción (Scripts Automatizados)
+
+#### Opción A — Script PowerShell Universal (Recomendado en Windows)
+
+Sinergy incluye un script que arranca automáticamente el backend compilado y el servidor de preview optimizado con proxy inverso configurado:
 
 ```powershell
-# Compilar ambos proyectos
+# 1. Compilar ambos proyectos (si no se ha hecho previamente)
 pnpm build
 
-# El frontend compilado queda en: apps/frontend/dist/
-# El backend compilado queda en: apps/backend/dist/
+# 2. Iniciar con puertos por defecto (Backend: 3080, Frontend: 4173)
+.\start-sinergy.ps1
 
-# Iniciar el backend compilado
-pnpm --filter @sinergy/backend start
+# O especificando los puertos que desees sin recompilar:
+.\start-sinergy.ps1 -BackendPort 3000 -FrontendPort 8080
+```
+
+> [!TIP]
+> Gracias al proxy dinámico en `vite.config.ts` y al endpoint relativo `/api`, puedes cambiar el puerto del backend en cualquier momento usando el parámetro `-BackendPort` sin necesidad de volver a compilar el frontend.
+
+#### Opción B — Auto-inicio con Windows Task Scheduler (Servidores de Producción)
+
+Para que Sinergy se inicie automáticamente en segundo plano cuando el servidor físico/virtual se encienda (sin requerir que un usuario inicie sesión en Windows):
+
+```powershell
+# Ejecutar PowerShell como Administrador:
+.\register-autostart.ps1 -BackendPort 3080 -FrontendPort 4173
+```
+
+- Para remover la tarea programada si es necesario:
+  ```powershell
+  Unregister-ScheduledTask -TaskName "Sinergy Production" -Confirm:$false
+  ```
+
+#### Opción C — PM2 (Ecosystem)
+
+```powershell
+# Iniciar backend con PM2
+pm2 start ecosystem.config.cjs
+
+# Guardar lista de procesos para auto-reinicio
+pm2 save
 ```
 
 ---
