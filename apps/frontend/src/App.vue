@@ -3,7 +3,6 @@ import { RouterView, useRoute } from 'vue-router'
 import { computed, watch, onMounted } from 'vue'
 import { useTheme } from 'vuetify'
 import Menu from './components/Menu.vue'
-import ThemeToggle from './components/ThemeToggle.vue'
 
 const route = useRoute()
 const ocultarLayout = computed(() => !!route.meta.hideLayout)
