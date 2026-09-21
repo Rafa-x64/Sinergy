@@ -7,29 +7,43 @@ export default defineConfig(({ mode }) => {
   // Necesario para usarlas en la configuración del proxy del servidor de desarrollo.
   const env = loadEnv(mode, process.cwd(), '')
 
-  // Determina el origen del backend para el proxy.
-  // Extrae solo el origen (protocolo + host + puerto) de VITE_API_URL.
-  const backendOrigin = env.VITE_API_URL
-    ? new URL(env.VITE_API_URL).origin
-    : 'http://localhost:3000'
+  // Determina el origen del backend para el proxy (dev y preview).
+  const rawUrl = process.env.BACKEND_URL || env.VITE_API_URL || 'http://localhost:3000'
+  let backendOrigin = 'http://localhost:3000'
+  try {
+    if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
+      backendOrigin = new URL(rawUrl).origin
+    } else if (process.env.BACKEND_URL) {
+      backendOrigin = new URL(process.env.BACKEND_URL).origin
+    }
+  } catch {
+    backendOrigin = 'http://localhost:3000'
+  }
+
+  const proxyConfig = {
+    '/api': {
+      target: backendOrigin,
+      changeOrigin: true,
+      secure: false,
+    },
+    '/socket.io': {
+      target: backendOrigin,
+      ws: true,
+      changeOrigin: true,
+    },
+  }
 
   return {
     plugins: [vue()],
     server: {
       host: true,
       port: 5173,
-      proxy: {
-        '/api': {
-          target: backendOrigin,
-          changeOrigin: true,
-          secure: false,
-        },
-        '/socket.io': {
-          target: backendOrigin,
-          ws: true,
-          changeOrigin: true,
-        },
-      },
+      proxy: proxyConfig,
+    },
+    preview: {
+      host: true,
+      port: 4173,
+      proxy: proxyConfig,
     },
     resolve: {
       alias: {

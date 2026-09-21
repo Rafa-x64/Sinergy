@@ -51,6 +51,7 @@ Start-Process powershell -ArgumentList "-NoExit", "-ExecutionPolicy", "Bypass", 
 $frontendScript = Join-Path $env:TEMP "sinergy-frontend.ps1"
 Set-Content -Path $frontendScript -Value @"
 Set-Location "$FRONTEND_DIR"
+`$env:BACKEND_URL = "http://localhost:$BackendPort"
 npx vite preview --port $FrontendPort --host
 "@
 
