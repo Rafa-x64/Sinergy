@@ -702,7 +702,7 @@ class VariableCriticaService {
           desactivadas++
         }
       }
-    })
+    }, { timeout: 30000, maxWait: 10000 })
 
     return {
       componenteId,
