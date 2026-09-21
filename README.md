@@ -79,7 +79,9 @@ Toda la inteligencia, reglas de negocio y directrices del proyecto se encuentran
 
 | Comando | Acción |
 |---|---|
-| `pnpm dev` | Inicia el frontend (Vite) y el backend (Express) en paralelo. |
+| `pnpm dev` | Inicia el frontend (Vite) y el backend (Express) en paralelo en desarrollo. |
 | `pnpm dev:frontend` | Inicia exclusivamente el frontend en `localhost:5173`. |
 | `pnpm dev:backend` | Inicia exclusivamente el backend en `localhost:3000`. |
 | `pnpm build` | Compila tanto el frontend como el backend para producción. |
+| `.\start-sinergy.ps1` | Inicia ambos servicios optimizados en producción con soporte de puertos configurables. |
+| `.\register-autostart.ps1` | Registra el auto-inicio de Sinergy en Windows Task Scheduler (arranque con el SO). |

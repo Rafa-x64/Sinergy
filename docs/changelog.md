@@ -16,7 +16,22 @@ El formato sigue el estándar [Keep a Changelog](https://keepachangelog.com/es/1
 
 ## [Unreleased]
 
+### Added
+- **Desacoplamiento de Puertos y Automatización de Despliegue en Producción (`feat: production-deploy-and-port-decoupling`)**:
+  - **Proxy Inverso Dinámico en Vite Preview (`apps/frontend/vite.config.ts`)**: Soporte de proxy inverso en `preview` (producción) y `server` (desarrollo) para `/api` y `/socket.io`, permitiendo redirigir el tráfico hacia cualquier puerto de backend mediante la variable `BACKEND_URL` sin necesidad de recompilar el frontend.
+  - **Rutas Relativas Universales (`VITE_API_URL=/api`)**: Configuración del frontend para consumir `/api` relativo por defecto, eliminando puertos fijos y URLs absolutas quemadas en los bundles de producción.
+  - **Carga Robusta y Universal de Variables de Entorno (`apps/backend/src/core/env.ts`)**: Resolución dinámica de la ruta de `apps/backend/.env` sin importar desde qué directorio o proceso (`process.cwd()`) se invoque Node.js (PowerShell, Windows Task Scheduler, PM2).
+  - **Scripts de Automatización y Auto-Inicio para Windows**:
+    - `start-sinergy.ps1`: Script parametrizable (`-BackendPort <puerto> -FrontendPort <puerto>`) para arrancar frontend y backend en ventanas independientes con sus variables de entorno configuradas.
+    - `register-autostart.ps1`: Registra Sinergy como servicio en el Programador de Tareas de Windows (`Task Scheduler`) ejecutándose con cuenta `SYSTEM` para arranque desatendido al boot del servidor.
+    - `ecosystem.config.cjs`: Archivo de configuración para despliegue y gestión de procesos con PM2.
+
 ### Fixed
+- **Manejo Explícito y Trazabilidad de Errores 500 (`apps/backend/src/core/middlewares/errorHandler.ts`)**: Registro obligatorio por consola (`console.error`) de fallos no controlados del servidor (status >= 500) junto con la traza de ejecución (`stack trace`) para diagnóstico inmediato.
+- **Corrección de Build y Code-Splitting en Frontend**:
+  - Removido el import no utilizado `ThemeToggle` en `App.vue` que provocaba fallos de verificación de tipos con `vue-tsc`.
+  - Eliminación de la división manual de chunks (`manualChunks`) en `vite.config.ts` que generaba referencias circulares entre `vendor-charts` y `vendor`.
+
 - **Deduplicación y Sincronización Idempotente de Variables Críticas (`fix: deduplicacion-sincronizacion-variables-criticas`)**:
   - **Deduplicación de Plantillas en Origen**: Se normalizan los nombres de variables y se da prioridad a la plantilla específica del componente sobre la genérica (`nombreComponente = null`), evitando generar múltiples variables idénticas para un mismo concepto.
   - **Saneamiento Automático de Duplicados en Base de Datos**: Al sincronizar un componente, el servicio detecta si existían duplicados previos en la BD, conserva una única instancia canónica activa y desactiva (`activa = false`) las réplicas sobrantes.
