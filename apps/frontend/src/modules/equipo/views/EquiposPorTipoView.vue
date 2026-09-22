@@ -359,7 +359,7 @@ watch(pestañaActiva, (nuevaPestana) => {
 </script>
 
 <template>
-  <v-container fluid class="equipos-tipo-view">
+  <v-container fluid class="equipos-tipo-view pa-2 pa-sm-4 pa-md-6">
     <!-- Encabezado dinámico de la vista -->
     <HeaderViews :titulo="tituloVista" :mensaje="tipoFiltro" />
 

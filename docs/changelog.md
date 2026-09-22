@@ -27,6 +27,24 @@ El formato sigue el estándar [Keep a Changelog](https://keepachangelog.com/es/1
     - `ecosystem.config.cjs`: Archivo de configuración para despliegue y gestión de procesos con PM2.
 
 ### Fixed
+- **Optimización Integral de Espaciados, Márgenes y Paddings (`fix: global-spacing-and-fluid-view-containers`)**:
+  - **Componente Base de Pestañas (`AppTabs.vue`)**: Eliminado el padding acumulado excesivo en `v-col` (`pa-sm-1 pa-lg-5` &rarr; `pa-0`) y en las hojas de contenido (`pa-5` &rarr; `pa-2 pa-sm-3 pt-3`), además de desactivar el touch swipe accidental (`:touch="false"`), permitiendo que las tarjetas, tablas y paneles aprovechen todo el ancho de la pantalla en lugar de quedar comprimidos al centro.
+  - **Estandarización de Contenedores Fluidos en Vistas**: Homogeneizada la estructura `<v-container fluid class="... pa-2 pa-sm-3 pa-md-4">` en todas las vistas (`InspeccionesView`, `VariablesCriticasView`, `PlantasView`, `UbicacionesView`, `UsuariosView`, `RolesView`, `EquipoView`, `EquiposPorTipoView`, `ComponentesView`, `NotificacionesGlobalesView`, `DashboardView` y `MatrizLubricacionView`).
+  - **Encabezados Armónicos (`HeaderViews.vue`)**: Ajustada la cuadrícula del encabezado para alinearse de borde a borde con los contenedores fluidos sin generar sangrías redundantes.
+- **Optimización y Segregación de Roles en Módulo de Lubricación (`fix: lubricacion-roles-mobile-ui-and-touch-swipe`)**:
+  - **Segregación Estricta de Roles en Backend y Frontend**:
+    - **Supervisores**: Tienen acceso exclusivo a la configuración de partes y puntos de lubricación (`/puntos`) y visualización de reportes analíticos. Se oculta la pestaña de registro de inspecciones.
+    - **Técnicos**: Tienen acceso exclusivo al registro de rutinas de inspección operativa diaria (`/rutina` y `/horometro`) cargando directamente la pestaña correspondiente. Se oculta la pestaña de configuración de partes.
+    - **Administradores**: Conservan permisos universales para ambas pestañas.
+  - **Desactivación de Touch Swipe en Contenedor de Pestañas (`:touch="false"`)**: Se desactivó el gesto táctil de deslizamiento horizontal entre ventanas de Vuetify (`<v-window :touch="false">`), evitando que el usuario cambie involuntariamente de pestaña al realizar scroll horizontal dentro de tablas y formularios en teléfonos.
+  - **Rediseño Compacto del Selector de Equipos en Resolución Móvil**:
+    - Se eliminó el código del equipo como título principal; ahora se muestra únicamente el nombre del equipo (`item.equipoNombre`).
+    - **Línea Superior (Title)**: Nombre del equipo a la izquierda y un badge/chip numérico discreto a la derecha con la cantidad de puntos a lubricar.
+    - **Línea Inferior (Subtitle)**: Planta y Ubicación técnica en formato compacto.
+    - Reglas CSS responsivas `@media (max-width: 600px)` para ajustar el tamaño de fuente (`0.84rem` / `0.72rem`) y espaciado en pantallas de dispositivos móviles.
+  - **Claridad en Encabezados y Horómetros**:
+    - Eliminada la notación matemática `(Δh)`, renombrando la columna a *"Horas de Uso"* / *"Horas Uso"*.
+    - Reemplazado el encabezado ambiguo *"Semáforo / Vida"* por *"Vida Útil (Horómetro)"*, explicando con precisión el cálculo basado en horómetros.
 - **Manejo Explícito y Trazabilidad de Errores 500 (`apps/backend/src/core/middlewares/errorHandler.ts`)**: Registro obligatorio por consola (`console.error`) de fallos no controlados del servidor (status >= 500) junto con la traza de ejecución (`stack trace`) para diagnóstico inmediato.
 - **Corrección de Build y Code-Splitting en Frontend**:
   - Removido el import no utilizado `ThemeToggle` en `App.vue` que provocaba fallos de verificación de tipos con `vue-tsc`.

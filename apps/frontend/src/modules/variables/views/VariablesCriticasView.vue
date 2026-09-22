@@ -149,7 +149,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <v-container fluid class="variables-criticas-container">
+  <v-container fluid class="variables-criticas-container pa-2 pa-sm-4 pa-md-6">
     <!-- Header -->
     <HeaderViews
       titulo="Variables Críticas"

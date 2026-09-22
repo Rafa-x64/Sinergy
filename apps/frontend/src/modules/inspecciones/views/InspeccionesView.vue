@@ -65,7 +65,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <v-container fluid class="inspecciones-view-container">
+  <v-container fluid class="inspecciones-view-container pa-2 pa-sm-4 pa-md-6">
     <!-- Header principal -->
     <HeaderViews
       titulo="Inspecciones Técnicas por Planta"

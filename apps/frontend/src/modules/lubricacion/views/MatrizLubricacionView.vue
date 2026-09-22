@@ -20,11 +20,15 @@ const lubricacionStore = useLubricacionStore()
 const plantasStore = usePlantasStore()
 const authStore = useAuthStore()
 
-// Solo administradores y supervisores pueden gestionar los puntos de lubricación
-const puedeGestionarLubricacion = computed(() => authStore.esAdmin || authStore.esSupervisor)
+// Permisos por rol: Administradores y Supervisores gestionan partes; Administradores y Técnicos registran inspección
+const puedeGestionarPartes = computed(() => authStore.esAdmin || authStore.esSupervisor)
+const puedeRegistrarInspeccion = computed(() => authStore.esAdmin || authStore.esTecnico)
+const puedeGestionarLubricacion = puedeGestionarPartes
 
-// Pestaña activa ('partes' = Matriz Excel de partes a lubricar, 'inspeccion' = Toma de rutina)
-const pestanaActiva = ref<'partes' | 'inspeccion'>('partes')
+// Pestaña activa inicial: Técnicos ingresan directamente a 'inspeccion'; Supervisores y Admins a 'partes'
+const pestanaActiva = ref<'partes' | 'inspeccion'>(
+  authStore.esTecnico && !authStore.esAdmin ? 'inspeccion' : 'partes'
+)
 
 // Filtros y Selección de Equipo
 const plantaSeleccionada = ref<number | null>(null)
@@ -469,25 +473,25 @@ async function guardarInspeccion() {
 
     <!-- Barra de Pestañas Principales -->
     <v-tabs v-model="pestanaActiva" color="primary" class="mb-4">
-      <v-tab value="partes">
+      <v-tab v-if="puedeGestionarPartes" value="partes">
         <v-icon start>mdi-table-edit</v-icon>
         Partes a Lubricar
         <v-chip v-if="filaEquipoActual" size="x-small" class="ms-2" color="primary" variant="tonal">
           {{ filaEquipoActual.puntos.length }}
         </v-chip>
       </v-tab>
-      <v-tab value="inspeccion">
+      <v-tab v-if="puedeRegistrarInspeccion" value="inspeccion">
         <v-icon start>mdi-clipboard-check-outline</v-icon>
         Inspección de Lubricación
       </v-tab>
     </v-tabs>
 
-    <!-- Contenido de las Pestañas -->
-    <v-window v-model="pestanaActiva">
+    <!-- Contenido de las Pestañas (touch desactivado para permitir scroll horizontal fluido en móviles) -->
+    <v-window v-model="pestanaActiva" :touch="false">
       <!-- ═══════════════════════════════════════════════════════════════════ -->
       <!-- PESTAÑA 1: PARTES A LUBRICAR (MATRIZ EXCEL INTERACTIVA CON CRUD)   -->
       <!-- ═══════════════════════════════════════════════════════════════════ -->
-      <v-window-item value="partes">
+      <v-window-item v-if="puedeGestionarPartes" value="partes">
         <!-- Barra de Selección de Planta y Maquinaria (Específica de Matriz de Partes) -->
         <v-card class="mb-4 elevation-1">
           <v-card-text class="py-3">
@@ -511,10 +515,10 @@ async function guardarInspeccion() {
                 <v-autocomplete
                   v-model="equipoSeleccionadoId"
                   :items="equiposFiltrados"
-                  :item-title="(item: any) => `${item.equipoCodigo} - ${item.equipoNombre}`"
+                  :item-title="(item: FilaMatrizLubricacion) => item.equipoNombre"
                   item-value="equipoId"
                   label="Seleccionar Equipo *"
-                  placeholder="Escriba para buscar por código o nombre..."
+                  placeholder="Escriba para buscar equipo..."
                   variant="outlined"
                   density="compact"
                   clearable
@@ -522,12 +526,27 @@ async function guardarInspeccion() {
                   auto-select-first
                 >
                   <template #item="{ props: itemProps, item }">
-                    <v-list-item v-bind="{ ...itemProps, title: undefined }">
+                    <v-list-item v-bind="{ ...itemProps, title: undefined }" class="item-equipo-dropdown py-1 px-3">
                       <template #title>
-                        <span class="font-weight-bold">{{ item.raw.equipoCodigo }}</span> - {{ item.raw.equipoNombre }}
+                        <div class="d-flex align-center justify-space-between w-100 mb-1">
+                          <span class="font-weight-bold item-equipo-nombre text-truncate">
+                            {{ item.raw.equipoNombre }}
+                          </span>
+                          <v-chip
+                            v-if="item.raw.puntos"
+                            size="x-small"
+                            :color="item.raw.puntos.length > 0 ? 'primary' : 'grey'"
+                            variant="flat"
+                            class="ms-2 font-weight-bold px-2 flex-shrink-0"
+                          >
+                            {{ item.raw.puntos.length }}
+                          </v-chip>
+                        </div>
                       </template>
                       <template #subtitle>
-                        {{ item.raw.plantaNombre }} &bull; {{ item.raw.ubicacionNombre }} &bull; Horómetro: {{ item.raw.horometroActual }} hrs
+                        <div class="text-caption item-equipo-ubicacion text-truncate text-medium-emphasis">
+                          {{ item.raw.plantaNombre }} &bull; {{ item.raw.ubicacionNombre }}
+                        </div>
                       </template>
                     </v-list-item>
                   </template>
@@ -601,8 +620,8 @@ async function guardarInspeccion() {
                     <th style="min-width: 130px;" class="text-center">Frecuencia Límite</th>
                     <th style="min-width: 110px;" class="text-center">Capacidad</th>
                     <th style="min-width: 130px;" class="text-center">Horómetro Base</th>
-                    <th style="min-width: 130px;" class="text-center">Horas de Uso (&Delta;h)</th>
-                    <th style="min-width: 150px;" class="text-center">Estado de Vida</th>
+                    <th style="min-width: 130px;" class="text-center">Horas de Uso</th>
+                    <th style="min-width: 160px;" class="text-center">Vida Útil (Horómetro)</th>
                     <th v-if="puedeGestionarLubricacion" style="min-width: 110px;" class="text-center">Acciones</th>
                   </tr>
                 </thead>
@@ -727,7 +746,7 @@ async function guardarInspeccion() {
       <!-- ═══════════════════════════════════════════════════════════════════ -->
       <!-- PESTAÑA 2: (INSPECCIÓN) DE LUBRICACIÓN (TOMA OPERATIVA DIARIA)     -->
       <!-- ═══════════════════════════════════════════════════════════════════ -->
-      <v-window-item value="inspeccion">
+      <v-window-item v-if="puedeRegistrarInspeccion" value="inspeccion">
 
         <!-- ── Selector de Alcance de Inspección (independiente del filtro global) ── -->
         <v-card class="elevation-2 mb-4 rounded-lg">
@@ -816,7 +835,7 @@ async function guardarInspeccion() {
                 <v-autocomplete
                   v-model="equipoInspeccionId"
                   :items="equiposAlcanceDisponibles"
-                  :item-title="(item: FilaMatrizLubricacion) => `${item.equipoCodigo} - ${item.equipoNombre}`"
+                  :item-title="(item: FilaMatrizLubricacion) => item.equipoNombre"
                   item-value="equipoId"
                   label="Equipo a Inspeccionar *"
                   placeholder="Seleccione o busque el equipo..."
@@ -829,17 +848,27 @@ async function guardarInspeccion() {
                   :no-data-text="lubricacionStore.cargandoMatriz ? 'Cargando...' : 'Sin equipos con puntos de lubricación configurados'"
                 >
                   <template #item="{ props: itemProps, item }">
-                    <v-list-item v-bind="{ ...itemProps, title: undefined }">
+                    <v-list-item v-bind="{ ...itemProps, title: undefined }" class="item-equipo-dropdown py-1 px-3">
                       <template #title>
-                        <span class="font-weight-bold">{{ item.raw.equipoCodigo }}</span>
-                        — {{ item.raw.equipoNombre }}
+                        <div class="d-flex align-center justify-space-between w-100 mb-1">
+                          <span class="font-weight-bold item-equipo-nombre text-truncate">
+                            {{ item.raw.equipoNombre }}
+                          </span>
+                          <v-chip
+                            v-if="item.raw.puntos"
+                            size="x-small"
+                            :color="item.raw.puntos.length > 0 ? 'primary' : 'grey'"
+                            variant="flat"
+                            class="ms-2 font-weight-bold px-2 flex-shrink-0"
+                          >
+                            {{ item.raw.puntos.length }}
+                          </v-chip>
+                        </div>
                       </template>
                       <template #subtitle>
-                        {{ item.raw.plantaNombre }} • {{ item.raw.ubicacionNombre }}
-                        • <span class="font-weight-medium">Horómetro: {{ item.raw.horometroActual }} hrs</span>
-                        • <span :class="item.raw.puntos.length === 0 ? 'text-error' : 'text-success'">
-                            {{ item.raw.puntos.length }} punto(s) a lubricar
-                          </span>
+                        <div class="text-caption item-equipo-ubicacion text-truncate text-medium-emphasis">
+                          {{ item.raw.plantaNombre }} &bull; {{ item.raw.ubicacionNombre }}
+                        </div>
                       </template>
                     </v-list-item>
                   </template>
@@ -981,8 +1010,8 @@ async function guardarInspeccion() {
                   <tr>
                     <th style="min-width: 190px;">Componente / Parte</th>
                     <th style="min-width: 160px;">Lubricante</th>
-                    <th style="min-width: 150px;">Horas Uso (&Delta;h)</th>
-                    <th style="min-width: 160px;">Semáforo / Vida</th>
+                    <th style="min-width: 150px;">Horas Uso</th>
+                    <th style="min-width: 170px;">Vida Útil (Horómetro)</th>
                     <th style="min-width: 170px;">Nivel Observado</th>
                     <th style="min-width: 200px;">Reposición</th>
                     <th style="min-width: 200px;">Fuga Detectada</th>
@@ -1303,10 +1332,32 @@ async function guardarInspeccion() {
   background-color: rgba(245, 158, 11, 0.09) !important;
 }
 
+.item-equipo-nombre {
+  font-size: 0.95rem;
+}
+
+.item-equipo-ubicacion {
+  font-size: 0.78rem;
+}
+
 @media (max-width: 600px) {
   .celda-input {
     padding-top: 4px !important;
     padding-bottom: 4px !important;
+  }
+
+  .item-equipo-dropdown {
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+    min-height: 42px !important;
+  }
+
+  .item-equipo-nombre {
+    font-size: 0.84rem !important;
+  }
+
+  .item-equipo-ubicacion {
+    font-size: 0.72rem !important;
   }
 }
 </style>

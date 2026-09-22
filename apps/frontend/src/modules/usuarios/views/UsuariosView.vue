@@ -288,7 +288,7 @@ const handleFiltroUsuarios = (payload: ContenidoFiltro): void => {
 </script>
 
 <template>
-    <v-container fluid class="usuarios-dashboard">
+    <v-container fluid class="usuarios-dashboard pa-2 pa-sm-4 pa-md-6">
 
         <HeaderViews titulo="Usuarios" mensaje="Usuarios" color='purple' icono="mdi-account-group"></HeaderViews>
         <AppTabs v-model="pestañaActiva" :tabs="pestañasUsuarios">

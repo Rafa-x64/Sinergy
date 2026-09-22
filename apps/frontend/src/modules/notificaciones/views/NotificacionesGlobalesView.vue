@@ -63,7 +63,7 @@ async function recargar(): Promise<void> {
 </script>
 
 <template>
-    <v-container fluid class="pa-6">
+    <v-container fluid class="pa-2 pa-sm-4 pa-md-6">
         <!-- Encabezado -->
         <v-row class="mb-4">
             <v-col cols="12" class="d-flex justify-space-between align-center flex-wrap ga-3">

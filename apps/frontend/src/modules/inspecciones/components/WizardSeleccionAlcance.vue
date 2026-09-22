@@ -225,7 +225,7 @@ const ejecutarBusquedaEquipos = async () => {
 </script>
 
 <template>
-  <v-card class="elevation-2 rounded-lg pa-6 bg-surface border">
+  <v-card class="elevation-2 rounded-lg pa-3 pa-sm-4 pa-md-5 bg-surface border">
     <div class="d-flex align-center mb-4">
       <v-avatar color="#5cb85c" variant="tonal" size="48" class="mr-3">
         <v-icon size="28" color="#5cb85c">mdi-clipboard-list-outline</v-icon>

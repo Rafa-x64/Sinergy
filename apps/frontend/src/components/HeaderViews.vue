@@ -6,24 +6,33 @@ defineProps<{
     icono?: string
 }>()
 </script>
+
 <template>
-    <v-row class="mb-0 pb-0 px-2">
-        <v-col cols="auto" class="d-flex justify-space-between align-center flex-wrap ga-3" style="width: 100%;">
+    <div class="header-view-wrapper d-flex flex-column flex-sm-row justify-space-between align-start align-sm-center mb-4 gap-3">
+        <div class="d-flex align-center gap-3">
+            <v-avatar v-if="icono" :color="color || 'primary'" variant="tonal" size="44" class="flex-shrink-0">
+                <v-icon :color="color || 'primary'" size="26">{{ icono }}</v-icon>
+            </v-avatar>
             <div>
-                <h1 class="text-h5 font-weight-bold d-flex align-center ga-2">
-                    <v-icon v-if="icono" :color="color">{{ icono }}</v-icon>
+                <h1 class="text-h5 font-weight-bold mb-0">
                     {{ titulo }}
                 </h1>
-                <p class="text-body-2 text-grey-darken-1 mb-0">
-                    Panel de visualizacion de {{ mensaje }}
+                <p class="text-caption text-medium-emphasis mb-0 mt-1">
+                    {{ mensaje }}
                 </p>
             </div>
+        </div>
 
-            <div>
-                <slot />
-            </div>
-            
-        </v-col>
-    </v-row>
+        <div v-if="$slots.default" class="d-flex align-center gap-2 flex-wrap">
+            <slot />
+        </div>
+    </div>
 </template>
-<style scoped></style>
+
+<style scoped>
+.header-view-wrapper {
+    width: 100%;
+}
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
+</style>

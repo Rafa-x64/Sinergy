@@ -475,7 +475,7 @@ const handleTiposFilterChange = async (payload: ContenidoFiltro): Promise<void> 
 </script>
 
 <template>
-  <v-container fluid class="equipo-view">
+  <v-container fluid class="equipo-view pa-2 pa-sm-4 pa-md-6">
     <HeaderViews titulo="Equipos" mensaje="Equipos y Tipos de Equipos" color="safety-orange" icono="mdi-engine" />
     <!-- Pestañas principales: Equipos | Tipos de Equipo -->
     <AppTabs v-model="pestañaActiva" :tabs="pestañasPrincipales">
