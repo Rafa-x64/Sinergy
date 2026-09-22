@@ -51,7 +51,7 @@ watch(pestañaActiva, (nuevoValor) => {
 <template>
     <v-container fluid class="pa-0">
         <v-row no-gutters>
-            <v-col cols="12" class="pa-sm-1 pa-lg-5">
+            <v-col cols="12" class="pa-0">
                 <v-sheet elevation="0" color="background">
                     <v-tabs v-model="pestañaActiva" color="primary" grow>
                         <v-tab v-for="item in tabs" :key="item.id" :value="item.id" :color="item.color">
@@ -59,9 +59,9 @@ watch(pestañaActiva, (nuevoValor) => {
                         </v-tab>
                     </v-tabs>
 
-                    <v-tabs-window v-model="pestañaActiva" transition="fade-transition">
+                    <v-tabs-window v-model="pestañaActiva" transition="fade-transition" :touch="false">
                         <v-tabs-window-item v-for="item in tabs" :key="item.id" :value="item.id">
-                            <v-sheet class="pa-5" elevation="0" color="surface">
+                            <v-sheet class="pa-2 pa-sm-3 pt-3" elevation="0" color="surface">
                                 <!-- Proyección de contenido mediante ranuras dinámicas -->
                                 <slot :name="`tab-${item.id}`" :tab="item">
                                     Contenido por defecto para {{ item.name }}

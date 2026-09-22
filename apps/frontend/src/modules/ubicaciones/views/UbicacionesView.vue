@@ -256,7 +256,7 @@ const handleFiltroUbicaciones = (payload: ContenidoFiltro): void => {
 </script>
 
 <template>
-    <v-container fluid class="ubicaciones-dashboard">
+    <v-container fluid class="ubicaciones-dashboard pa-2 pa-sm-4 pa-md-6">
         <HeaderViews titulo="Ubicaciones" mensaje="Ubicaciones Tecnicas" color="#f7474a" icono="mdi-map-marker-radius"></HeaderViews>
 
         <AppTabs v-model="pestañaActiva" :tabs="pestañasUbicaciones">

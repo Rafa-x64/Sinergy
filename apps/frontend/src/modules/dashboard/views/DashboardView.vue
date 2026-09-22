@@ -36,7 +36,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <v-container fluid class="dashboard-view-container pa-2 pa-sm-4">
+  <v-container fluid class="dashboard-view-container pa-2 pa-sm-4 pa-md-6">
     <HeaderViews
       titulo="Dashboard Integral de Mantenimiento"
       mensaje="Métricas operativas de planta, control de confiabilidad y reportería técnica y gerencial"

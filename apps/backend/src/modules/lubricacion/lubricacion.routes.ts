@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { lubricacionController } from './lubricacion.controller'
 import { validarJWT } from '../../core/middlewares/autenticar'
-import { requerirRol, ROL_ADMIN_NOMBRE, ROL_SUPERVISOR_NOMBRE } from '../../core/middlewares/autorizarRol'
+import { requerirRol, ROL_ADMIN_NOMBRE, ROL_SUPERVISOR_NOMBRE, ROL_TECNICO_NOMBRE } from '../../core/middlewares/autorizarRol'
 
 const router = Router()
 
@@ -23,11 +23,11 @@ router.put(['/puntos/:id', '/puntos/:id/'], requerirRol(ROL_ADMIN_NOMBRE, ROL_SU
 router.delete(['/puntos/:id', '/puntos/:id/'], requerirRol(ROL_ADMIN_NOMBRE, ROL_SUPERVISOR_NOMBRE), lubricacionController.eliminarPuntoLubricacion)
 
 // ─── CONTROL DE HORÓMETRO ───────────────────────────────────────────────────
-router.post(['/horometro', '/horometro/'], lubricacionController.registrarHorometro)
+router.post(['/horometro', '/horometro/'], requerirRol(ROL_ADMIN_NOMBRE, ROL_TECNICO_NOMBRE), lubricacionController.registrarHorometro)
 router.get(['/horometro/:equipoId', '/horometro/:equipoId/'], lubricacionController.obtenerUltimoHorometro)
 
 // ─── RUTINAS / INSPECCIONES DE LUBRICACIÓN ────────────────────────────────────
-router.post(['/rutina', '/rutinas', '/rutina/', '/rutinas/'], lubricacionController.registrarRutina)
+router.post(['/rutina', '/rutinas', '/rutina/', '/rutinas/'], requerirRol(ROL_ADMIN_NOMBRE, ROL_TECNICO_NOMBRE), lubricacionController.registrarRutina)
 router.get(['/rutinas/historial', '/historial', '/historial/'], lubricacionController.obtenerHistorialRutinas)
 
 // ─── REPORTES ANALÍTICOS ─────────────────────────────────────────────────────

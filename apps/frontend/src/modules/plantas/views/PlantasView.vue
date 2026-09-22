@@ -204,7 +204,7 @@ const handleFiltroPlantas = (payload: ContenidoFiltro): void => {
 </script>
 
 <template>
-    <v-container fluid class="plantas-dashboard">
+    <v-container fluid class="plantas-dashboard pa-2 pa-sm-4 pa-md-6">
         <HeaderViews titulo="Plantas" mensaje="Plantas" icono="mdi-factory"></HeaderViews>
         <AppTabs v-model="pestañaActiva" :tabs="pestañasPlantas">
 

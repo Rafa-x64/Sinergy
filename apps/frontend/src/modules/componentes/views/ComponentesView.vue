@@ -221,7 +221,7 @@ watch(pestañaActiva, (nuevaPestana) => {
 </script>
 
 <template>
-    <v-container fluid class="componente-view">
+    <v-container fluid class="componente-view pa-2 pa-sm-4 pa-md-6">
         <HeaderViews titulo="Componentes" mensaje="Componentes" icono="mdi-view-grid" color="success"></HeaderViews>
 
         <AppTabs v-model="pestañaActiva" :tabs="pestañas">
