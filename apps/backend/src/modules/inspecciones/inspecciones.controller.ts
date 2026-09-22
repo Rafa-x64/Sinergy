@@ -176,5 +176,23 @@ export const inspeccionesController = {
     } catch (error) {
       next(error)
     }
+  },
+
+  // DELETE /api/inspecciones/:id
+  async eliminarInspeccion(
+    req: Request<{ id: string }>,
+    res: Response<ResponseDTO>,
+    next: NextFunction
+  ) {
+    try {
+      const { id } = req.params
+      await inspeccionesService.eliminarInspeccion(id)
+      return res.status(200).json({
+        status: 'ok',
+        message: 'Inspección eliminada exitosamente'
+      })
+    } catch (error) {
+      next(error)
+    }
   }
 }

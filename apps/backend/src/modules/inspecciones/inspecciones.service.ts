@@ -531,6 +531,22 @@ export class InspeccionesService {
       id: String(i.id)
     }))
   }
+
+  /**
+   * Elimina una inspección física o administrativamente.
+   */
+  async eliminarInspeccion(idInput: string | number) {
+    const id = BigInt(idInput)
+    const inspeccion = await prisma.inspeccion.findUnique({ where: { id } })
+
+    if (!inspeccion) {
+      throw new AppError('Inspección no encontrada', 404)
+    }
+
+    return prisma.inspeccion.delete({
+      where: { id }
+    })
+  }
 }
 
 export const inspeccionesService = new InspeccionesService()

@@ -6,8 +6,8 @@ import router from './core/router'          // ✅
 // Bootstrap
 import { createBootstrap } from 'bootstrap-vue-next'
 import 'bootstrap/dist/css/bootstrap.min.css'           // ✅
-import 'bootstrap-vue-next/dist/bootstrap-vue-next.css' //  ¡Correcto!// ApexCharts
-import VueApexCharts from 'vue3-apexcharts'
+import 'bootstrap-vue-next/dist/bootstrap-vue-next.css' // ✅
+
 // Toastification
 import 'vue-toastification/dist/index.css' // ✅
 import './assets/theme.css' // ✅ Sinergy Global Theme & Dark Mode
@@ -32,7 +32,6 @@ app.use(pinia)
 app.use(router)
 app.use(vuetify)
 app.use(createBootstrap())
-app.use(VueApexCharts)
 app.use(Toast, toastOptions)
 
 app.component('font-awesome-icon', FontAwesomeIcon)
