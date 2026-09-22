@@ -16,14 +16,19 @@ import ubicacionRoutes from '../modules/ubicaciones/ubicacion.routes'
 import componenteRoutes from '../modules/componentes/componente.routes'
 import variableCriticaRoutes from '../modules/variables-criticas/variable-critica.routes'
 import inspeccionRoutes from '../modules/inspecciones/inspeccion.routes'
-import mantenimientoRoutes from '../modules/mantenimiento/mantenimiento.routes'
 import dashboardRoutes from '../modules/dashboard/dashboard.routes'
 import lubricacionRoutes from '../modules/lubricacion/lubricacion.routes'
+import notificacionesRoutes from '../modules/notificaciones/notificaciones.routes'
 
 import { inicializarWebSockets } from '../modules/notificaciones/notification.socket'
 import { registrarListenersNotificaciones } from '../modules/notificaciones/notification.events'
 
 import { corsOptions } from './security/cors'
+
+// ─── Polyfill Global para Serialización Segura de BigInt en JSON ───────────────
+;(BigInt.prototype as any).toJSON = function () {
+  return this.toString()
+}
 
 const app = express()
 
@@ -65,8 +70,6 @@ app.get('/api/health', async (_req, res, next) => {
   }
 })
 
-import notificacionesRoutes from '../modules/notificaciones/notificaciones.routes'
-
 // ─── Módulos de funcionalidades ───────────────────────────────────────────────
 app.use('/api/auth', authRoutes)
 app.use('/api/usuarios', authRoutes)
@@ -77,7 +80,6 @@ app.use('/api/ubicaciones', ubicacionRoutes)
 app.use('/api/componentes', componenteRoutes)
 app.use('/api/variables-criticas', variableCriticaRoutes)
 app.use('/api/inspecciones', inspeccionRoutes)
-app.use('/api/mantenimiento', mantenimientoRoutes)
 app.use('/api/notificaciones', notificacionesRoutes)
 app.use('/api/dashboard', dashboardRoutes)
 app.use('/api/lubricacion', lubricacionRoutes)

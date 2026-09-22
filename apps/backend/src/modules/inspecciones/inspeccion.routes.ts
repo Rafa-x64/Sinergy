@@ -1,6 +1,5 @@
 import { Router } from 'express'
 import { inspeccionesController } from './inspecciones.controller'
-import { inspeccionController } from './inspeccion.controller'
 import { validarJWT } from '../../core/middlewares/autenticar'
 import { autorizarRoles, ROL_ADMIN, ROL_SUPERVISOR, ROL_TECNICO } from '../../core/middlewares/autorizarRoles'
 
@@ -18,13 +17,10 @@ router.get('/pendientes', validarJWT, autorizarRoles(ROL_ADMIN, ROL_SUPERVISOR),
 router.patch(['/:id/evaluar', '/evaluar/:id'], validarJWT, autorizarRoles(ROL_ADMIN, ROL_SUPERVISOR), inspeccionesController.evaluarInspeccion)
 
 // Historial y Detalle: Todos los roles autenticados (filtrado por su planta vía PBAC)
-router.get('/historial', validarJWT, inspeccionesController.obtenerHistorial)
-router.get('/:id', validarJWT, inspeccionesController.obtenerPorId)
+router.get(['/historial', '/listar'], validarJWT, inspeccionesController.obtenerHistorial)
+router.get(['/:id', '/buscar/:id'], validarJWT, inspeccionesController.obtenerPorId)
 
-// Endpoints compatibles con llamadas legacy
-router.get(['/listar', '/listar/'], validarJWT, inspeccionController.listarInspecciones)
-router.get('/buscar/:id', validarJWT, inspeccionesController.obtenerPorId)
-router.patch('/editar-estado/:id', validarJWT, autorizarRoles(ROL_ADMIN, ROL_SUPERVISOR), inspeccionController.editarEstadoInspeccion)
-router.delete('/eliminar/:id', validarJWT, autorizarRoles(ROL_ADMIN), inspeccionController.eliminarInspeccion)
+// Eliminación (solo Administrador)
+router.delete(['/:id', '/eliminar/:id'], validarJWT, autorizarRoles(ROL_ADMIN), inspeccionesController.eliminarInspeccion)
 
 export default router
