@@ -77,27 +77,44 @@ defineExpose({ abrir, cerrar })
         <!-- Metadatos de la Inspección -->
         <v-row dense class="mb-4 bg-surface border rounded pa-3">
           <v-col cols="12" sm="6" md="3">
+            <div class="text-caption text-medium-emphasis">Rutina Técnica:</div>
+            <div class="text-body-2 font-weight-bold" style="color: #5cb85c;">
+              {{
+                store.inspeccionActiva.tipoInspeccion === 'CHILLER'
+                  ? 'Rutina Chillers'
+                  : store.inspeccionActiva.tipoInspeccion === 'COMPRESOR'
+                  ? 'Rutina Compresores'
+                  : store.inspeccionActiva.tipoInspeccion === 'GENERADOR'
+                  ? 'Rutina Generadores'
+                  : store.inspeccionActiva.tipoInspeccion === 'MONTACARGAS'
+                  ? 'Rutina Montacargas'
+                  : 'Variables Críticas'
+              }}
+            </div>
+          </v-col>
+
+          <v-col cols="12" sm="6" md="3">
             <div class="text-caption text-medium-emphasis">Elaborado por:</div>
             <div class="text-body-2 font-weight-bold text-high-emphasis">
               {{ store.inspeccionActiva.elaboradoPor?.nombre }} {{ store.inspeccionActiva.elaboradoPor?.apellido }}
             </div>
           </v-col>
 
-          <v-col cols="12" sm="6" md="3">
+          <v-col cols="12" sm="6" md="2">
             <div class="text-caption text-medium-emphasis">Planta:</div>
             <div class="text-body-2 font-weight-bold text-high-emphasis">
               {{ store.inspeccionActiva.planta?.nombre ?? 'General' }}
             </div>
           </v-col>
 
-          <v-col cols="12" sm="6" md="3">
+          <v-col cols="12" sm="6" md="2">
             <div class="text-caption text-medium-emphasis">Fecha Registro:</div>
             <div class="text-body-2 font-weight-bold text-high-emphasis">
               {{ formatearFecha(store.inspeccionActiva.fechaRegistro) }}
             </div>
           </v-col>
 
-          <v-col cols="12" sm="6" md="3">
+          <v-col cols="12" sm="6" md="2">
             <div class="text-caption text-medium-emphasis">Estado Actual:</div>
             <v-chip
               size="x-small"

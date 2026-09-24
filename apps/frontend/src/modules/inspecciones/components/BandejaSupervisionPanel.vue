@@ -25,6 +25,37 @@ const formatearFecha = (f?: string) => {
     minute: '2-digit'
   })
 }
+function formatearTipoInspeccion(tipo?: string) {
+  switch (tipo) {
+    case 'CHILLER':
+      return 'Rutina Chillers'
+    case 'COMPRESOR':
+      return 'Rutina Compresores'
+    case 'GENERADOR':
+      return 'Rutina Generadores'
+    case 'MONTACARGAS':
+      return 'Rutina Montacargas'
+    case 'VARIABLES_CRITICAS':
+    default:
+      return 'Variables Críticas'
+  }
+}
+
+function colorTipoInspeccion(tipo?: string) {
+  switch (tipo) {
+    case 'CHILLER':
+      return 'cyan'
+    case 'COMPRESOR':
+      return 'teal'
+    case 'GENERADOR':
+      return 'amber'
+    case 'MONTACARGAS':
+      return 'indigo'
+    case 'VARIABLES_CRITICAS':
+    default:
+      return 'primary'
+  }
+}
 </script>
 
 <template>
@@ -85,6 +116,7 @@ const formatearFecha = (f?: string) => {
           <thead>
             <tr class="table-header-row">
               <th class="text-left font-weight-bold">Código Inspección</th>
+              <th class="text-left font-weight-bold">Rutina</th>
               <th class="text-left font-weight-bold">Técnico Elaborador</th>
               <th class="text-center font-weight-bold">Planta / Cobertura</th>
               <th class="text-center font-weight-bold">Fecha Registro</th>
@@ -97,6 +129,12 @@ const formatearFecha = (f?: string) => {
             <tr v-for="item in store.inspeccionesPendientes" :key="item.id">
               <td class="font-weight-bold text-primary">
                 {{ item.codigoInspeccion }}
+              </td>
+
+              <td>
+                <v-chip size="x-small" :color="colorTipoInspeccion(item.tipoInspeccion)" variant="tonal" class="font-weight-bold">
+                  {{ formatearTipoInspeccion(item.tipoInspeccion) }}
+                </v-chip>
               </td>
 
               <td class="font-weight-medium text-high-emphasis">

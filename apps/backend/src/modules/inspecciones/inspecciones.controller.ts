@@ -25,6 +25,7 @@ export const inspeccionesController = {
       const alcance = (req.query.alcance as AlcanceInspeccion) || 'POR_LINEA'
       const referenciaId = req.query.referenciaId ? Number(req.query.referenciaId) : undefined
       const referenciaCodigo = req.query.referenciaCodigo ? String(req.query.referenciaCodigo) : undefined
+      const tipoInspeccion = req.query.tipoInspeccion ? (req.query.tipoInspeccion as any) : undefined
 
       if (isNaN(plantaId)) {
         return res.status(400).json({ status: 'error', message: 'El ID de la planta es requerido' })
@@ -34,7 +35,8 @@ export const inspeccionesController = {
         plantaId,
         alcance,
         referenciaId,
-        referenciaCodigo
+        referenciaCodigo,
+        tipoInspeccion
       )
       return res.status(200).json({
         status: 'ok',

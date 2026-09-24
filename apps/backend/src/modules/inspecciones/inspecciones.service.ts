@@ -29,7 +29,8 @@ export class InspeccionesService {
     plantaId: number,
     alcance: AlcanceInspeccion,
     referenciaId?: number,
-    referenciaCodigo?: string
+    referenciaCodigo?: string,
+    tipoInspeccion?: TipoInspeccion
   ) {
     // 1. Identificar si la planta seleccionada es la planta "NINGUNA" (equipos móviles / sin ubicación fija)
     const planta = plantaId > 0
@@ -48,6 +49,17 @@ export class InspeccionesService {
 
     let whereCondition: any = {
       estadoOperativo: 'OPERATIVO'
+    }
+
+    // Filtro por tipo de inspección específico (Chillers, Compresores, Generadores, Montacargas)
+    if (tipoInspeccion === 'CHILLER') {
+      whereCondition.tipoEquipo = { nombre: { contains: 'chiller', mode: 'insensitive' } }
+    } else if (tipoInspeccion === 'COMPRESOR') {
+      whereCondition.tipoEquipo = { nombre: { contains: 'compresor', mode: 'insensitive' } }
+    } else if (tipoInspeccion === 'GENERADOR') {
+      whereCondition.tipoEquipo = { nombre: { contains: 'generador', mode: 'insensitive' } }
+    } else if (tipoInspeccion === 'MONTACARGAS') {
+      whereCondition.tipoEquipo = { nombre: { contains: 'montacarg', mode: 'insensitive' } }
     }
 
     if (esPlantaNinguna) {
@@ -70,7 +82,8 @@ export class InspeccionesService {
             { OR: whereCondition.OR },
             { ubicacionTecnicaId: referenciaId }
           ],
-          estadoOperativo: 'OPERATIVO'
+          estadoOperativo: 'OPERATIVO',
+          ...(whereCondition.tipoEquipo && { tipoEquipo: whereCondition.tipoEquipo })
         }
       } else {
         whereCondition.ubicacionTecnicaId = referenciaId
@@ -95,7 +108,8 @@ export class InspeccionesService {
               { OR: whereCondition.OR },
               { id: referenciaId }
             ],
-            estadoOperativo: 'OPERATIVO'
+            estadoOperativo: 'OPERATIVO',
+            ...(whereCondition.tipoEquipo && { tipoEquipo: whereCondition.tipoEquipo })
           }
         } else {
           whereCondition.id = referenciaId
@@ -114,7 +128,8 @@ export class InspeccionesService {
               { OR: whereCondition.OR },
               { OR: orBusqueda }
             ],
-            estadoOperativo: 'OPERATIVO'
+            estadoOperativo: 'OPERATIVO',
+            ...(whereCondition.tipoEquipo && { tipoEquipo: whereCondition.tipoEquipo })
           }
         } else {
           whereCondition.OR = orBusqueda
@@ -164,7 +179,11 @@ export class InspeccionesService {
 
     if (tipoEquipoIds.length > 0) {
       const plantillas = await prisma.plantillaVariable.findMany({
-        where: { tipoEquipoId: { in: tipoEquipoIds }, activa: true },
+        where: {
+          tipoEquipoId: { in: tipoEquipoIds },
+          activa: true,
+          ...(tipoInspeccion ? { OR: [{ tipoInspeccion }, { tipoInspeccion: null }] } : {})
+        },
         include: { opcionesSeleccion: { orderBy: { ordenPosicion: 'asc' } } },
         orderBy: { ordenPosicion: 'asc' }
       })

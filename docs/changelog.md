@@ -17,6 +17,11 @@ El formato sigue el estándar [Keep a Changelog](https://keepachangelog.com/es/1
 ## [Unreleased]
 
 ### Added
+- **Soporte de Rutinas de Inspección Interdiarias para Chillers, Compresores y Generadores (`feat: rutinas-inspeccion-interdiarias-chillers-compresores-generadores`)**:
+  - **Selector de Rutina Técnica en Captura (`WizardSeleccionAlcance.vue`)**: Configurado el selector especializado para diferenciar explícitamente entre `Variables Críticas de Planta`, `Rutina de Inspección Chillers`, `Rutina de Inspección Compresores`, `Rutina de Inspección Generadores` y `Rutina de Inspección Montacargas`, con filtrado contextual automático de maquinarias operativas y alcance.
+  - **Filtrado y Resolución Normativa en Backend (`apps/backend/src/modules/inspecciones/inspecciones.service.ts`)**: Adaptado el endpoint `/api/inspecciones/equipos-elegibles` para admitir `tipoInspeccion`, discriminando los equipos por categoría (`CHILLER`, `COMPRESOR`, `GENERADOR`, `MONTACARGAS`) y aplicando con prioridad las plantillas normativas vinculadas a cada tipo de rutina.
+  - **Persistencia Transaccional y Auditoría**: Asignación automática del enum `TipoInspeccion` en la cabecera de inspección y registro detallado de variables y mediciones.
+  - **Visualización en Bandeja y Filtrado en Historial (`PanelHistorialInspecciones.vue` y `BandejaSupervisionPanel.vue`)**: Incorporados chips de estado/rutina por color y filtro reactivo por tipo de rutina en el historial general de inspecciones.
 - **Desacoplamiento de Puertos y Automatización de Despliegue en Producción (`feat: production-deploy-and-port-decoupling`)**:
   - **Proxy Inverso Dinámico en Vite Preview (`apps/frontend/vite.config.ts`)**: Soporte de proxy inverso en `preview` (producción) y `server` (desarrollo) para `/api` y `/socket.io`, permitiendo redirigir el tráfico hacia cualquier puerto de backend mediante la variable `BACKEND_URL` sin necesidad de recompilar el frontend.
   - **Rutas Relativas Universales (`VITE_API_URL=/api`)**: Configuración del frontend para consumir `/api` relativo por defecto, eliminando puertos fijos y URLs absolutas quemadas en los bundles de producción.

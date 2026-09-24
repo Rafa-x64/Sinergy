@@ -4,6 +4,7 @@ import api from '@/core/api'
 
 export type AlcanceInspeccion = 'POR_TIPO_EQUIPO' | 'POR_EQUIPO' | 'POR_LINEA'
 export type EstadoInspeccion = 'BORRADOR' | 'PENDIENTE' | 'APROBADO' | 'RECHAZADO'
+export type TipoInspeccion = 'VARIABLES_CRITICAS' | 'CHILLER' | 'COMPRESOR' | 'GENERADOR' | 'MONTACARGAS'
 
 export interface OpcionSeleccion {
   id: number
@@ -126,6 +127,7 @@ export const useInspeccionesStore = defineStore('inspecciones', () => {
   const errorMsg = ref<string | null>(null)
 
   // Estado del Configuración y Wizard del Técnico
+  const tipoInspeccionSeleccionado = ref<TipoInspeccion>('VARIABLES_CRITICAS')
   const plantaSeleccionadaId = ref<number | null>(null)
   const alcanceSeleccionado = ref<AlcanceInspeccion>('POR_LINEA')
   const referenciaSeleccionadaId = ref<number | null>(null)
@@ -199,11 +201,13 @@ export const useInspeccionesStore = defineStore('inspecciones', () => {
     plantaId: number,
     alcance: AlcanceInspeccion,
     referenciaId?: number,
-    referenciaCodigo?: string
+    referenciaCodigo?: string,
+    tipoInspeccion?: TipoInspeccion
   ) {
     cargandoEquipos.value = true
     errorMsg.value = null
     try {
+      tipoInspeccionSeleccionado.value = tipoInspeccion || 'VARIABLES_CRITICAS'
       plantaSeleccionadaId.value = plantaId
       alcanceSeleccionado.value = alcance
       referenciaSeleccionadaId.value = referenciaId ?? null
@@ -211,6 +215,7 @@ export const useInspeccionesStore = defineStore('inspecciones', () => {
       const params: any = { plantaId, alcance }
       if (referenciaId) params.referenciaId = referenciaId
       if (referenciaCodigo) params.referenciaCodigo = referenciaCodigo
+      if (tipoInspeccion) params.tipoInspeccion = tipoInspeccion
 
       const res = await api.get('/inspecciones/equipos-elegibles', { params })
       if (res.data?.status === 'ok') {
@@ -311,6 +316,7 @@ export const useInspeccionesStore = defineStore('inspecciones', () => {
     try {
       const detalles = Object.values(respuestasWizard.value)
       const payload = {
+        tipoInspeccion: tipoInspeccionSeleccionado.value,
         plantaId: plantaSeleccionadaId.value,
         alcance: alcanceSeleccionado.value,
         ubicacionTecnicaId: alcanceSeleccionado.value === 'POR_LINEA' ? referenciaSeleccionadaId.value : null,
@@ -410,6 +416,7 @@ export const useInspeccionesStore = defineStore('inspecciones', () => {
     cargandoAccion,
     errorMsg,
     plantaSeleccionadaId,
+    tipoInspeccionSeleccionado,
     alcanceSeleccionado,
     referenciaSeleccionadaId,
     respuestasWizard,
