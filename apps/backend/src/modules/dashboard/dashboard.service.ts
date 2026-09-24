@@ -1,4 +1,4 @@
-﻿import prisma from '../../core/prisma'
+import prisma from '../../core/prisma'
 
 export class DashboardService {
 
@@ -567,6 +567,7 @@ export class DashboardService {
   async inspeccionesDelPeriodo(filtros: {
     plantaId?: number
     elaboradoPorId?: number
+    tipoInspeccion?: string
     estado?: string
     fechaInicio?: string
     fechaFin?: string
@@ -575,6 +576,7 @@ export class DashboardService {
     const where: any = {}
     if (filtros.plantaId) where.plantaId = filtros.plantaId
     if (filtros.elaboradoPorId) where.elaboradoPorId = filtros.elaboradoPorId
+    if (filtros.tipoInspeccion) where.tipoInspeccion = filtros.tipoInspeccion
     if (filtros.estado) where.estadoInspeccion = filtros.estado
     if (filtros.fechaInicio || filtros.fechaFin) {
       where.fechaRegistro = {}

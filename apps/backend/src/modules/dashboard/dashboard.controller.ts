@@ -1,4 +1,4 @@
-﻿import { Request, Response, NextFunction } from 'express'
+import { Request, Response, NextFunction } from 'express'
 import { dashboardService } from './dashboard.service'
 import { AppError } from '../../core/errors/AppError'
 
@@ -72,10 +72,11 @@ export class DashboardController {
   async inspeccionesDelPeriodo(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const plantaId = this.resolverPlantaId(req, req.query.plantaId as string)
-      const { elaboradoPorId, estado, fechaInicio, fechaFin, limite } = req.query as Record<string, string>
+      const { elaboradoPorId, tipoInspeccion, estado, fechaInicio, fechaFin, limite } = req.query as Record<string, string>
       const data = await dashboardService.inspeccionesDelPeriodo({
         plantaId,
         elaboradoPorId: elaboradoPorId ? parseInt(elaboradoPorId, 10) : undefined,
+        tipoInspeccion: tipoInspeccion && tipoInspeccion.trim() ? tipoInspeccion.trim() : undefined,
         estado,
         fechaInicio,
         fechaFin,

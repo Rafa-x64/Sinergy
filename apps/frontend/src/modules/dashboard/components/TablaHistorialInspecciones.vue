@@ -1,16 +1,27 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { ref, onMounted } from "vue"
 import { useDashboardStore } from "../dashboard.store"
 
 const store = useDashboardStore()
 
+const filtroTipo = ref("")
 const filtroEstado = ref("")
 const fechaInicio = ref("")
 const fechaFin = ref("")
 
+const opcionesTiposInspeccion = [
+  { title: "Todas las rutinas", value: "" },
+  { title: "Variables Críticas de Planta", value: "VARIABLES_CRITICAS" },
+  { title: "Rutina Chillers", value: "CHILLER" },
+  { title: "Rutina Compresores", value: "COMPRESOR" },
+  { title: "Rutina Generadores", value: "GENERADOR" },
+  { title: "Rutina Montacargas", value: "MONTACARGAS" }
+]
+
 const headers = [
   { title: "Código", key: "codigoInspeccion", sortable: false },
   { title: "Fecha", key: "fechaRegistro", sortable: false },
+  { title: "Rutina", key: "tipoInspeccion", sortable: false },
   { title: "Planta", key: "planta", sortable: false },
   { title: "Equipo", key: "equipo", sortable: false },
   { title: "Técnico", key: "elaboradoPor", sortable: false },
@@ -20,10 +31,33 @@ const headers = [
 
 async function cargar() {
   await store.cargarInspeccionesDelPeriodo({
+    tipoInspeccion: filtroTipo.value || undefined,
     estado: filtroEstado.value || undefined,
     fechaInicio: fechaInicio.value || undefined,
     fechaFin: fechaFin.value || undefined
   })
+}
+
+function etiquetaRutina(tipo?: string) {
+  switch (tipo) {
+    case 'CHILLER': return 'Chillers'
+    case 'COMPRESOR': return 'Compresores'
+    case 'GENERADOR': return 'Generadores'
+    case 'MONTACARGAS': return 'Montacargas'
+    case 'VARIABLES_CRITICAS': return 'Var. Críticas'
+    default: return tipo || 'General'
+  }
+}
+
+function colorRutina(tipo?: string) {
+  switch (tipo) {
+    case 'CHILLER': return 'cyan'
+    case 'COMPRESOR': return 'indigo'
+    case 'GENERADOR': return 'amber'
+    case 'MONTACARGAS': return 'deep-orange'
+    case 'VARIABLES_CRITICAS': return 'teal'
+    default: return 'secondary'
+  }
 }
 
 function formatearFecha(fechaStr: string) {
@@ -75,7 +109,20 @@ onMounted(() => {
 
     <!-- Filtros -->
     <v-row dense class="mb-2">
-      <v-col cols="12" sm="4">
+      <v-col cols="12" sm="3">
+        <v-select
+          v-model="filtroTipo"
+          :items="opcionesTiposInspeccion"
+          item-title="title"
+          item-value="value"
+          label="Rutina / Tipo"
+          variant="outlined"
+          density="compact"
+          hide-details
+          @update:model-value="cargar"
+        />
+      </v-col>
+      <v-col cols="12" sm="3">
         <v-select
           v-model="filtroEstado"
           :items="[
@@ -93,7 +140,7 @@ onMounted(() => {
           @update:model-value="cargar"
         />
       </v-col>
-      <v-col cols="12" sm="4">
+      <v-col cols="12" sm="3">
         <v-text-field
           v-model="fechaInicio"
           type="date"
@@ -105,7 +152,7 @@ onMounted(() => {
           @update:model-value="cargar"
         />
       </v-col>
-      <v-col cols="12" sm="4">
+      <v-col cols="12" sm="3">
         <v-text-field
           v-model="fechaFin"
           type="date"
@@ -146,13 +193,13 @@ onMounted(() => {
       </thead>
       <tbody>
         <tr v-if="store.cargandoInspecciones">
-          <td colspan="7" class="text-center py-6">
+          <td colspan="8" class="text-center py-6">
             <v-progress-circular indeterminate color="success" size="28" />
             <div class="text-caption mt-2">Cargando historial de inspecciones...</div>
           </td>
         </tr>
         <tr v-else-if="!store.inspeccionesDelPeriodo?.inspecciones || store.inspeccionesDelPeriodo.inspecciones.length === 0">
-          <td colspan="7" class="text-center py-8 text-medium-emphasis">
+          <td colspan="8" class="text-center py-8 text-medium-emphasis">
             No se encontraron inspecciones en el rango seleccionado.
           </td>
         </tr>
@@ -161,6 +208,11 @@ onMounted(() => {
             <span class="font-weight-bold font-mono text-body-2">{{ item.codigoInspeccion }}</span>
           </td>
           <td class="text-caption">{{ formatearFecha(item.fechaRegistro) }}</td>
+          <td>
+            <v-chip size="x-small" variant="tonal" :color="colorRutina(item.tipoInspeccion)" class="font-weight-medium">
+              {{ etiquetaRutina(item.tipoInspeccion) }}
+            </v-chip>
+          </td>
           <td>
             <v-chip size="x-small" variant="outlined" color="primary">
               {{ item.planta?.nombre || "General" }}
