@@ -316,10 +316,17 @@ pnpm build
 
 # O especificando los puertos que desees sin recompilar:
 .\start-sinergy.ps1 -BackendPort 3000 -FrontendPort 8080
+
+# 3. Detener los servicios de forma segura (sin afectar otros procesos Node del servidor):
+.\stop-sinergy.ps1
+
+# O especificando los puertos si se usaron puertos personalizados:
+.\stop-sinergy.ps1 -BackendPort 3000 -FrontendPort 8080
 ```
 
 > [!TIP]
-> Gracias al proxy dinámico en `vite.config.ts` y al endpoint relativo `/api`, puedes cambiar el puerto del backend en cualquier momento usando el parámetro `-BackendPort` sin necesidad de volver a compilar el frontend.
+> `start-sinergy.ps1` ejecuta automáticamente `stop-sinergy.ps1` antes de arrancar para garantizar que no queden procesos zombis u ocupando puertos de ejecuciones anteriores.
+
 
 #### Opción B — Auto-inicio con Windows Task Scheduler (Servidores de Producción)
 
