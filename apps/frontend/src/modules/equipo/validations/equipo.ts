@@ -18,7 +18,18 @@ export const equipoRules: EquipoRules = {
   codigo: [
     (v) => !!v || 'El código del equipo es obligatorio.',
     (v) => (v ? String(v).trim().length >= 2 : false) || 'El código debe tener al menos 2 caracteres.',
-    (v) => (v ? String(v).length <= 100 : false) || 'El código no puede superar los 100 caracteres.'
+    (v) => (v ? String(v).length <= 100 : false) || 'El código no puede superar los 100 caracteres.',
+    (v) => {
+      if (!v) return true
+      // Acepta formato libre o los formatos 1000-XXX-XXXX y 1000-XXX-XXXX-XXXX
+      const regexCorto = /^\d{4}-[A-Z0-9]{3}-[A-Z0-9]{4}$/i
+      const regexLargo = /^\d{4}-[A-Z0-9]{3}-[A-Z0-9]{4}-[A-Z0-9]{4}$/i
+      const valor = String(v).trim()
+      const tieneGuiones = valor.includes('-')
+      if (!tieneGuiones) return true
+      return regexCorto.test(valor) || regexLargo.test(valor)
+        || 'Formato inválido. Use 1000-XXX-XXXX o 1000-XXX-XXXX-XXXX'
+    }
   ],
   nombre: [
     (v) => !!v || 'El nombre del equipo es obligatorio.',

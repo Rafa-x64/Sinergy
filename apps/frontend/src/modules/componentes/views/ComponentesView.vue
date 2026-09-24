@@ -263,10 +263,6 @@ watch(pestañaActiva, (nuevaPestana) => {
                                 :disabled="!item.activo" prepend-icon="mdi-minus-circle">
                                 Eliminar
                             </v-btn>
-                            <v-btn color="warning" variant="text" size="small" :disabled="!item.activo"
-                                prepend-icon="mdi-puzzle">
-                                Agregar Variable Crítica
-                            </v-btn>
                         </div>
                     </template>
                 </v-data-table>
