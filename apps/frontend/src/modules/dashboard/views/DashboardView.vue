@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue"
+import { ref, computed, onMounted } from "vue"
 import AppTabs from "@/components/AppTabs.vue"
 import type { TabItem } from "@/core/types/tabs"
 import HeaderViews from "@/components/HeaderViews.vue"
@@ -24,6 +24,25 @@ const pestanasDashboard: TabItem[] = [
 ]
 
 const pestanaActiva = ref<string | number>("estadisticas")
+
+const ESTADOS_FLOTA = [
+  { key: 'OPERATIVO', label: 'Operativo', color: 'success' },
+  { key: 'EN_MANTENIMIENTO', label: 'En Mantenimiento', color: 'warning' },
+  { key: 'INOPERATIVO', label: 'Inoperativo', color: 'error' }
+]
+
+const estadosFlotaNormalizados = computed(() => {
+  return ESTADOS_FLOTA.map(({ key, label, color }) => {
+    const encontrado = store.disponibilidadGlobal.find((g) => g.estado === key)
+    return {
+      estado: key,
+      label,
+      color,
+      cantidad: encontrado?.cantidad ?? 0,
+      porcentaje: encontrado?.porcentaje ?? 0
+    }
+  })
+})
 
 async function refrescarDashboard() {
   const plantaId = authStore.plantaId ?? undefined
@@ -164,10 +183,10 @@ onMounted(() => {
           </div>
 
           <v-row dense>
-            <v-col v-for="g in store.disponibilidadGlobal" :key="g.estado" cols="12" sm="4">
-              <v-card variant="tonal" :color="g.estado === 'OPERATIVO' ? 'success' : g.estado === 'INOPERATIVO' ? 'error' : 'warning'" class="pa-4 text-center rounded-lg">
+            <v-col v-for="g in estadosFlotaNormalizados" :key="g.estado" cols="12" sm="4">
+              <v-card variant="tonal" :color="g.color" class="pa-4 text-center rounded-lg">
                 <div class="text-h4 font-weight-bold">{{ g.cantidad }}</div>
-                <div class="text-subtitle-2 font-weight-medium mt-1">{{ g.estado }}</div>
+                <div class="text-subtitle-2 font-weight-medium mt-1">{{ g.label }}</div>
                 <div class="text-caption mt-1">{{ g.porcentaje }}% del total</div>
               </v-card>
             </v-col>

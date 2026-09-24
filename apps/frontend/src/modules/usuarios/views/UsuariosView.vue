@@ -34,8 +34,7 @@ const usuarioVacio: Partial<RegistrarUsuarioDTO> = {
     nombreUsuario: '',
     activo: true,
     rolId: undefined,
-    plantaId: undefined,
-    supervisorId: null
+    plantaId: undefined
 }
 const datosFormulario = ref<Partial<RegistrarUsuarioDTO>>({ ...usuarioVacio })
 
@@ -62,7 +61,6 @@ const headersTabla = [
     { title: 'Nombre de Usuario', key: 'nombreUsuario', align: 'center' as const },
     { title: 'Rol', key: 'rol', align: 'center' as const },
     { title: 'Planta', key: 'planta', align: 'center' as const },
-    { title: 'Supervisor', key: 'supervisor', align: 'center' as const },
     { title: 'Estado', key: 'activo', align: 'center' as const },
     { title: 'Ultimo Acceso', key: 'ultimoAcceso', align: 'center' as const },
     { title: 'Fecha Creación', key: 'creadoEn', align: 'center' as const },
@@ -109,8 +107,7 @@ const prepararEdicion = (usuario: Usuario): void => {
         nombreUsuario: usuario.nombreUsuario,
         activo: usuario.activo,
         rolId: usuario.rolesUsuario?.[0]?.rolId,
-        plantaId: usuario.plantaId,
-        supervisorId: usuario.supervisorId ?? null
+        plantaId: usuario.plantaId
     }
     pestañaActiva.value = 'editar'
 }
@@ -315,12 +312,7 @@ const handleFiltroUsuarios = (payload: ContenidoFiltro): void => {
                         </v-chip>
                     </template>
 
-                    <template #item.supervisor="{ item }">
-                        <span v-if="item.supervisor">
-                            {{ item.supervisor.nombre }} {{ item.supervisor.apellido }}
-                        </span>
-                        <span v-else class="text-grey">—</span>
-                    </template>
+
 
                     <template #item.activo="{ item }">
                         <v-chip :color="item.activo ? 'success' : 'error'" size="small">
