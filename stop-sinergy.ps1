@@ -5,7 +5,7 @@
 # ============================================================
 
 param(
-    [int]$BackendPort  = 3010,
+    [int]$BackendPort  = 3000,
     [int]$FrontendPort = 4173
 )
 
@@ -13,8 +13,8 @@ Write-Host ""
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host "  Sinergy - Deteniendo servicios en ejecucion" -ForegroundColor Cyan
 Write-Host "============================================================" -ForegroundColor Cyan
-Write-Host "  Backend Port  : $BackendPort" -ForegroundColor DarkGray
-Write-Host "  Frontend Port : $FrontendPort" -ForegroundColor DarkGray
+Write-Host "  Backend Port  : $($BackendPort)" -ForegroundColor DarkGray
+Write-Host "  Frontend Port : $($FrontendPort)" -ForegroundColor DarkGray
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -32,7 +32,7 @@ foreach ($port in $targetPorts) {
                 $proc = Get-Process -Id $pidFound -ErrorAction SilentlyContinue
                 if ($proc -and ($proc.ProcessName -match "node|powershell|pwsh|cmd")) {
                     $null = $pidsToKill.Add($pidFound)
-                    Write-Host "[DETECTADO] Puerto $port ocupado por PID $pidFound ($($proc.ProcessName))" -ForegroundColor Yellow
+                    Write-Host "[DETECTADO] Puerto $($port) ocupado por PID $($pidFound) ($($proc.ProcessName))" -ForegroundColor Yellow
                 }
             }
         }
@@ -58,7 +58,7 @@ try {
         $procId = [int]$proc.ProcessId
         if ($procId -gt 0 -and $procId -ne $PID) {
             $null = $pidsToKill.Add($procId)
-            Write-Host "[DETECTADO] Proceso Sinergy PID $procId ($($proc.Name))" -ForegroundColor Yellow
+            Write-Host "[DETECTADO] Proceso Sinergy PID $($procId) ($($proc.Name))" -ForegroundColor Yellow
         }
     }
 } catch {
@@ -84,13 +84,13 @@ foreach ($targetPid in $pidsToKill) {
             # taskkill /T /F asegura matar el proceso padre y todos sus hijos/hilos
             $resultado = & taskkill.exe /PID $targetPid /T /F 2>&1
             if ($LASTEXITCODE -eq 0) {
-                Write-Host "  [X] PID $targetPid ($($proc.ProcessName)) terminado exitosamente." -ForegroundColor Green
+                Write-Host "  [X] PID $($targetPid) ($($proc.ProcessName)) terminado exitosamente." -ForegroundColor Green
             } else {
                 if ($resultado -like "*Acceso denegado*" -or $resultado -like "*Access is denied*") {
                     $huboAccesoDenegado = $true
-                    Write-Host "  [!] PID $targetPid ($($proc.ProcessName)): Acceso denegado (Requiere PowerShell como Administrador)." -ForegroundColor Red
+                    Write-Host "  [!] PID $($targetPid) ($($proc.ProcessName)): Acceso denegado (Requiere PowerShell como Administrador)." -ForegroundColor Red
                 } else {
-                    Write-Host "  [!] PID $targetPid: $resultado" -ForegroundColor DarkYellow
+                    Write-Host "  [!] PID $($targetPid): $($resultado)" -ForegroundColor DarkYellow
                 }
             }
         }
