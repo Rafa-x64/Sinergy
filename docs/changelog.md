@@ -18,6 +18,7 @@ El formato sigue el estándar [Keep a Changelog](https://keepachangelog.com/es/1
 
 ### Added
 - **Soporte de Rutinas de Inspección Interdiarias para Chillers, Compresores y Generadores (`feat: rutinas-inspeccion-interdiarias-chillers-compresores-generadores`)**:
+  - **Acciones Directas en Pantallas Filtradas (`EquiposPorTipoView.vue`)**: Incorporados botones de *Inspeccionar* por fila de maquinaria y botón global *Iniciar Rutina de [Categoría]* para Chillers, Compresores, Generadores y Montacargas, permitiendo iniciar la captura sin pasos intermedios.
   - **Selector de Rutina Técnica en Captura (`WizardSeleccionAlcance.vue`)**: Configurado el selector especializado para diferenciar explícitamente entre `Variables Críticas de Planta`, `Rutina de Inspección Chillers`, `Rutina de Inspección Compresores`, `Rutina de Inspección Generadores` y `Rutina de Inspección Montacargas`, con filtrado contextual automático de maquinarias operativas y alcance.
   - **Filtrado y Resolución Normativa en Backend (`apps/backend/src/modules/inspecciones/inspecciones.service.ts`)**: Adaptado el endpoint `/api/inspecciones/equipos-elegibles` para admitir `tipoInspeccion`, discriminando los equipos por categoría (`CHILLER`, `COMPRESOR`, `GENERADOR`, `MONTACARGAS`) y aplicando con prioridad las plantillas normativas vinculadas a cada tipo de rutina.
   - **Persistencia Transaccional y Auditoría**: Asignación automática del enum `TipoInspeccion` en la cabecera de inspección y registro detallado de variables y mediciones.

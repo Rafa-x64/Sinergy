@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { useVariablesStore } from '@/modules/variables/variables.store'
 import { usePlantasStore } from '@/modules/plantas/plantas.store'
 import { useUbicacionStore } from '@/modules/ubicaciones/ubicacion.store'
@@ -11,6 +12,7 @@ const emit = defineEmits<{
   (e: 'iniciar-wizard'): void
 }>()
 
+const route = useRoute()
 const variablesStore = useVariablesStore()
 const plantasStore = usePlantasStore()
 const ubicacionStore = useUbicacionStore()
@@ -59,6 +61,25 @@ const opcionesTiposInspeccion = [
 /** Si el usuario NO es administrador y tiene una planta asignada en su perfil, el selector se bloquea */
 const selectPlantaBloqueado = computed(() => !authStore.esAdmin && !!authStore.plantaId)
 
+const procesarParametrosRuta = async () => {
+  if (route.query.tipoInspeccion) {
+    tipoInspeccion.value = route.query.tipoInspeccion as TipoInspeccion
+  }
+
+  if (route.query.plantaId) {
+    plantaId.value = Number(route.query.plantaId)
+  }
+
+  if (route.query.equipoId) {
+    alcance.value = 'POR_EQUIPO'
+    referenciaId.value = Number(route.query.equipoId)
+  }
+
+  if (route.query.autoStart === 'true' && (plantaId.value !== null && plantaId.value !== undefined)) {
+    await ejecutarBusquedaEquipos()
+  }
+}
+
 onMounted(async () => {
   const promesas: Promise<any>[] = [
     plantasStore.listarPlantas(),
@@ -83,7 +104,16 @@ onMounted(async () => {
     // Usuario admin o sin planta: preseleccionar la primera planta activa
     plantaId.value = opcionesPlantas.value[0].id
   }
+
+  await procesarParametrosRuta()
 })
+
+watch(
+  () => route.query,
+  async () => {
+    await procesarParametrosRuta()
+  }
+)
 
 watch(
   () => authStore.plantaId,

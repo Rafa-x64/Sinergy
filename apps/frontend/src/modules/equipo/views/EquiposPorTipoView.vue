@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useToast } from 'vue-toastification'
 import AppTabs from '../../../components/AppTabs.vue'
@@ -14,10 +14,12 @@ import {
 } from '../equipo.store'
 import { useUbicacionStore } from '../../ubicaciones/ubicacion.store'
 import { useAuthStore } from '../../auth/auth.store'
+import type { TipoInspeccion } from '../../inspecciones/inspecciones.store'
 import type { TabItem } from '../../../core/types/tabs'
 import HeaderViews from '../../../components/HeaderViews.vue'
 
 const route = useRoute()
+const router = useRouter()
 const toast = useToast()
 const authStore = useAuthStore()
 const equipoStore = useEquipoStore()
@@ -30,6 +32,16 @@ const { ubicaciones } = storeToRefs(ubicacionStore)
 
 const tipoFiltro = computed<string>(() => (route.meta.tipoFiltro as string) || '')
 const tituloVista = computed<string>(() => (route.meta.titulo as string) || 'Equipos')
+
+// Determina el tipo de inspección técnica asociado a la categoría actual
+const tipoInspeccionAsociado = computed<TipoInspeccion | null>(() => {
+  const t = tipoFiltro.value.toLowerCase().trim()
+  if (t.includes('chiller')) return 'CHILLER'
+  if (t.includes('compresor')) return 'COMPRESOR'
+  if (t.includes('generador')) return 'GENERADOR'
+  if (t.includes('montacarg')) return 'MONTACARGAS'
+  return null
+})
 
 // Raíz del nombre para búsqueda flexible (ej. "Montacargas" -> "montacarg")
 const raizBusqueda = computed<string>(() => {
@@ -236,7 +248,7 @@ const headersTabla = computed(() => {
     { title: 'Serial', key: 'serial', align: 'center' as const },
     { title: 'Estado', key: 'estadoOperativo', align: 'center' as const }
   ]
-  if (authStore.puedeGestionarMaquinas) {
+  if (authStore.puedeGestionarMaquinas || (tipoInspeccionAsociado.value && authStore.puedeRegistrarInspecciones)) {
     h.push({ title: 'Acciones', key: 'acciones', sortable: false, align: 'center' as const })
   }
   return h
@@ -254,6 +266,32 @@ const labelEstado = (estado: string): string => {
   if (estado === 'OPERATIVO') return 'Operativo'
   if (estado === 'EN_MANTENIMIENTO') return 'En Mantenimiento'
   return 'Inoperativo'
+}
+
+// ─── Navegación directa a Inspección ─────────────────────────────────────────
+
+const iniciarInspeccionEquipo = (item: Equipo): void => {
+  if (!tipoInspeccionAsociado.value) return
+  router.push({
+    path: '/inspecciones',
+    query: {
+      tipoInspeccion: tipoInspeccionAsociado.value,
+      equipoId: String(item.id),
+      plantaId: item.ubicacionTecnica?.planta?.id ? String(item.ubicacionTecnica.planta?.id) : undefined,
+      autoStart: 'true'
+    }
+  })
+}
+
+const iniciarRutinaCompleta = (): void => {
+  if (!tipoInspeccionAsociado.value) return
+  router.push({
+    path: '/inspecciones',
+    query: {
+      tipoInspeccion: tipoInspeccionAsociado.value,
+      autoStart: 'false'
+    }
+  })
 }
 
 // ─── Carga inicial de datos ──────────────────────────────────────────────────
@@ -366,6 +404,18 @@ watch(pestañaActiva, (nuevaPestana) => {
     <AppTabs v-model="pestañaActiva" :tabs="pestañasVista">
       <!-- Pestaña 1: Lista de equipos filtrados -->
       <template #tab-lista>
+        <div v-if="tipoInspeccionAsociado && authStore.puedeRegistrarInspecciones" class="d-flex justify-end mb-3">
+          <v-btn
+            color="#5cb85c"
+            variant="flat"
+            prepend-icon="mdi-clipboard-play-outline"
+            class="font-weight-bold"
+            @click="iniciarRutinaCompleta"
+          >
+            Iniciar Rutina de {{ tipoFiltro }}
+          </v-btn>
+        </div>
+
         <FiltroGenerico :config="equipmentFiltersConfig" :loading="cargando"
           @cambiar-filtro="handleFilterChange" />
         <v-data-table :items="equiposFiltrados" :headers="headersTabla"
@@ -389,13 +439,38 @@ watch(pestañaActiva, (nuevaPestana) => {
           </template>
 
           <template #item.acciones="{ item }">
-            <div class="d-flex ga-2 align-center justify-center">
-              <v-btn color="primary" variant="text" size="small" @click="prepararEdicion(item)"
-                prepend-icon="mdi-file-edit">
+            <div class="d-flex ga-2 align-center justify-center flex-wrap">
+              <v-btn
+                v-if="tipoInspeccionAsociado && authStore.puedeRegistrarInspecciones"
+                color="#5cb85c"
+                variant="tonal"
+                size="small"
+                @click="iniciarInspeccionEquipo(item)"
+                :disabled="item.estadoOperativo === 'INOPERATIVO'"
+                prepend-icon="mdi-clipboard-check-outline"
+                class="font-weight-bold"
+              >
+                Inspeccionar
+              </v-btn>
+              <v-btn
+                v-if="authStore.puedeGestionarMaquinas"
+                color="primary"
+                variant="text"
+                size="small"
+                @click="prepararEdicion(item)"
+                prepend-icon="mdi-file-edit"
+              >
                 Editar
               </v-btn>
-              <v-btn color="error" variant="text" size="small" @click="prepararEliminacion(item.id)"
-                :disabled="item.estadoOperativo === 'INOPERATIVO'" prepend-icon="mdi-minus-circle">
+              <v-btn
+                v-if="authStore.puedeGestionarMaquinas"
+                color="error"
+                variant="text"
+                size="small"
+                @click="prepararEliminacion(item.id)"
+                :disabled="item.estadoOperativo === 'INOPERATIVO'"
+                prepend-icon="mdi-minus-circle"
+              >
                 Desactivar
               </v-btn>
             </div>
