@@ -4,7 +4,7 @@ import { useVariablesStore } from '@/modules/variables/variables.store'
 import { usePlantasStore } from '@/modules/plantas/plantas.store'
 import { useUbicacionStore } from '@/modules/ubicaciones/ubicacion.store'
 import { useEquipoStore } from '@/modules/equipo/equipo.store'
-import { useInspeccionesStore, type AlcanceInspeccion } from '../inspecciones.store'
+import { useInspeccionesStore, type AlcanceInspeccion, type TipoInspeccion } from '../inspecciones.store'
 import { useAuthStore } from '@/modules/auth/auth.store'
 
 const emit = defineEmits<{
@@ -18,9 +18,43 @@ const equipoStore = useEquipoStore()
 const inspeccionesStore = useInspeccionesStore()
 const authStore = useAuthStore()
 
+const tipoInspeccion = ref<TipoInspeccion>('VARIABLES_CRITICAS')
 const plantaId = ref<number | null>(null)
 const alcance = ref<AlcanceInspeccion>('POR_LINEA')
 const referenciaId = ref<number | null>(null)
+
+const opcionesTiposInspeccion = [
+  {
+    title: 'Variables Críticas de Planta',
+    value: 'VARIABLES_CRITICAS',
+    icon: 'mdi-clipboard-list-outline',
+    desc: 'Evaluación de variables de control operativo por línea o maquinaria general'
+  },
+  {
+    title: 'Rutina de Inspección Chillers',
+    value: 'CHILLER',
+    icon: 'mdi-snowflake',
+    desc: 'Rutina interdiaria: sistemas de agua, compresores, ventiladores y bombas'
+  },
+  {
+    title: 'Rutina de Inspección Compresores',
+    value: 'COMPRESOR',
+    icon: 'mdi-gauge',
+    desc: 'Rutina interdiaria: presiones, temperaturas, niveles y puntos de compresión'
+  },
+  {
+    title: 'Rutina de Inspección Generadores',
+    value: 'GENERADOR',
+    icon: 'mdi-lightning-bolt',
+    desc: 'Rutina interdiaria: parámetros eléctricos, combustible, refrigerante y alternador'
+  },
+  {
+    title: 'Rutina de Inspección Montacargas',
+    value: 'MONTACARGAS',
+    icon: 'mdi-forklift',
+    desc: 'Inspección de operatividad, niveles y seguridad de flota móvil'
+  }
+]
 
 /** Si el usuario NO es administrador y tiene una planta asignada en su perfil, el selector se bloquea */
 const selectPlantaBloqueado = computed(() => !authStore.esAdmin && !!authStore.plantaId)
@@ -63,7 +97,6 @@ watch(
 
 // Catálogo de plantas disponibles: si es admin o acceso global muestra todas las plantas activas
 const opcionesPlantas = computed(() => {
-  // Lista desde plantas.store (catálogo oficial) o árbol jerárquico como fallback
   let listado: Array<{ id: number; nombre: string; codigo: string }> = []
 
   if (plantasStore.plantas.length > 0) {
@@ -93,13 +126,13 @@ const opcionesPlantas = computed(() => {
   )
 
   if (!yaExisteNinguna && listado.length > 0) {
-    listado = [...listado, { id: 0, nombre: 'Ninguna (Móviles)', codigo: 'NINGUNA' }]
+    listado = [...listado, { id: 0, nombre: 'Ninguna (Móviles / Auxiliares)', codigo: 'NINGUNA' }]
   }
 
   return listado
 })
 
-// Detecta si la planta seleccionada corresponde a "Ninguna" (equipos móviles / sin ubicación fija)
+// Detecta si la planta seleccionada corresponde a "Ninguna"
 const esPlantaNinguna = computed(() => {
   if (plantaId.value === null || plantaId.value === undefined) return false
   if (plantaId.value === 0) return true
@@ -116,7 +149,7 @@ const labelUbicacion = computed(() => {
 
 const placeholderUbicacion = computed(() => {
   return esPlantaNinguna.value
-    ? 'Todos los equipos sin ubicación fija / Montacargas'
+    ? 'Todos los equipos de la categoría'
     : 'Todas las líneas de la planta'
 })
 
@@ -126,7 +159,6 @@ const ubicacionesDisponibles = computed<{ id: number; nombre: string; codigo: st
     return []
   }
 
-  // Primero buscar en ubicacionStore
   const filtradasUbicStore = ubicacionStore.ubicaciones.filter((u) => u.plantaId === plantaId.value)
   if (filtradasUbicStore.length > 0) {
     return filtradasUbicStore.map((u) => ({
@@ -136,7 +168,6 @@ const ubicacionesDisponibles = computed<{ id: number; nombre: string; codigo: st
     }))
   }
 
-  // Fallback: buscar en variablesStore.arbolJerarquico
   const plantaEncontrada = variablesStore.arbolJerarquico.find((p) => p.id === plantaId.value)
   if (plantaEncontrada && plantaEncontrada.ubicacionesTecnicas) {
     return plantaEncontrada.ubicacionesTecnicas.map((u) => ({
@@ -149,63 +180,39 @@ const ubicacionesDisponibles = computed<{ id: number; nombre: string; codigo: st
   return []
 })
 
-// Opciones de Equipos individuales para la Planta elegida
+// Opciones de Equipos individuales filtrados por Planta y por Tipo de Inspección
 const equiposDisponibles = computed(() => {
   if (plantaId.value === null || plantaId.value === undefined) return []
 
-  if (plantaId.value === 0) {
-    // Equipos de tipo Montacargas o sin ubicación fija
-    return equipoStore.equipos
-      .filter((e) => {
-        const tipoNom = (e.tipoEquipo?.nombre || '').toLowerCase()
-        return tipoNom.includes('montacarg')
-      })
-      .map((e) => ({
-        id: e.id,
-        codigo: e.codigo,
-        nombre: e.nombre,
-        etiqueta: `${e.codigo} — ${e.nombre}`
-      }))
+  let filtrados = equipoStore.equipos
+
+  // 1. Filtrar por planta si no es 0
+  if (plantaId.value !== 0) {
+    const idsUbicacionesPlanta = new Set(ubicacionesDisponibles.value.map((u) => u.id))
+    filtrados = filtrados.filter((e) => idsUbicacionesPlanta.has(e.ubicacionTecnicaId))
   }
 
-  // Equipos asociados a la planta seleccionada
-  const listado: { id: number; codigo: string; nombre: string; etiqueta: string }[] = []
-
-  // 1. Desde equipoStore
-  const idsUbicacionesPlanta = new Set(ubicacionesDisponibles.value.map((u) => u.id))
-  const equiposDePlanta = equipoStore.equipos.filter((e) => idsUbicacionesPlanta.has(e.ubicacionTecnicaId))
-
-  if (equiposDePlanta.length > 0) {
-    return equiposDePlanta.map((e) => ({
-      id: e.id,
-      codigo: e.codigo,
-      nombre: e.nombre,
-      etiqueta: `${e.codigo} — ${e.nombre}`
-    }))
+  // 2. Filtrar por Tipo de Inspección (Chiller, Compresor, Generador, Montacargas)
+  if (tipoInspeccion.value === 'CHILLER') {
+    filtrados = filtrados.filter((e) => (e.tipoEquipo?.nombre || '').toLowerCase().includes('chiller'))
+  } else if (tipoInspeccion.value === 'COMPRESOR') {
+    filtrados = filtrados.filter((e) => (e.tipoEquipo?.nombre || '').toLowerCase().includes('compresor'))
+  } else if (tipoInspeccion.value === 'GENERADOR') {
+    filtrados = filtrados.filter((e) => (e.tipoEquipo?.nombre || '').toLowerCase().includes('generador'))
+  } else if (tipoInspeccion.value === 'MONTACARGAS') {
+    filtrados = filtrados.filter((e) => (e.tipoEquipo?.nombre || '').toLowerCase().includes('montacarg'))
   }
 
-  // 2. Fallback: desde el árbol jerárquico
-  const plantaEncontrada = variablesStore.arbolJerarquico.find((p) => p.id === plantaId.value)
-  if (plantaEncontrada && plantaEncontrada.ubicacionesTecnicas) {
-    plantaEncontrada.ubicacionesTecnicas.forEach((u) => {
-      if (u.equipos) {
-        u.equipos.forEach((e) => {
-          listado.push({
-            id: e.id,
-            codigo: e.codigo,
-            nombre: e.nombre,
-            etiqueta: `${e.codigo} — ${e.nombre}`
-          })
-        })
-      }
-    })
-  }
-
-  return listado
+  return filtrados.map((e) => ({
+    id: e.id,
+    codigo: e.codigo,
+    nombre: e.nombre,
+    etiqueta: `${e.codigo} — ${e.nombre}`
+  }))
 })
 
 watch(
-  [plantaId, alcance],
+  [plantaId, alcance, tipoInspeccion],
   () => {
     referenciaId.value = null
   }
@@ -216,7 +223,9 @@ const ejecutarBusquedaEquipos = async () => {
   const res = await inspeccionesStore.cargarEquiposElegibles(
     plantaId.value,
     alcance.value,
-    referenciaId.value ?? undefined
+    referenciaId.value ?? undefined,
+    undefined,
+    tipoInspeccion.value
   )
   if (res.status === 'ok') {
     emit('iniciar-wizard')
@@ -235,14 +244,33 @@ const ejecutarBusquedaEquipos = async () => {
           Configuración del Alcance de Inspección
         </h2>
         <span class="text-caption text-medium-emphasis">
-          Selecciona la planta y la cobertura para evaluar únicamente las maquinarias en estado <strong>OPERATIVO</strong>.
+          Selecciona la rutina técnica, planta y cobertura para evaluar únicamente las maquinarias en estado <strong>OPERATIVO</strong>.
         </span>
       </div>
     </div>
 
     <v-row dense class="mt-2">
-      <!-- 1. Selección de Planta -->
-      <v-col cols="12" md="4">
+      <!-- 1. Tipo de Rutina de Inspección -->
+      <v-col cols="12" md="6">
+        <v-select
+          v-model="tipoInspeccion"
+          :items="opcionesTiposInspeccion"
+          item-title="title"
+          item-value="value"
+          label="Rutina de Inspección *"
+          prepend-inner-icon="mdi-clipboard-text-clock-outline"
+          variant="outlined"
+          density="compact"
+          hide-details
+        >
+          <template #item="{ props: itemProps, item }">
+            <v-list-item v-bind="itemProps" :prepend-icon="item.raw.icon" :title="item.raw.title" :subtitle="item.raw.desc" />
+          </template>
+        </v-select>
+      </v-col>
+
+      <!-- 2. Selección de Planta -->
+      <v-col cols="12" md="6">
         <v-select
           v-model="plantaId"
           :items="opcionesPlantas"
@@ -259,8 +287,8 @@ const ejecutarBusquedaEquipos = async () => {
         />
       </v-col>
 
-      <!-- 2. Selección de Alcance -->
-      <v-col cols="12" md="4">
+      <!-- 3. Selección de Alcance -->
+      <v-col cols="12" md="6">
         <v-select
           v-model="alcance"
           :items="[
@@ -276,8 +304,8 @@ const ejecutarBusquedaEquipos = async () => {
         />
       </v-col>
 
-      <!-- 3. Selección Dinámica según Alcance -->
-      <v-col cols="12" md="4">
+      <!-- 4. Selección Dinámica según Alcance -->
+      <v-col cols="12" md="6">
         <!-- Si es POR_LINEA -->
         <v-select
           v-if="alcance === 'POR_LINEA'"
@@ -324,7 +352,7 @@ const ejecutarBusquedaEquipos = async () => {
           item-title="etiqueta"
           item-value="id"
           label="Maquinaria Específica *"
-          placeholder="Buscar por código o nombre..."
+          :placeholder="equiposDisponibles.length > 0 ? 'Buscar por código o nombre...' : 'No hay equipos para esta rutina en la planta'"
           prepend-inner-icon="mdi-robot-industrial"
           variant="outlined"
           density="compact"
@@ -343,8 +371,11 @@ const ejecutarBusquedaEquipos = async () => {
       icon="mdi-information-outline"
     >
       <div class="text-caption">
+        <span v-if="tipoInspeccion !== 'VARIABLES_CRITICAS'">
+          Rutina seleccionada: <strong>{{ opcionesTiposInspeccion.find(o => o.value === tipoInspeccion)?.title }}</strong>.
+        </span>
         <span v-if="alcance === 'POR_LINEA' && !referenciaId">
-          Se evaluarán <strong>todas las líneas y maquinarias operativas</strong> de la planta seleccionada.
+          Se evaluarán todas las maquinarias operativas elegibles de la planta seleccionada.
         </span>
         <span v-else-if="alcance === 'POR_LINEA' && referenciaId">
           Se evaluarán únicamente las maquinarias operativas ubicadas en la línea seleccionada.

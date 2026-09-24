@@ -43,6 +43,23 @@ defineExpose({ abrir, cerrar })
       </v-card-title>
 
       <v-card-text class="pa-4 pt-5">
+        <div class="mb-3 d-flex align-center justify-space-between">
+          <span class="text-caption text-medium-emphasis">Rutina Seleccionada:</span>
+          <v-chip size="small" color="#5cb85c" variant="tonal" class="font-weight-bold">
+            {{
+              store.tipoInspeccionSeleccionado === 'CHILLER'
+                ? 'Rutina de Inspección Chillers'
+                : store.tipoInspeccionSeleccionado === 'COMPRESOR'
+                ? 'Rutina de Inspección Compresores'
+                : store.tipoInspeccionSeleccionado === 'GENERADOR'
+                ? 'Rutina de Inspección Generadores'
+                : store.tipoInspeccionSeleccionado === 'MONTACARGAS'
+                ? 'Rutina de Inspección Montacargas'
+                : 'Variables Críticas de Planta'
+            }}
+          </v-chip>
+        </div>
+
         <div class="d-flex align-center justify-space-between mb-4 pa-3 bg-surface border rounded">
           <div>
             <div class="text-caption text-medium-emphasis">Progreso de Evaluación</div>
