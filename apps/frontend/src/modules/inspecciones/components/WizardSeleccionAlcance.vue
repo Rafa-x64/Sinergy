@@ -24,13 +24,14 @@ const tipoInspeccion = ref<TipoInspeccion>('VARIABLES_CRITICAS')
 const plantaId = ref<number | null>(null)
 const alcance = ref<AlcanceInspeccion>('POR_LINEA')
 const referenciaId = ref<number | null>(null)
+const equipoEspecificoId = ref<number | null>(null)
 
 const opcionesTiposInspeccion = [
   {
     title: 'Variables Críticas de Planta',
     value: 'VARIABLES_CRITICAS',
     icon: 'mdi-clipboard-list-outline',
-    desc: 'Evaluación de variables de control operativo por línea o maquinaria general'
+    desc: 'Evaluación general de control operativo por línea o maquinaria general'
   },
   {
     title: 'Rutina de Inspección Chillers',
@@ -58,6 +59,19 @@ const opcionesTiposInspeccion = [
   }
 ]
 
+/** Determina si la rutina actual es específica/interdiaria (Chillers, Compresores, Generadores, Montacargas) */
+const esRutinaEspecifica = computed(() => tipoInspeccion.value !== 'VARIABLES_CRITICAS')
+
+const nombreCategoria = computed(() => {
+  switch (tipoInspeccion.value) {
+    case 'CHILLER': return 'Chillers'
+    case 'COMPRESOR': return 'Compresores'
+    case 'GENERADOR': return 'Generadores'
+    case 'MONTACARGAS': return 'Montacargas'
+    default: return 'Maquinarias'
+  }
+})
+
 /** Si el usuario NO es administrador y tiene una planta asignada en su perfil, el selector se bloquea */
 const selectPlantaBloqueado = computed(() => !authStore.esAdmin && !!authStore.plantaId)
 
@@ -71,8 +85,10 @@ const procesarParametrosRuta = async () => {
   }
 
   if (route.query.equipoId) {
+    const id = Number(route.query.equipoId)
     alcance.value = 'POR_EQUIPO'
-    referenciaId.value = Number(route.query.equipoId)
+    referenciaId.value = id
+    equipoEspecificoId.value = id
   }
 
   if (route.query.autoStart === 'true' && (plantaId.value !== null && plantaId.value !== undefined)) {
@@ -98,10 +114,8 @@ onMounted(async () => {
   await Promise.all(promesas)
 
   if (!authStore.esAdmin && authStore.plantaId) {
-    // Usuario no admin con planta asignada: forzar su planta
     plantaId.value = authStore.plantaId
-  } else if (opcionesPlantas.value.length > 0 && !plantaId.value) {
-    // Usuario admin o sin planta: preseleccionar la primera planta activa
+  } else if (opcionesPlantas.value.length > 0 && (plantaId.value === null || plantaId.value === undefined)) {
     plantaId.value = opcionesPlantas.value[0].id
   }
 
@@ -125,7 +139,32 @@ watch(
   { immediate: true }
 )
 
-// Catálogo de plantas disponibles: si es admin o acceso global muestra todas las plantas activas
+// Ajuste automático de planta al alternar tipo de rutina
+watch(tipoInspeccion, (nuevoTipo) => {
+  equipoEspecificoId.value = null
+  referenciaId.value = null
+
+  if (nuevoTipo === 'MONTACARGAS') {
+    // Si no tiene planta obligatoria y no está en 0, preseleccionar 0 (Móviles)
+    if (authStore.esAdmin || !authStore.plantaId) {
+      plantaId.value = 0
+    }
+  } else {
+    // Para chillers, compresores o generadores, si estaba en 'Ninguna (0)', restablecer a la planta del usuario o primera planta activa
+    if (plantaId.value === 0) {
+      if (!authStore.esAdmin && authStore.plantaId) {
+        plantaId.value = authStore.plantaId
+      } else {
+        const primeraPlantaFisica = opcionesPlantas.value.find((p) => p.id > 0)
+        if (primeraPlantaFisica) {
+          plantaId.value = primeraPlantaFisica.id
+        }
+      }
+    }
+  }
+})
+
+// Catálogo de plantas disponibles: si es admin muestra todas las plantas activas; si es técnico, solo su planta asignada
 const opcionesPlantas = computed(() => {
   let listado: Array<{ id: number; nombre: string; codigo: string }> = []
 
@@ -210,19 +249,23 @@ const ubicacionesDisponibles = computed<{ id: number; nombre: string; codigo: st
   return []
 })
 
-// Opciones de Equipos individuales filtrados por Planta y por Tipo de Inspección
-const equiposDisponibles = computed(() => {
+// Equipos disponibles para rutinas específicas filtrados por planta y categoría
+const equiposRutinaEspecifica = computed(() => {
   if (plantaId.value === null || plantaId.value === undefined) return []
 
-  let filtrados = equipoStore.equipos
+  let filtrados = equipoStore.equipos.filter((e) => e.estadoOperativo === 'OPERATIVO')
 
-  // 1. Filtrar por planta si no es 0
+  // Filtro por Planta
   if (plantaId.value !== 0) {
     const idsUbicacionesPlanta = new Set(ubicacionesDisponibles.value.map((u) => u.id))
-    filtrados = filtrados.filter((e) => idsUbicacionesPlanta.has(e.ubicacionTecnicaId))
+    filtrados = filtrados.filter((e) => {
+      if (e.ubicacionTecnica?.planta?.id === plantaId.value) return true
+      if (idsUbicacionesPlanta.has(e.ubicacionTecnicaId)) return true
+      return false
+    })
   }
 
-  // 2. Filtrar por Tipo de Inspección (Chiller, Compresor, Generador, Montacargas)
+  // Filtro por Categoría
   if (tipoInspeccion.value === 'CHILLER') {
     filtrados = filtrados.filter((e) => (e.tipoEquipo?.nombre || '').toLowerCase().includes('chiller'))
   } else if (tipoInspeccion.value === 'COMPRESOR') {
@@ -241,19 +284,53 @@ const equiposDisponibles = computed(() => {
   }))
 })
 
+// Equipos individuales para la inspección general
+const equiposDisponiblesGeneral = computed(() => {
+  if (plantaId.value === null || plantaId.value === undefined) return []
+
+  let filtrados = equipoStore.equipos.filter((e) => e.estadoOperativo === 'OPERATIVO')
+
+  if (plantaId.value !== 0) {
+    const idsUbicacionesPlanta = new Set(ubicacionesDisponibles.value.map((u) => u.id))
+    filtrados = filtrados.filter((e) => idsUbicacionesPlanta.has(e.ubicacionTecnicaId))
+  }
+
+  return filtrados.map((e) => ({
+    id: e.id,
+    codigo: e.codigo,
+    nombre: e.nombre,
+    etiqueta: `${e.codigo} — ${e.nombre}`
+  }))
+})
+
 watch(
-  [plantaId, alcance, tipoInspeccion],
+  [plantaId, alcance],
   () => {
     referenciaId.value = null
+    equipoEspecificoId.value = null
   }
 )
 
 const ejecutarBusquedaEquipos = async () => {
   if (plantaId.value === null || plantaId.value === undefined) return
+
+  let alcanceFinal: AlcanceInspeccion = alcance.value
+  let refIdFinal: number | undefined = referenciaId.value ?? undefined
+
+  if (esRutinaEspecifica.value) {
+    if (equipoEspecificoId.value) {
+      alcanceFinal = 'POR_EQUIPO'
+      refIdFinal = equipoEspecificoId.value
+    } else {
+      alcanceFinal = 'POR_LINEA'
+      refIdFinal = undefined
+    }
+  }
+
   const res = await inspeccionesStore.cargarEquiposElegibles(
     plantaId.value,
-    alcance.value,
-    referenciaId.value ?? undefined,
+    alcanceFinal,
+    refIdFinal,
     undefined,
     tipoInspeccion.value
   )
@@ -274,122 +351,189 @@ const ejecutarBusquedaEquipos = async () => {
           Configuración del Alcance de Inspección
         </h2>
         <span class="text-caption text-medium-emphasis">
-          Selecciona la rutina técnica, planta y cobertura para evaluar únicamente las maquinarias en estado <strong>OPERATIVO</strong>.
+          Selecciona la rutina técnica y las maquinarias operativas a evaluar.
         </span>
       </div>
     </div>
 
-    <v-row dense class="mt-2">
-      <!-- 1. Tipo de Rutina de Inspección -->
-      <v-col cols="12" md="6">
-        <v-select
-          v-model="tipoInspeccion"
-          :items="opcionesTiposInspeccion"
-          item-title="title"
-          item-value="value"
-          label="Rutina de Inspección *"
-          prepend-inner-icon="mdi-clipboard-text-clock-outline"
-          variant="outlined"
-          density="compact"
-          hide-details
-        >
-          <template #item="{ props: itemProps, item }">
-            <v-list-item v-bind="itemProps" :prepend-icon="item.raw.icon" :title="item.raw.title" :subtitle="item.raw.desc" />
-          </template>
-        </v-select>
-      </v-col>
+    <!-- MODO 1: Rutinas Específicas / Interdiarias (Chillers, Compresores, Generadores, Montacargas) -->
+    <template v-if="esRutinaEspecifica">
+      <v-row dense class="mt-2">
+        <!-- 1. Tipo de Rutina -->
+        <v-col cols="12" md="6">
+          <v-select
+            v-model="tipoInspeccion"
+            :items="opcionesTiposInspeccion"
+            item-title="title"
+            item-value="value"
+            label="Rutina de Inspección *"
+            prepend-inner-icon="mdi-clipboard-text-clock-outline"
+            variant="outlined"
+            density="compact"
+            hide-details
+          >
+            <template #item="{ props: itemProps, item }">
+              <v-list-item v-bind="itemProps" :prepend-icon="item.raw.icon" :title="item.raw.title" :subtitle="item.raw.desc" />
+            </template>
+          </v-select>
+        </v-col>
 
-      <!-- 2. Selección de Planta -->
-      <v-col cols="12" md="6">
-        <v-select
-          v-model="plantaId"
-          :items="opcionesPlantas"
-          item-title="nombre"
-          item-value="id"
-          label="Planta Industrial *"
-          prepend-inner-icon="mdi-factory"
-          variant="outlined"
-          density="compact"
-          hide-details
-          :disabled="selectPlantaBloqueado"
-          :hint="selectPlantaBloqueado ? 'Planta asignada a tu perfil' : ''"
-          :persistent-hint="selectPlantaBloqueado"
-        />
-      </v-col>
+        <!-- 2. Planta Industrial (Restringida al área del usuario si no es admin) -->
+        <v-col cols="12" md="6">
+          <v-select
+            v-model="plantaId"
+            :items="opcionesPlantas"
+            item-title="nombre"
+            item-value="id"
+            label="Planta Industrial *"
+            prepend-inner-icon="mdi-factory"
+            variant="outlined"
+            density="compact"
+            :disabled="selectPlantaBloqueado"
+            :hint="selectPlantaBloqueado ? 'Área asignada a tu perfil de usuario' : ''"
+            :persistent-hint="selectPlantaBloqueado"
+            :hide-details="!selectPlantaBloqueado"
+          />
+        </v-col>
 
-      <!-- 3. Selección de Alcance -->
-      <v-col cols="12" md="6">
-        <v-select
-          v-model="alcance"
-          :items="[
-            { title: esPlantaNinguna ? 'Cobertura General (Sin Línea Fija)' : 'Por Línea / Ubicación Técnica', value: 'POR_LINEA' },
-            { title: 'Por Tipo de Maquinaria', value: 'POR_TIPO_EQUIPO' },
-            { title: 'Por Maquinaria Específica', value: 'POR_EQUIPO' }
-          ]"
-          label="Alcance de Evaluación *"
-          prepend-inner-icon="mdi-filter-variant"
-          variant="outlined"
-          density="compact"
-          hide-details
-        />
-      </v-col>
+        <!-- 3. Selección Directa de Maquinaria -->
+        <v-col cols="12" class="mt-1">
+          <v-autocomplete
+            v-model="equipoEspecificoId"
+            :items="equiposRutinaEspecifica"
+            item-title="etiqueta"
+            item-value="id"
+            :label="`Maquinaria (${nombreCategoria}) *`"
+            :placeholder="`Todos los ${nombreCategoria} de la planta (o selecciona uno específico)...`"
+            prepend-inner-icon="mdi-robot-industrial"
+            variant="outlined"
+            density="compact"
+            clearable
+            hide-details
+            :no-data-text="`No se encontraron ${nombreCategoria} operativos en la planta seleccionada.`"
+          >
+            <template #selection="{ item }">
+              <span class="font-weight-medium">{{ item.raw.etiqueta }}</span>
+            </template>
+          </v-autocomplete>
+        </v-col>
+      </v-row>
+    </template>
 
-      <!-- 4. Selección Dinámica según Alcance -->
-      <v-col cols="12" md="6">
-        <!-- Si es POR_LINEA -->
-        <v-select
-          v-if="alcance === 'POR_LINEA'"
-          v-model="referenciaId"
-          :items="ubicacionesDisponibles"
-          item-title="nombre"
-          item-value="id"
-          :label="labelUbicacion"
-          :placeholder="placeholderUbicacion"
-          prepend-inner-icon="mdi-map-marker-path"
-          variant="outlined"
-          density="compact"
-          clearable
-          hide-details
-        >
-          <template #selection="{ item }">
-            <span>{{ item.raw.codigo ? `${item.raw.codigo} - ${item.raw.nombre}` : item.raw.nombre }}</span>
-          </template>
-          <template #item="{ props: itemProps, item }">
-            <v-list-item v-bind="{ ...itemProps, title: undefined }" :subtitle="item.raw.codigo" />
-          </template>
-        </v-select>
+    <!-- MODO 2: Variables Críticas de Planta (Evaluación Flexible Multi-Alcance) -->
+    <template v-else>
+      <v-row dense class="mt-2">
+        <!-- 1. Tipo de Rutina -->
+        <v-col cols="12" md="6">
+          <v-select
+            v-model="tipoInspeccion"
+            :items="opcionesTiposInspeccion"
+            item-title="title"
+            item-value="value"
+            label="Rutina de Inspección *"
+            prepend-inner-icon="mdi-clipboard-text-clock-outline"
+            variant="outlined"
+            density="compact"
+            hide-details
+          >
+            <template #item="{ props: itemProps, item }">
+              <v-list-item v-bind="itemProps" :prepend-icon="item.raw.icon" :title="item.raw.title" :subtitle="item.raw.desc" />
+            </template>
+          </v-select>
+        </v-col>
 
-        <!-- Si es POR_TIPO_EQUIPO -->
-        <v-select
-          v-else-if="alcance === 'POR_TIPO_EQUIPO'"
-          v-model="referenciaId"
-          :items="variablesStore.tiposEquipo"
-          item-title="nombre"
-          item-value="id"
-          label="Tipo de Maquinaria *"
-          placeholder="Seleccionar tipo de maquinaria"
-          prepend-inner-icon="mdi-cog-sync"
-          variant="outlined"
-          density="compact"
-          hide-details
-        />
+        <!-- 2. Selección de Planta -->
+        <v-col cols="12" md="6">
+          <v-select
+            v-model="plantaId"
+            :items="opcionesPlantas"
+            item-title="nombre"
+            item-value="id"
+            label="Planta Industrial *"
+            prepend-inner-icon="mdi-factory"
+            variant="outlined"
+            density="compact"
+            :disabled="selectPlantaBloqueado"
+            :hint="selectPlantaBloqueado ? 'Área asignada a tu perfil de usuario' : ''"
+            :persistent-hint="selectPlantaBloqueado"
+            :hide-details="!selectPlantaBloqueado"
+          />
+        </v-col>
 
-        <!-- Si es POR_EQUIPO -->
-        <v-autocomplete
-          v-else-if="alcance === 'POR_EQUIPO'"
-          v-model="referenciaId"
-          :items="equiposDisponibles"
-          item-title="etiqueta"
-          item-value="id"
-          label="Maquinaria Específica *"
-          :placeholder="equiposDisponibles.length > 0 ? 'Buscar por código o nombre...' : 'No hay equipos para esta rutina en la planta'"
-          prepend-inner-icon="mdi-robot-industrial"
-          variant="outlined"
-          density="compact"
-          hide-details
-        />
-      </v-col>
-    </v-row>
+        <!-- 3. Selección de Alcance -->
+        <v-col cols="12" md="6">
+          <v-select
+            v-model="alcance"
+            :items="[
+              { title: esPlantaNinguna ? 'Cobertura General (Sin Línea Fija)' : 'Por Línea / Ubicación Técnica', value: 'POR_LINEA' },
+              { title: 'Por Tipo de Maquinaria', value: 'POR_TIPO_EQUIPO' },
+              { title: 'Por Maquinaria Específica', value: 'POR_EQUIPO' }
+            ]"
+            label="Alcance de Evaluación *"
+            prepend-inner-icon="mdi-filter-variant"
+            variant="outlined"
+            density="compact"
+            hide-details
+          />
+        </v-col>
+
+        <!-- 4. Selección Dinámica según Alcance -->
+        <v-col cols="12" md="6">
+          <!-- Si es POR_LINEA -->
+          <v-select
+            v-if="alcance === 'POR_LINEA'"
+            v-model="referenciaId"
+            :items="ubicacionesDisponibles"
+            item-title="nombre"
+            item-value="id"
+            :label="labelUbicacion"
+            :placeholder="placeholderUbicacion"
+            prepend-inner-icon="mdi-map-marker-path"
+            variant="outlined"
+            density="compact"
+            clearable
+            hide-details
+          >
+            <template #selection="{ item }">
+              <span>{{ item.raw.codigo ? `${item.raw.codigo} - ${item.raw.nombre}` : item.raw.nombre }}</span>
+            </template>
+            <template #item="{ props: itemProps, item }">
+              <v-list-item v-bind="{ ...itemProps, title: undefined }" :subtitle="item.raw.codigo" />
+            </template>
+          </v-select>
+
+          <!-- Si es POR_TIPO_EQUIPO -->
+          <v-select
+            v-else-if="alcance === 'POR_TIPO_EQUIPO'"
+            v-model="referenciaId"
+            :items="variablesStore.tiposEquipo"
+            item-title="nombre"
+            item-value="id"
+            label="Tipo de Maquinaria *"
+            placeholder="Seleccionar tipo de maquinaria"
+            prepend-inner-icon="mdi-cog-sync"
+            variant="outlined"
+            density="compact"
+            hide-details
+          />
+
+          <!-- Si es POR_EQUIPO -->
+          <v-autocomplete
+            v-else-if="alcance === 'POR_EQUIPO'"
+            v-model="referenciaId"
+            :items="equiposDisponiblesGeneral"
+            item-title="etiqueta"
+            item-value="id"
+            label="Maquinaria Específica *"
+            :placeholder="equiposDisponiblesGeneral.length > 0 ? 'Buscar por código o nombre...' : 'No hay maquinarias disponibles'"
+            prepend-inner-icon="mdi-robot-industrial"
+            variant="outlined"
+            density="compact"
+            hide-details
+          />
+        </v-col>
+      </v-row>
+    </template>
 
     <!-- Resumen de Cobertura según la configuración -->
     <v-alert
@@ -401,24 +545,34 @@ const ejecutarBusquedaEquipos = async () => {
       icon="mdi-information-outline"
     >
       <div class="text-caption">
-        <span v-if="tipoInspeccion !== 'VARIABLES_CRITICAS'">
-          Rutina seleccionada: <strong>{{ opcionesTiposInspeccion.find(o => o.value === tipoInspeccion)?.title }}</strong>.
-        </span>
-        <span v-if="alcance === 'POR_LINEA' && !referenciaId">
-          Se evaluarán todas las maquinarias operativas elegibles de la planta seleccionada.
-        </span>
-        <span v-else-if="alcance === 'POR_LINEA' && referenciaId">
-          Se evaluarán únicamente las maquinarias operativas ubicadas en la línea seleccionada.
-        </span>
-        <span v-else-if="alcance === 'POR_TIPO_EQUIPO' && referenciaId">
-          Se evaluarán todas las maquinarias operativas del tipo seleccionado dentro de la planta.
-        </span>
-        <span v-else-if="alcance === 'POR_EQUIPO' && referenciaId">
-          Se evaluará una sola maquinaria específica de manera individual.
-        </span>
-        <span v-else>
-          Completa la selección del alcance para consultar las maquinarias elegibles.
-        </span>
+        <template v-if="esRutinaEspecifica">
+          <span v-if="equipoEspecificoId">
+            Se evaluará la rutina <strong>{{ opcionesTiposInspeccion.find(o => o.value === tipoInspeccion)?.title }}</strong> para el equipo individual <strong>{{ equiposRutinaEspecifica.find(e => e.id === equipoEspecificoId)?.etiqueta }}</strong>.
+          </span>
+          <span v-else-if="equiposRutinaEspecifica.length > 0">
+            Se evaluarán todos los <strong>{{ nombreCategoria }}</strong> operativos de la planta seleccionada (<strong>{{ equiposRutinaEspecifica.length }} equipo(s) disponible(s)</strong>).
+          </span>
+          <span v-else class="text-error font-weight-medium">
+            No se encontraron {{ nombreCategoria }} operativos registrados en la planta seleccionada.
+          </span>
+        </template>
+        <template v-else>
+          <span v-if="alcance === 'POR_LINEA' && !referenciaId">
+            Se evaluarán todas las maquinarias operativas elegibles de la planta seleccionada.
+          </span>
+          <span v-else-if="alcance === 'POR_LINEA' && referenciaId">
+            Se evaluarán únicamente las maquinarias operativas ubicadas en la línea seleccionada.
+          </span>
+          <span v-else-if="alcance === 'POR_TIPO_EQUIPO' && referenciaId">
+            Se evaluarán todas las maquinarias operativas del tipo seleccionado dentro de la planta.
+          </span>
+          <span v-else-if="alcance === 'POR_EQUIPO' && referenciaId">
+            Se evaluará una sola maquinaria específica de manera individual.
+          </span>
+          <span v-else>
+            Completa la selección del alcance para consultar las maquinarias elegibles.
+          </span>
+        </template>
       </div>
     </v-alert>
 
@@ -435,7 +589,7 @@ const ejecutarBusquedaEquipos = async () => {
         color="#5cb85c"
         size="comfortable"
         prepend-icon="mdi-play-circle-outline"
-        :disabled="plantaId === null || plantaId === undefined"
+        :disabled="plantaId === null || plantaId === undefined || (esRutinaEspecifica && equiposRutinaEspecifica.length === 0)"
         :loading="inspeccionesStore.cargandoEquipos"
         @click="ejecutarBusquedaEquipos"
       >
