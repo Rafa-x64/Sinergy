@@ -37,6 +37,13 @@ Write-Host "  Frontend -> http://localhost:$FrontendPort" -ForegroundColor Green
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host ""
 
+# ─── Limpiar instancias previas colgadas si existen ──────────────────────────
+$stopScript = Join-Path $ROOT "stop-sinergy.ps1"
+if (Test-Path $stopScript) {
+    & $stopScript -BackendPort $BackendPort -FrontendPort $FrontendPort
+}
+
+
 # ─── Backend: generar script temporal y ejecutarlo en nueva ventana ───────────
 $backendScript = Join-Path $env:TEMP "sinergy-backend.ps1"
 Set-Content -Path $backendScript -Value @"

@@ -22,7 +22,8 @@ El formato sigue el estándar [Keep a Changelog](https://keepachangelog.com/es/1
   - **Rutas Relativas Universales (`VITE_API_URL=/api`)**: Configuración del frontend para consumir `/api` relativo por defecto, eliminando puertos fijos y URLs absolutas quemadas en los bundles de producción.
   - **Carga Robusta y Universal de Variables de Entorno (`apps/backend/src/core/env.ts`)**: Resolución dinámica de la ruta de `apps/backend/.env` sin importar desde qué directorio o proceso (`process.cwd()`) se invoque Node.js (PowerShell, Windows Task Scheduler, PM2).
   - **Scripts de Automatización y Auto-Inicio para Windows**:
-    - `start-sinergy.ps1`: Script parametrizable (`-BackendPort <puerto> -FrontendPort <puerto>`) para arrancar frontend y backend en ventanas independientes con sus variables de entorno configuradas.
+    - `start-sinergy.ps1`: Script parametrizable (`-BackendPort <puerto> -FrontendPort <puerto>`) para arrancar frontend y backend en ventanas independientes con verificación previa y detención automática de procesos anteriores.
+    - `stop-sinergy.ps1`: Script de detención segura que inspecciona conexiones TCP y líneas de comando WMI (`Win32_Process`) para terminar exclusivamente los árboles de procesos de Node.js y PowerShell de Sinergy sin afectar otros servicios del servidor.
     - `register-autostart.ps1`: Registra Sinergy como servicio en el Programador de Tareas de Windows (`Task Scheduler`) ejecutándose con cuenta `SYSTEM` para arranque desatendido al boot del servidor.
     - `ecosystem.config.cjs`: Archivo de configuración para despliegue y gestión de procesos con PM2.
 
