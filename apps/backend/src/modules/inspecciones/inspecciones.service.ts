@@ -182,7 +182,11 @@ export class InspeccionesService {
         where: {
           tipoEquipoId: { in: tipoEquipoIds },
           activa: true,
-          ...(tipoInspeccion ? { OR: [{ tipoInspeccion }, { tipoInspeccion: null }] } : {})
+          ...(tipoInspeccion === 'VARIABLES_CRITICAS'
+            ? { OR: [{ tipoInspeccion: 'VARIABLES_CRITICAS' }, { tipoInspeccion: null }] }
+            : tipoInspeccion
+            ? { tipoInspeccion }
+            : {})
         },
         include: { opcionesSeleccion: { orderBy: { ordenPosicion: 'asc' } } },
         orderBy: { ordenPosicion: 'asc' }
@@ -207,7 +211,7 @@ export class InspeccionesService {
         let variablesResueltas: any[]
 
         if (tieneEsquemaDePlantilla) {
-          // Incluir solo variables que fueron instanciadas desde una plantilla
+          // Incluir solo variables que fueron instanciadas desde una plantilla de ESTA rutina
           // y sobrescribir sus metadatos normativos con los de la plantilla fuente.
           variablesResueltas = componente.variables
             .filter((v) => v.plantillaId !== null && plantillasDelTipo!.has(v.plantillaId!))
@@ -232,21 +236,29 @@ export class InspeccionesService {
               }
             })
         } else {
-          // Sin plantilla: usar las variables propias del componente
-          variablesResueltas = componente.variables.map((v) => ({
-            id: v.id,
-            componenteId: v.componenteId,
-            plantillaId: v.plantillaId,
-            nombre: v.nombre,
-            tipoEvaluacion: v.tipoEvaluacion,
-            unidad: v.unidad,
-            valorMinimo: v.valorMinimo !== null ? Number(v.valorMinimo) : null,
-            valorMaximo: v.valorMaximo !== null ? Number(v.valorMaximo) : null,
-            ordenPosicion: v.ordenPosicion,
-            activa: v.activa,
-            origenNormativo: 'VARIABLE_DIRECTA',
-            opcionesSeleccion: v.opcionesSeleccion
-          }))
+          // Si no hay plantilla específica para este tipo:
+          // Para VARIABLES_CRITICAS permitimos variables directas que no pertenezcan a rutinas interdiarias
+          if (tipoInspeccion === 'VARIABLES_CRITICAS' || !tipoInspeccion) {
+            variablesResueltas = componente.variables
+              .filter((v) => !v.plantilla || v.plantilla.tipoInspeccion === 'VARIABLES_CRITICAS' || v.plantilla.tipoInspeccion === null)
+              .map((v) => ({
+                id: v.id,
+                componenteId: v.componenteId,
+                plantillaId: v.plantillaId,
+                nombre: v.nombre,
+                tipoEvaluacion: v.tipoEvaluacion,
+                unidad: v.unidad,
+                valorMinimo: v.valorMinimo !== null ? Number(v.valorMinimo) : null,
+                valorMaximo: v.valorMaximo !== null ? Number(v.valorMaximo) : null,
+                ordenPosicion: v.ordenPosicion,
+                activa: v.activa,
+                origenNormativo: 'VARIABLE_DIRECTA',
+                opcionesSeleccion: v.opcionesSeleccion
+              }))
+          } else {
+            // En rutinas interdiarias (CHILLER, COMPRESOR, GENERADOR, MONTACARGAS), no mezclar variables de otros tipos
+            variablesResueltas = []
+          }
         }
 
         return {
