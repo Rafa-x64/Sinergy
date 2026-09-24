@@ -40,11 +40,43 @@ const r1DescargandoExcel = ref(false)
 const r1DescargandoPdf = ref(false)
 
 // Filtros para R2
+const r2TipoInspeccion = ref("")
 const r2Estado = ref("")
 const r2Inicio = ref("")
 const r2Fin = ref("")
 const r2DescargandoExcel = ref(false)
 const r2DescargandoPdf = ref(false)
+
+const opcionesTiposInspeccionR2 = [
+  { title: "Todas las rutinas", value: "" },
+  { title: "Variables Críticas de Planta", value: "VARIABLES_CRITICAS" },
+  { title: "Rutina Chillers", value: "CHILLER" },
+  { title: "Rutina Compresores", value: "COMPRESOR" },
+  { title: "Rutina Generadores", value: "GENERADOR" },
+  { title: "Rutina Montacargas", value: "MONTACARGAS" }
+]
+
+function etiquetaRutina(tipo?: string) {
+  switch (tipo) {
+    case 'CHILLER': return 'Chillers'
+    case 'COMPRESOR': return 'Compresores'
+    case 'GENERADOR': return 'Generadores'
+    case 'MONTACARGAS': return 'Montacargas'
+    case 'VARIABLES_CRITICAS': return 'Var. Críticas'
+    default: return tipo || 'General'
+  }
+}
+
+function colorRutina(tipo?: string) {
+  switch (tipo) {
+    case 'CHILLER': return 'cyan'
+    case 'COMPRESOR': return 'indigo'
+    case 'GENERADOR': return 'amber'
+    case 'MONTACARGAS': return 'deep-orange'
+    case 'VARIABLES_CRITICAS': return 'teal'
+    default: return 'secondary'
+  }
+}
 
 // Filtros para R3
 const r3Inicio = ref("")
@@ -174,6 +206,7 @@ function exportarR1Pdf() {
 // ═══════════════════════════════════════════════════════════════
 async function cargarR2() {
   await store.cargarInspeccionesDelPeriodo({
+    tipoInspeccion: r2TipoInspeccion.value || undefined,
     estado: r2Estado.value || undefined,
     fechaInicio: r2Inicio.value || undefined,
     fechaFin: r2Fin.value || undefined,
@@ -188,6 +221,7 @@ function exportarR2Excel() {
     const filas = store.inspeccionesDelPeriodo.inspecciones.map(i => ({
       "Código Inspección": i.codigoInspeccion,
       "Fecha": new Date(i.fechaRegistro).toLocaleString("es-ES"),
+      "Rutina / Tipo": etiquetaRutina(i.tipoInspeccion),
       "Planta": i.planta?.nombre || "N/A",
       "Código Equipo": i.equipo?.codigo || "N/A",
       "Nombre Equipo": i.equipo?.nombre || "N/A",
@@ -221,17 +255,19 @@ function exportarR2Pdf() {
         { label: "Tasa Aprobación", valor: `${store.inspeccionesDelPeriodo.tasaAprobacion}%` }
       ],
       columnas: [
-        { title: "Código", key: "codigoInspeccion", width: 45 },
-        { title: "Fecha", key: "fechaStr", width: 35 },
-        { title: "Planta", key: "plantaNombre", width: 35 },
-        { title: "Equipo", key: "equipoStr", width: 50 },
-        { title: "Técnico Responsable", key: "tecnicoNombre", width: 45 },
-        { title: "Estado", key: "estadoInspeccion", width: 30 },
-        { title: "Variables", key: "totalVars", width: 25 }
+        { title: "Código", key: "codigoInspeccion", width: 35 },
+        { title: "Fecha", key: "fechaStr", width: 25 },
+        { title: "Rutina", key: "rutinaStr", width: 30 },
+        { title: "Planta", key: "plantaNombre", width: 30 },
+        { title: "Equipo", key: "equipoStr", width: 45 },
+        { title: "Técnico", key: "tecnicoNombre", width: 35 },
+        { title: "Estado", key: "estadoInspeccion", width: 25 },
+        { title: "Vars", key: "totalVars", width: 18 }
       ],
       filas: store.inspeccionesDelPeriodo.inspecciones.map(i => ({
         codigoInspeccion: i.codigoInspeccion,
         fechaStr: new Date(i.fechaRegistro).toLocaleDateString("es-ES"),
+        rutinaStr: etiquetaRutina(i.tipoInspeccion),
         plantaNombre: i.planta?.nombre || "General",
         equipoStr: i.equipo ? `${i.equipo.codigo} - ${i.equipo.nombre}` : "General",
         tecnicoNombre: i.elaboradoPor ? `${i.elaboradoPor.nombre} ${i.elaboradoPor.apellido}` : "-",
@@ -751,7 +787,20 @@ onMounted(() => {
       </div>
 
       <v-row dense class="mb-3">
-        <v-col cols="12" sm="4">
+        <v-col cols="12" sm="3">
+          <v-select
+            v-model="r2TipoInspeccion"
+            :items="opcionesTiposInspeccionR2"
+            item-title="title"
+            item-value="value"
+            label="Tipo de Inspección / Rutina"
+            variant="outlined"
+            density="compact"
+            hide-details
+            @update:model-value="cargarR2"
+          />
+        </v-col>
+        <v-col cols="12" sm="3">
           <v-select
             v-model="r2Estado"
             :items="[
@@ -769,7 +818,7 @@ onMounted(() => {
             @update:model-value="cargarR2"
           />
         </v-col>
-        <v-col cols="12" sm="4">
+        <v-col cols="12" sm="3">
           <v-text-field
             v-model="r2Inicio"
             type="date"
@@ -781,7 +830,7 @@ onMounted(() => {
             @update:model-value="cargarR2"
           />
         </v-col>
-        <v-col cols="12" sm="4">
+        <v-col cols="12" sm="3">
           <v-text-field
             v-model="r2Fin"
             type="date"
@@ -808,6 +857,7 @@ onMounted(() => {
             <tr class="bg-slate-50">
               <th class="text-left font-weight-bold">Código</th>
               <th class="text-left font-weight-bold">Fecha</th>
+              <th class="text-left font-weight-bold">Rutina</th>
               <th class="text-left font-weight-bold">Planta</th>
               <th class="text-left font-weight-bold">Equipo</th>
               <th class="text-left font-weight-bold">Técnico</th>
@@ -817,18 +867,23 @@ onMounted(() => {
           </thead>
           <tbody>
             <tr v-if="store.cargandoInspecciones">
-              <td colspan="7" class="text-center py-6">
+              <td colspan="8" class="text-center py-6">
                 <v-progress-circular indeterminate color="primary" size="24" />
               </td>
             </tr>
             <tr v-else-if="!store.inspeccionesDelPeriodo?.inspecciones.length">
-              <td colspan="7" class="text-center py-6 text-medium-emphasis">
+              <td colspan="8" class="text-center py-6 text-medium-emphasis">
                 No hay inspecciones registradas para el período.
               </td>
             </tr>
             <tr v-for="i in store.inspeccionesDelPeriodo?.inspecciones" :key="i.id">
               <td class="font-weight-bold font-mono">{{ i.codigoInspeccion }}</td>
               <td class="text-caption">{{ new Date(i.fechaRegistro).toLocaleDateString("es-ES") }}</td>
+              <td>
+                <v-chip size="x-small" variant="tonal" :color="colorRutina(i.tipoInspeccion)" class="font-weight-medium">
+                  {{ etiquetaRutina(i.tipoInspeccion) }}
+                </v-chip>
+              </td>
               <td>{{ i.planta?.nombre || "General" }}</td>
               <td>{{ i.equipo ? `${i.equipo.codigo} - ${i.equipo.nombre}` : "General" }}</td>
               <td>{{ i.elaboradoPor ? `${i.elaboradoPor.nombre} ${i.elaboradoPor.apellido}` : "-" }}</td>

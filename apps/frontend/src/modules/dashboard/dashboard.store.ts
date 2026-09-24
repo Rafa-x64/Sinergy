@@ -1,4 +1,4 @@
-﻿import { defineStore } from 'pinia'
+import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import api from '@/core/api'
 
@@ -280,6 +280,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
   async function cargarInspeccionesDelPeriodo(filtros: {
     plantaId?: number
     elaboradoPorId?: number
+    tipoInspeccion?: string
     estado?: string
     fechaInicio?: string
     fechaFin?: string
