@@ -557,14 +557,17 @@ export const useVariablesStore = defineStore('variables', () => {
       nombre: `${variable.nombre} (Copia)`,
       tipoEvaluacion: variable.tipoEvaluacion,
       unidad: variable.unidad,
-      valorMinimo: variable.valorMinimo !== null ? Number(variable.valorMinimo) : null,
-      valorMaximo: variable.valorMaximo !== null ? Number(variable.valorMaximo) : null,
+      valorMinimo: variable.valorMinimo !== null && variable.valorMinimo !== undefined ? Number(variable.valorMinimo) : null,
+      valorMaximo: variable.valorMaximo !== null && variable.valorMaximo !== undefined ? Number(variable.valorMaximo) : null,
       ordenPosicion: (variable.ordenPosicion ?? 0) + 1,
-      opciones: variable.opcionesSeleccion?.map((o) => ({
-        clave: o.clave,
-        etiqueta: o.etiqueta,
-        ordenPosicion: o.ordenPosicion
-      }))
+      opciones:
+        variable.tipoEvaluacion === 'SELECCION' && variable.opcionesSeleccion && variable.opcionesSeleccion.length > 0
+          ? variable.opcionesSeleccion.map((o) => ({
+              clave: o.clave,
+              etiqueta: o.etiqueta,
+              ordenPosicion: o.ordenPosicion
+            }))
+          : undefined
     }
     return crearVariable(dto)
   }

@@ -129,8 +129,8 @@ export const variableCriticaController = {
             message: 'Las claves de las opciones no pueden repetirse dentro de la misma variable'
           })
         }
-      } else if (opciones !== undefined) {
-        // Para tipos numéricos, ignorar silenciosamente las opciones podría generar confusión —
+      } else if (opciones !== undefined && opciones !== null && Array.isArray(opciones) && opciones.length > 0) {
+        // Para tipos numéricos, ignorar silenciosamente las opciones con datos podría generar confusión —
         // se rechaza explícitamente para mantener contratos de API claros
         return res.status(400).json({
           status: 'error',
@@ -146,7 +146,7 @@ export const variableCriticaController = {
         valorMinimo: valorMinimo ?? null,
         valorMaximo: valorMaximo ?? null,
         ordenPosicion: ordenPosicion ?? 0,
-        opciones: tipoEvaluacion === TipoEvaluacion.SELECCION ? opciones : undefined
+        opciones: tipoEvaluacion === TipoEvaluacion.SELECCION && Array.isArray(opciones) && opciones.length > 0 ? opciones : undefined
       }
 
       const variableRegistrada = await variableCriticaService.crearVariable(nuevaVariable)
