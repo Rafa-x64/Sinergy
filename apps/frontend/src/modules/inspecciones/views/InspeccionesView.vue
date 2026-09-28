@@ -46,9 +46,14 @@ const solicitarFinalizar = () => {
   refResumenDialog.value?.abrir()
 }
 
-const manejarEnviadoExito = () => {
+const manejarEnviadoExito = (data?: any) => {
   modoWizardActivo.value = false
   pestañaActiva.value = authStore.puedeEvaluarInspecciones ? 'supervision' : 'historial'
+  if (pestañaActiva.value === 'historial') {
+    store.cargarHistorial()
+  } else if (pestañaActiva.value === 'supervision') {
+    store.cargarPendientes()
+  }
 }
 
 onMounted(() => {

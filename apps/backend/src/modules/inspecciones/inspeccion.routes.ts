@@ -18,6 +18,7 @@ router.patch(['/:id/evaluar', '/evaluar/:id'], validarJWT, autorizarRoles(ROL_AD
 
 // Historial y Detalle: Todos los roles autenticados (filtrado por su planta vía PBAC)
 router.get(['/historial', '/listar'], validarJWT, inspeccionesController.obtenerHistorial)
+router.get('/ultima-inspeccion', validarJWT, inspeccionesController.obtenerUltimaInspeccionEquipo)
 router.get(['/:id', '/buscar/:id'], validarJWT, inspeccionesController.obtenerPorId)
 
 // Eliminación (solo Administrador)

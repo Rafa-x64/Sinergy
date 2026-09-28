@@ -180,6 +180,31 @@ export const inspeccionesController = {
     }
   },
 
+  // GET /api/inspecciones/ultima-inspeccion?equipoId=X&tipoInspeccion=Y
+  async obtenerUltimaInspeccionEquipo(
+    req: Request,
+    res: Response<ResponseDTO>,
+    next: NextFunction
+  ) {
+    try {
+      const equipoId = req.query.equipoId ? Number(req.query.equipoId) : NaN
+      const tipoInspeccion = req.query.tipoInspeccion ? (req.query.tipoInspeccion as any) : undefined
+
+      if (isNaN(equipoId)) {
+        return res.status(400).json({ status: 'error', message: 'El ID del equipo es requerido y debe ser numérico' })
+      }
+
+      const ultima = await inspeccionesService.obtenerUltimaInspeccionEquipo(equipoId, tipoInspeccion)
+      return res.status(200).json({
+        status: 'ok',
+        message: 'Última inspección del equipo obtenida correctamente',
+        data: ultima ?? undefined
+      })
+    } catch (error) {
+      next(error)
+    }
+  },
+
   // DELETE /api/inspecciones/:id
   async eliminarInspeccion(
     req: Request<{ id: string }>,
