@@ -117,6 +117,19 @@ export interface InspeccionMaestra {
   _count?: { detalles: number }
 }
 
+export interface UltimaInspeccionResumen {
+  id: string
+  codigoInspeccion: string
+  fechaRegistro: string
+  estadoInspeccion: EstadoInspeccion
+  tipoInspeccion: TipoInspeccion
+  observacionesGenerales?: string | null
+  elaboradoPor?: {
+    nombre: string
+    apellido: string
+  }
+}
+
 const LOCAL_STORAGE_DRAFT_KEY = 'sinergy_draft_inspeccion'
 
 export const useInspeccionesStore = defineStore('inspecciones', () => {
@@ -247,6 +260,7 @@ export const useInspeccionesStore = defineStore('inspecciones', () => {
   function guardarBorradorLocal() {
     try {
       const borrador = {
+        tipoInspeccion: tipoInspeccionSeleccionado.value,
         plantaId: plantaSeleccionadaId.value,
         alcance: alcanceSeleccionado.value,
         referenciaId: referenciaSeleccionadaId.value,
@@ -292,6 +306,9 @@ export const useInspeccionesStore = defineStore('inspecciones', () => {
         respuestasWizard.value = respuestasRaw
       }
 
+      if (data.tipoInspeccion) {
+        tipoInspeccionSeleccionado.value = data.tipoInspeccion
+      }
       observacionesGeneralesWizard.value = data.observacionesGenerales || ''
       pasoActualWizard.value = data.pasoActual || 1
       return true
@@ -410,6 +427,21 @@ export const useInspeccionesStore = defineStore('inspecciones', () => {
     }
   }
 
+  async function consultarUltimaInspeccion(equipoId: number, tipoInspeccion?: TipoInspeccion): Promise<UltimaInspeccionResumen | null> {
+    try {
+      const params: any = { equipoId }
+      if (tipoInspeccion) params.tipoInspeccion = tipoInspeccion
+      const res = await api.get('/inspecciones/ultima-inspeccion', { params })
+      if (res.data?.status === 'ok') {
+        return res.data.data
+      }
+      return null
+    } catch (err) {
+      console.error('Error al consultar última inspección:', err)
+      return null
+    }
+  }
+
   return {
     equiposElegibles,
     cargandoEquipos,
@@ -443,6 +475,7 @@ export const useInspeccionesStore = defineStore('inspecciones', () => {
     cargarPendientes,
     cargarDetalleInspeccion,
     evaluarInspeccion,
-    cargarHistorial
+    cargarHistorial,
+    consultarUltimaInspeccion
   }
 })

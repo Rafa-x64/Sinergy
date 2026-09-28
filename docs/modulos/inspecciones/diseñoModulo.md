@@ -42,6 +42,17 @@ El **Módulo de Inspecciones** sustituye los formularios impresos y planillas de
   - `APROBADO` / `RECHAZADO`: Estado final inmutable con registro de fecha y usuario revisor.
 - **Trade-off:** Los técnicos no pueden editar una inspección una vez enviada a `PENDIENTE` a menos que sea rechazada con observaciones.
 
+### ADR-04: Guardia Anti-Duplicado y Consulta de Última Inspección
+- **Decisión:** 
+  1. En `crearInspeccion`, cuando se evalúa un equipo individual (`equipoId`), el backend valida si ya existe una inspección en estado `PENDIENTE` o `APROBADO` registrada en el día actual para ese equipo y tipo de rutina. Si existe, rechaza con HTTP 409 Conflict.
+  2. Implementación del endpoint `GET /api/inspecciones/ultima-inspeccion?equipoId=X&tipoInspeccion=Y` para retroalimentar al técnico en tiempo real en el wizard con la última fecha, folio y estado previo.
+- **Por qué:** Evita duplicidades accidentales o doble captura de rutinas interdiarias por diferentes técnicos en el mismo turno, mejorando la coherencia operativa.
+
+### ADR-05: Simplificación de UI Basada en PBAC y Advertencia de Completitud
+- **Decisión:**
+  1. Si el usuario logueado no es Administrador y cuenta con una planta fija asignada en su perfil, el selector de planta se oculta de la vista para reducir fricción cognitiva, mostrando un badge informativo compacto con la planta asignada.
+  2. En el diálogo resumen de envío (`ResumenInspeccionDialog`), se incorpora un cálculo en tiempo real de variables pendientes. Si existen variables sin responder, se muestra una alerta preventiva (warning) para que el técnico decida si envía parcial o completa la evaluación.
+
 ---
 
 ## 3. Modelo de Datos (Prisma Schema)

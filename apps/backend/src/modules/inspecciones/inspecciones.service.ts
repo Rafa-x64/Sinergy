@@ -308,8 +308,36 @@ export class InspeccionesService {
     })
     const secuencial = String(conteoHoy + 1).padStart(4, '0')
     const codigoInspeccion = `INSP-${prefijoPlanta}-${codigoFecha}-${secuencial}`
-
     const tipoInspeccion: TipoInspeccion = dto.tipoInspeccion ?? 'VARIABLES_CRITICAS'
+
+    // Guardia anti-duplicado: Evita registrar múltiples inspecciones del mismo tipo para el mismo equipo en el mismo día
+    if (dto.equipoId) {
+      const inicioHoy = new Date(fechaHoy.getFullYear(), fechaHoy.getMonth(), fechaHoy.getDate())
+      const finHoy = new Date(fechaHoy.getFullYear(), fechaHoy.getMonth(), fechaHoy.getDate(), 23, 59, 59, 999)
+      const yaInspeccionadoHoy = await prisma.inspeccion.findFirst({
+        where: {
+          equipoId: dto.equipoId,
+          tipoInspeccion,
+          fechaRegistro: {
+            gte: inicioHoy,
+            lte: finHoy
+          },
+          estadoInspeccion: { in: ['PENDIENTE', 'APROBADO'] }
+        },
+        select: {
+          id: true,
+          codigoInspeccion: true,
+          estadoInspeccion: true
+        }
+      })
+
+      if (yaInspeccionadoHoy) {
+        throw new AppError(
+          `Este equipo ya cuenta con una inspección registrada el día de hoy (${yaInspeccionadoHoy.codigoInspeccion}, estado: ${yaInspeccionadoHoy.estadoInspeccion}). Verifique en el historial o evite duplicar el registro.`,
+          409
+        )
+      }
+    }
 
     return prisma.$transaction(async (tx) => {
       // 1. Crear registro maestro de Inspeccion
@@ -577,6 +605,42 @@ export class InspeccionesService {
     return prisma.inspeccion.delete({
       where: { id }
     })
+  }
+
+  /**
+   * Obtiene la última inspección registrada para un equipo específico.
+   */
+  async obtenerUltimaInspeccionEquipo(equipoId: number, tipoInspeccion?: TipoInspeccion) {
+    const where: any = { equipoId }
+    if (tipoInspeccion) {
+      where.tipoInspeccion = tipoInspeccion
+    }
+
+    const ultima = await prisma.inspeccion.findFirst({
+      where,
+      orderBy: { fechaRegistro: 'desc' },
+      select: {
+        id: true,
+        codigoInspeccion: true,
+        fechaRegistro: true,
+        estadoInspeccion: true,
+        tipoInspeccion: true,
+        observacionesGenerales: true,
+        elaboradoPor: {
+          select: {
+            nombre: true,
+            apellido: true
+          }
+        }
+      }
+    })
+
+    if (!ultima) return null
+
+    return {
+      ...ultima,
+      id: String(ultima.id)
+    }
   }
 }
 

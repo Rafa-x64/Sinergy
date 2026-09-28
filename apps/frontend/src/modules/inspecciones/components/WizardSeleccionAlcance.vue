@@ -5,7 +5,7 @@ import { useVariablesStore } from '@/modules/variables/variables.store'
 import { usePlantasStore } from '@/modules/plantas/plantas.store'
 import { useUbicacionStore } from '@/modules/ubicaciones/ubicacion.store'
 import { useEquipoStore } from '@/modules/equipo/equipo.store'
-import { useInspeccionesStore, type AlcanceInspeccion, type TipoInspeccion } from '../inspecciones.store'
+import { useInspeccionesStore, type AlcanceInspeccion, type TipoInspeccion, type UltimaInspeccionResumen } from '../inspecciones.store'
 import { useAuthStore } from '@/modules/auth/auth.store'
 
 const emit = defineEmits<{
@@ -338,6 +338,78 @@ const ejecutarBusquedaEquipos = async () => {
     emit('iniciar-wizard')
   }
 }
+
+// ─── CONSULTA DE ÚLTIMA INSPECCIÓN POR EQUIPO ─────────────────────────────
+const ultimaInspeccion = ref<UltimaInspeccionResumen | null>(null)
+const consultandoUltima = ref(false)
+
+const equipoSeleccionadoParaUltima = computed(() => {
+  if (esRutinaEspecifica.value) {
+    return equipoEspecificoId.value
+  }
+  if (alcance.value === 'POR_EQUIPO') {
+    return referenciaId.value
+  }
+  return null
+})
+
+watch(
+  [equipoSeleccionadoParaUltima, tipoInspeccion],
+  async ([nuevoEquipoId, nuevoTipo]) => {
+    if (!nuevoEquipoId) {
+      ultimaInspeccion.value = null
+      return
+    }
+    consultandoUltima.value = true
+    try {
+      ultimaInspeccion.value = await inspeccionesStore.consultarUltimaInspeccion(nuevoEquipoId, nuevoTipo)
+    } finally {
+      consultandoUltima.value = false
+    }
+  },
+  { immediate: true }
+)
+
+const ultimaInspeccionEsHoy = computed(() => {
+  if (!ultimaInspeccion.value?.fechaRegistro) return false
+  const fecha = new Date(ultimaInspeccion.value.fechaRegistro)
+  const hoy = new Date()
+  return (
+    fecha.getDate() === hoy.getDate() &&
+    fecha.getMonth() === hoy.getMonth() &&
+    fecha.getFullYear() === hoy.getFullYear()
+  )
+})
+
+function formatearFecha(fechaStr: string) {
+  try {
+    const f = new Date(fechaStr)
+    return f.toLocaleString('es-ES', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  } catch {
+    return fechaStr
+  }
+}
+
+function obtenerColorEstado(estado: string) {
+  switch (estado) {
+    case 'APROBADO': return 'success'
+    case 'PENDIENTE': return 'warning'
+    case 'RECHAZADO': return 'error'
+    default: return 'grey'
+  }
+}
+
+const nombrePlantaAsignada = computed(() => {
+  if (!authStore.plantaId) return ''
+  const p = opcionesPlantas.value.find((pl) => pl.id === authStore.plantaId)
+  return p ? `${p.codigo} - ${p.nombre}` : `Planta #${authStore.plantaId}`
+})
 </script>
 
 <template>
@@ -360,7 +432,7 @@ const ejecutarBusquedaEquipos = async () => {
     <template v-if="esRutinaEspecifica">
       <v-row dense class="mt-2">
         <!-- 1. Tipo de Rutina -->
-        <v-col cols="12" md="6">
+        <v-col cols="12" :md="selectPlantaBloqueado ? 12 : 6">
           <v-select
             v-model="tipoInspeccion"
             :items="opcionesTiposInspeccion"
@@ -376,10 +448,17 @@ const ejecutarBusquedaEquipos = async () => {
               <v-list-item v-bind="itemProps" :prepend-icon="item.raw.icon" :title="item.raw.title" :subtitle="item.raw.desc" />
             </template>
           </v-select>
+          <div v-if="selectPlantaBloqueado" class="d-flex align-center mt-2">
+            <v-chip size="small" color="primary" variant="tonal" class="mr-2">
+              <v-icon start size="14">mdi-factory</v-icon>
+              {{ nombrePlantaAsignada }}
+            </v-chip>
+            <span class="text-caption text-medium-emphasis">Área asignada a tu perfil de usuario</span>
+          </div>
         </v-col>
 
-        <!-- 2. Planta Industrial (Restringida al área del usuario si no es admin) -->
-        <v-col cols="12" md="6">
+        <!-- 2. Planta Industrial (Solo para administradores o usuarios sin planta fija) -->
+        <v-col v-if="!selectPlantaBloqueado" cols="12" md="6">
           <v-select
             v-model="plantaId"
             :items="opcionesPlantas"
@@ -389,10 +468,7 @@ const ejecutarBusquedaEquipos = async () => {
             prepend-inner-icon="mdi-factory"
             variant="outlined"
             density="compact"
-            :disabled="selectPlantaBloqueado"
-            :hint="selectPlantaBloqueado ? 'Área asignada a tu perfil de usuario' : ''"
-            :persistent-hint="selectPlantaBloqueado"
-            :hide-details="!selectPlantaBloqueado"
+            hide-details
           />
         </v-col>
 
@@ -416,6 +492,46 @@ const ejecutarBusquedaEquipos = async () => {
               <span class="font-weight-medium">{{ item.raw.etiqueta }}</span>
             </template>
           </v-autocomplete>
+
+          <!-- Badge de Última Inspección de la Maquinaria -->
+          <v-card
+            v-if="equipoSeleccionadoParaUltima"
+            variant="outlined"
+            class="mt-2 pa-2 rounded-lg"
+            :color="ultimaInspeccionEsHoy ? 'warning' : undefined"
+          >
+            <div class="d-flex align-center">
+              <v-icon
+                :color="ultimaInspeccionEsHoy ? 'warning' : 'primary'"
+                class="mr-2"
+                size="20"
+              >
+                {{ ultimaInspeccionEsHoy ? 'mdi-alert-circle' : 'mdi-history' }}
+              </v-icon>
+              <div>
+                <div class="text-caption font-weight-bold">
+                  {{ ultimaInspeccionEsHoy ? '¡Atención! Este equipo ya cuenta con inspección el día de hoy' : 'Última inspección registrada' }}
+                </div>
+                <div v-if="consultandoUltima" class="text-caption text-medium-emphasis">
+                  Consultando registros anteriores...
+                </div>
+                <div v-else-if="ultimaInspeccion" class="text-caption">
+                  Folio: <strong class="text-high-emphasis">{{ ultimaInspeccion.codigoInspeccion }}</strong>
+                  &bull; {{ formatearFecha(ultimaInspeccion.fechaRegistro) }}
+                  &bull;
+                  <v-chip size="x-small" :color="obtenerColorEstado(ultimaInspeccion.estadoInspeccion)" class="ml-1 font-weight-medium">
+                    {{ ultimaInspeccion.estadoInspeccion }}
+                  </v-chip>
+                  <span v-if="ultimaInspeccion.elaboradoPor" class="text-medium-emphasis ml-1">
+                    ({{ ultimaInspeccion.elaboradoPor.nombre }} {{ ultimaInspeccion.elaboradoPor.apellido }})
+                  </span>
+                </div>
+                <div v-else class="text-caption text-medium-emphasis">
+                  Sin inspecciones previas para esta rutina.
+                </div>
+              </div>
+            </div>
+          </v-card>
         </v-col>
       </v-row>
     </template>
@@ -424,7 +540,7 @@ const ejecutarBusquedaEquipos = async () => {
     <template v-else>
       <v-row dense class="mt-2">
         <!-- 1. Tipo de Rutina -->
-        <v-col cols="12" md="6">
+        <v-col cols="12" :md="selectPlantaBloqueado ? 12 : 6">
           <v-select
             v-model="tipoInspeccion"
             :items="opcionesTiposInspeccion"
@@ -440,10 +556,17 @@ const ejecutarBusquedaEquipos = async () => {
               <v-list-item v-bind="itemProps" :prepend-icon="item.raw.icon" :title="item.raw.title" :subtitle="item.raw.desc" />
             </template>
           </v-select>
+          <div v-if="selectPlantaBloqueado" class="d-flex align-center mt-2">
+            <v-chip size="small" color="primary" variant="tonal" class="mr-2">
+              <v-icon start size="14">mdi-factory</v-icon>
+              {{ nombrePlantaAsignada }}
+            </v-chip>
+            <span class="text-caption text-medium-emphasis">Área asignada a tu perfil de usuario</span>
+          </div>
         </v-col>
 
-        <!-- 2. Selección de Planta -->
-        <v-col cols="12" md="6">
+        <!-- 2. Selección de Planta (Solo administradores o usuarios sin planta fija) -->
+        <v-col v-if="!selectPlantaBloqueado" cols="12" md="6">
           <v-select
             v-model="plantaId"
             :items="opcionesPlantas"
@@ -453,10 +576,7 @@ const ejecutarBusquedaEquipos = async () => {
             prepend-inner-icon="mdi-factory"
             variant="outlined"
             density="compact"
-            :disabled="selectPlantaBloqueado"
-            :hint="selectPlantaBloqueado ? 'Área asignada a tu perfil de usuario' : ''"
-            :persistent-hint="selectPlantaBloqueado"
-            :hide-details="!selectPlantaBloqueado"
+            hide-details
           />
         </v-col>
 
@@ -531,6 +651,47 @@ const ejecutarBusquedaEquipos = async () => {
             density="compact"
             hide-details
           />
+        </v-col>
+
+        <!-- Badge de Última Inspección para alcance POR_EQUIPO en Variables Críticas -->
+        <v-col v-if="alcance === 'POR_EQUIPO' && referenciaId" cols="12">
+          <v-card
+            variant="outlined"
+            class="pa-2 rounded-lg"
+            :color="ultimaInspeccionEsHoy ? 'warning' : undefined"
+          >
+            <div class="d-flex align-center">
+              <v-icon
+                :color="ultimaInspeccionEsHoy ? 'warning' : 'primary'"
+                class="mr-2"
+                size="20"
+              >
+                {{ ultimaInspeccionEsHoy ? 'mdi-alert-circle' : 'mdi-history' }}
+              </v-icon>
+              <div>
+                <div class="text-caption font-weight-bold">
+                  {{ ultimaInspeccionEsHoy ? '¡Atención! Este equipo ya cuenta con inspección el día de hoy' : 'Última inspección registrada' }}
+                </div>
+                <div v-if="consultandoUltima" class="text-caption text-medium-emphasis">
+                  Consultando registros anteriores...
+                </div>
+                <div v-else-if="ultimaInspeccion" class="text-caption">
+                  Folio: <strong class="text-high-emphasis">{{ ultimaInspeccion.codigoInspeccion }}</strong>
+                  &bull; {{ formatearFecha(ultimaInspeccion.fechaRegistro) }}
+                  &bull;
+                  <v-chip size="x-small" :color="obtenerColorEstado(ultimaInspeccion.estadoInspeccion)" class="ml-1 font-weight-medium">
+                    {{ ultimaInspeccion.estadoInspeccion }}
+                  </v-chip>
+                  <span v-if="ultimaInspeccion.elaboradoPor" class="text-medium-emphasis ml-1">
+                    ({{ ultimaInspeccion.elaboradoPor.nombre }} {{ ultimaInspeccion.elaboradoPor.apellido }})
+                  </span>
+                </div>
+                <div v-else class="text-caption text-medium-emphasis">
+                  Sin inspecciones previas para esta rutina.
+                </div>
+              </div>
+            </div>
+          </v-card>
         </v-col>
       </v-row>
     </template>

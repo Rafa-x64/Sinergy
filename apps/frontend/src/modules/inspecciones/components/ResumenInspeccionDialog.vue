@@ -1,16 +1,20 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useToast } from 'vue-toastification'
 import { useInspeccionesStore } from '../inspecciones.store'
 
 const emit = defineEmits<{
-  (e: 'enviado-exito'): void
+  (e: 'enviado-exito', data?: any): void
 }>()
 
 const toast = useToast()
 const store = useInspeccionesStore()
 
 const mostrarModal = ref(false)
+
+const variablesPendientes = computed(() => {
+  return Math.max(0, store.totalVariablesWizard - store.variablesRespondidasCount)
+})
 
 const abrir = () => {
   mostrarModal.value = true
@@ -23,9 +27,10 @@ const cerrar = () => {
 const confirmarEnvio = async () => {
   const res = await store.enviarInspeccion()
   if (res.status === 'ok') {
-    toast.success(res.message ?? 'Inspección enviada exitosamente para revisión del supervisor')
+    const folio = res.data?.codigoInspeccion ? ` (Folio: ${res.data.codigoInspeccion})` : ''
+    toast.success(`Inspección enviada exitosamente${folio}. Notificado a supervisión.`)
     cerrar()
-    emit('enviado-exito')
+    emit('enviado-exito', res.data)
   } else {
     toast.error(res.message ?? 'Error al enviar la inspección')
   }
@@ -75,6 +80,28 @@ defineExpose({ abrir, cerrar })
           </div>
         </div>
 
+        <!-- Alerta preventiva si hay variables sin responder -->
+        <v-alert
+          v-if="variablesPendientes > 0"
+          type="warning"
+          variant="tonal"
+          density="compact"
+          class="text-caption mb-3"
+          icon="mdi-alert-circle-outline"
+        >
+          <strong>Atención:</strong> Tienes <strong>{{ variablesPendientes }}</strong> variable(s) sin responder de {{ store.totalVariablesWizard }}. Se enviará únicamente con las variables evaluadas hasta ahora.
+        </v-alert>
+        <v-alert
+          v-else
+          type="success"
+          variant="tonal"
+          density="compact"
+          class="text-caption mb-3"
+          icon="mdi-check-all"
+        >
+          ¡Excelente! Has respondido el 100% de las variables requeridas en este alcance.
+        </v-alert>
+
         <!-- Campo de Observaciones Generales del Técnico -->
         <div class="mb-3">
           <label class="text-caption font-weight-bold text-high-emphasis mb-1 d-block">
@@ -90,7 +117,7 @@ defineExpose({ abrir, cerrar })
           />
         </div>
 
-        <v-alert type="success" color="#5cb85c" variant="tonal" class="text-caption mb-0">
+        <v-alert type="info" color="#5cb85c" variant="tonal" class="text-caption mb-0">
           Al confirmar, la inspección quedará registrada en estado <strong>PENDIENTE</strong> y se notificará automáticamente a los supervisores de planta para su revisión y aprobación.
         </v-alert>
       </v-card-text>
