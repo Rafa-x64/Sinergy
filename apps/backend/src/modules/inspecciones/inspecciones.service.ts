@@ -437,14 +437,30 @@ export class InspeccionesService {
         planta: { select: { id: true, codigo: true, nombre: true } },
         ubicacionTecnica: { select: { id: true, codigo: true, nombre: true } },
         tipoEquipo: { select: { id: true, nombre: true } },
-        equipo: { select: { id: true, codigo: true, nombre: true } },
+        equipo: {
+          select: {
+            id: true,
+            codigo: true,
+            nombre: true,
+            ubicacionTecnica: { select: { id: true, codigo: true, nombre: true } },
+            montacargasDetalle: { select: { identificacionAbreviada: true } }
+          }
+        },
         detalles: {
           include: {
             variable: {
               include: {
                 componente: {
                   include: {
-                    equipo: { select: { id: true, codigo: true, nombre: true } }
+                    equipo: {
+                      select: {
+                        id: true,
+                        codigo: true,
+                        nombre: true,
+                        ubicacionTecnica: { select: { id: true, codigo: true, nombre: true } },
+                        montacargasDetalle: { select: { identificacionAbreviada: true } }
+                      }
+                    }
                   }
                 },
                 opcionesSeleccion: true

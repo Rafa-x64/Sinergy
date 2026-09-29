@@ -91,7 +91,13 @@ export interface InspeccionDetalleEvaluado extends RespuestaVariableDetalle {
     componente?: {
       id: number
       nombre: string
-      equipo?: { id: number; codigo: string; nombre: string }
+      equipo?: {
+        id: number
+        codigo: string
+        nombre: string
+        ubicacionTecnica?: { id: number; codigo: string; nombre: string }
+        montacargasDetalle?: { identificacionAbreviada?: string | null }
+      }
     }
     opcionesSeleccion?: OpcionSeleccion[]
   }
@@ -109,7 +115,13 @@ export interface InspeccionMaestra {
   planta?: { id: number; codigo: string; nombre: string }
   ubicacionTecnica?: { id: number; codigo: string; nombre: string }
   tipoEquipo?: { id: number; nombre: string }
-  equipo?: { id: number; codigo: string; nombre: string }
+  equipo?: {
+    id: number
+    codigo: string
+    nombre: string
+    ubicacionTecnica?: { id: number; codigo: string; nombre: string }
+    montacargasDetalle?: { identificacionAbreviada?: string | null }
+  }
   elaboradoPor?: { id: number; nombre: string; apellido: string; email: string }
   revisadoPor?: { id: number; nombre: string; apellido: string }
   aprobadoPor?: { id: number; nombre: string; apellido: string }
