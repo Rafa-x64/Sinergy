@@ -499,7 +499,7 @@ class VariableCriticaService {
 
   // ─── MOTOR DE SINCRONIZACIÓN DE VARIABLES ────────────────────────────────────
 
-  async sincronizarComponenteConPlantilla(componenteId: number) {
+  async sincronizarComponenteConPlantilla(componenteId: number, plantillasPreCargadas?: any[]) {
     const componente = await prisma.componente.findUnique({
       where: { id: componenteId },
       include: {
@@ -515,7 +515,7 @@ class VariableCriticaService {
     }
 
     const tipoEquipoId = componente.equipo.tipoEquipoId
-    const plantillas = await prisma.plantillaVariable.findMany({
+    const plantillas = plantillasPreCargadas ?? await prisma.plantillaVariable.findMany({
       where: { tipoEquipoId, activa: true },
       include: {
         opcionesSeleccion: { orderBy: { ordenPosicion: 'asc' } }
@@ -527,8 +527,6 @@ class VariableCriticaService {
     })
 
     // 1. Filtrar y deduplicar plantillas aplicables para este componente
-    // Si hay una plantilla específica para este componente y otra genérica con el mismo nombre,
-    // se prioriza la específica sobre la global para evitar crear dos variables con el mismo concepto.
     const plantillasAplicablesMap = new Map<string, typeof plantillas[0]>()
 
     for (const p of plantillas) {
@@ -546,7 +544,6 @@ class VariableCriticaService {
       if (!existente) {
         plantillasAplicablesMap.set(claveNombreVar, p)
       } else {
-        // Si ya existía una plantilla previa para este nombre pero la actual es específica del componente y la anterior era global, reemplazar
         if (esEspecifico && !existente.nombreComponente) {
           plantillasAplicablesMap.set(claveNombreVar, p)
         }
@@ -560,13 +557,13 @@ class VariableCriticaService {
     let desactivadas = 0
 
     await prisma.$transaction(async (tx) => {
-      // 2. Cargar todas las variables actuales del componente dentro de la transacción
+      // 2. Cargar variables actuales dentro de la transacción
       const variablesActuales = await tx.variable.findMany({
         where: { componenteId },
         include: { opcionesSeleccion: true }
       })
 
-      // Identificar y sanear variables duplicadas preexistentes en la base de datos para este componente
+      // Identificar y sanear variables duplicadas preexistentes en BD
       const variablesPorNombre = new Map<string, typeof variablesActuales>()
       for (const v of variablesActuales) {
         const k = v.nombre.trim().toLowerCase()
@@ -583,15 +580,12 @@ class VariableCriticaService {
         if (lista.length === 1) {
           variableCanonicasMap.set(nombreNorm, lista[0])
         } else {
-          // Si hay duplicados acumulados en BD:
-          // Elegimos la variable canónica: preferimos la activa con plantillaId o la activa de menor ID
           const activaConPlantilla = lista.find(v => v.activa && v.plantillaId)
           const activaSinPlantilla = lista.find(v => v.activa)
           const canonica = activaConPlantilla || activaSinPlantilla || lista[0]
 
           variableCanonicasMap.set(nombreNorm, canonica)
 
-          // Desactivar las demás instancias duplicadas redundantes
           for (const vDup of lista) {
             if (vDup.id !== canonica.id && vDup.activa) {
               await tx.variable.update({
@@ -611,7 +605,6 @@ class VariableCriticaService {
       for (const plantilla of plantillasAplicables) {
         const claveNombre = plantilla.nombre.trim().toLowerCase()
 
-        // Buscar variable existente por nombre o por plantillaId
         let variableExistente = variableCanonicasMap.get(claveNombre)
         if (!variableExistente) {
           variableExistente = variablesActuales.find(
@@ -622,44 +615,68 @@ class VariableCriticaService {
         if (variableExistente) {
           idsVariablesProcesadas.add(variableExistente.id)
 
-          // Actualizar variable existente
-          await tx.variable.update({
-            where: { id: variableExistente.id },
-            data: {
-              plantillaId: plantilla.id,
-              nombre: plantilla.nombre,
-              tipoEvaluacion: plantilla.tipoEvaluacion,
-              unidad: plantilla.unidad,
-              valorMinimo: plantilla.valorMinimo,
-              valorMaximo: plantilla.valorMaximo,
-              ordenPosicion: plantilla.ordenPosicion,
-              activa: true
-            }
-          })
+          // Comprobar si hubo cambios reales antes de emitir UPDATE
+          const requiereActualizacion =
+            variableExistente.plantillaId !== plantilla.id ||
+            variableExistente.nombre !== plantilla.nombre ||
+            variableExistente.tipoEvaluacion !== plantilla.tipoEvaluacion ||
+            variableExistente.unidad !== plantilla.unidad ||
+            Number(variableExistente.valorMinimo) !== (plantilla.valorMinimo !== null ? Number(plantilla.valorMinimo) : null) ||
+            Number(variableExistente.valorMaximo) !== (plantilla.valorMaximo !== null ? Number(plantilla.valorMaximo) : null) ||
+            variableExistente.ordenPosicion !== plantilla.ordenPosicion ||
+            !variableExistente.activa
 
-          // Si es de tipo selección, recrear opciones
-          if (plantilla.tipoEvaluacion === 'SELECCION') {
-            await tx.opcionSeleccion.deleteMany({
-              where: { variableId: variableExistente.id }
+          if (requiereActualizacion) {
+            await tx.variable.update({
+              where: { id: variableExistente.id },
+              data: {
+                plantillaId: plantilla.id,
+                nombre: plantilla.nombre,
+                tipoEvaluacion: plantilla.tipoEvaluacion,
+                unidad: plantilla.unidad,
+                valorMinimo: plantilla.valorMinimo,
+                valorMaximo: plantilla.valorMaximo,
+                ordenPosicion: plantilla.ordenPosicion,
+                activa: true
+              }
             })
+            actualizadas++
+          }
 
-            if (plantilla.opcionesSeleccion.length > 0) {
-              const opcionesSanitizadas = sanitizarOpcionesVariable(plantilla.opcionesSeleccion, variableExistente.id) as {
-                variableId: number
-                clave: string
-                etiqueta: string
-                ordenPosicion: number
-              }[]
+          // Si es tipo selección, verificar opciones
+          if (plantilla.tipoEvaluacion === 'SELECCION') {
+            const opcionesActuales = variableExistente.opcionesSeleccion || []
+            const opcionesPlantilla = plantilla.opcionesSeleccion || []
+            const sonIguales =
+              opcionesActuales.length === opcionesPlantilla.length &&
+              opcionesPlantilla.every((op: any, idx: number) => {
+                const oa = opcionesActuales[idx]
+                return oa && oa.clave === op.clave && oa.etiqueta === op.etiqueta
+              })
 
-              if (opcionesSanitizadas.length > 0) {
-                await tx.opcionSeleccion.createMany({
-                  data: opcionesSanitizadas,
-                  skipDuplicates: true
-                })
+
+            if (!sonIguales) {
+              await tx.opcionSeleccion.deleteMany({
+                where: { variableId: variableExistente.id }
+              })
+
+              if (opcionesPlantilla.length > 0) {
+                const opcionesSanitizadas = sanitizarOpcionesVariable(opcionesPlantilla, variableExistente.id) as {
+                  variableId: number
+                  clave: string
+                  etiqueta: string
+                  ordenPosicion: number
+                }[]
+
+                if (opcionesSanitizadas.length > 0) {
+                  await tx.opcionSeleccion.createMany({
+                    data: opcionesSanitizadas,
+                    skipDuplicates: true
+                  })
+                }
               }
             }
           }
-          actualizadas++
         } else {
           // Crear nueva variable instancia única
           const nuevaVar = await tx.variable.create({
@@ -676,7 +693,7 @@ class VariableCriticaService {
             }
           })
 
-          if (plantilla.tipoEvaluacion === 'SELECCION' && plantilla.opcionesSeleccion.length > 0) {
+          if (plantilla.tipoEvaluacion === 'SELECCION' && plantilla.opcionesSeleccion && plantilla.opcionesSeleccion.length > 0) {
             const opcionesSanitizadas = sanitizarOpcionesVariable(plantilla.opcionesSeleccion, nuevaVar.id) as {
               variableId: number
               clave: string
@@ -698,7 +715,7 @@ class VariableCriticaService {
         }
       }
 
-      // 4. Desactivar variables que provienen de plantilla pero ya no aplican a este componente
+      // 4. Desactivar variables que provienen de plantilla pero ya no aplican
       const idsPlantillasAplicables = new Set(plantillasAplicables.map(p => p.id))
       for (const variable of variablesActuales) {
         if (
@@ -728,22 +745,39 @@ class VariableCriticaService {
   }
 
   async sincronizarTipoEquipoCompleto(tipoEquipoId: number) {
-    const equipos = await prisma.equipo.findMany({
-      where: { tipoEquipoId },
-      include: {
-        componentes: {
-          where: { activo: true },
-          select: { id: true, nombre: true }
+    const [equipos, plantillas] = await Promise.all([
+      prisma.equipo.findMany({
+        where: { tipoEquipoId },
+        include: {
+          componentes: {
+            where: { activo: true },
+            select: { id: true, nombre: true }
+          }
         }
-      }
-    })
+      }),
+      prisma.plantillaVariable.findMany({
+        where: { tipoEquipoId, activa: true },
+        include: {
+          opcionesSeleccion: { orderBy: { ordenPosicion: 'asc' } }
+        },
+        orderBy: [
+          { ordenPosicion: 'asc' },
+          { id: 'asc' }
+        ]
+      })
+    ])
 
+    const componentesIds = equipos.flatMap(e => e.componentes.map(c => c.id))
     const resultados = []
-    for (const equipo of equipos) {
-      for (const componente of equipo.componentes) {
-        const res = await this.sincronizarComponenteConPlantilla(componente.id)
-        resultados.push(res)
-      }
+
+    // Procesar componentes en lotes de 5 concurrentes para máxima velocidad sin saturar el pool
+    const LOTE_SIZE = 5
+    for (let i = 0; i < componentesIds.length; i += LOTE_SIZE) {
+      const lote = componentesIds.slice(i, i + LOTE_SIZE)
+      const resLote = await Promise.all(
+        lote.map(id => this.sincronizarComponenteConPlantilla(id, plantillas))
+      )
+      resultados.push(...resLote)
     }
 
     return {
@@ -756,3 +790,4 @@ class VariableCriticaService {
 }
 
 export const variableCriticaService = new VariableCriticaService()
+
