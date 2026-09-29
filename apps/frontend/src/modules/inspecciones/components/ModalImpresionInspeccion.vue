@@ -100,6 +100,51 @@ const gruposCuantitativos = computed(() => {
   return grupos
 })
 
+// Ubicación Técnica de la máquina (priorizando siempre el equipo evaluado)
+const ubicacionTecnicaEquipo = computed(() => {
+  if (inspeccion.value?.equipo?.ubicacionTecnica?.codigo) {
+    return inspeccion.value.equipo.ubicacionTecnica
+  }
+  const eqVar = inspeccion.value?.detalles?.[0]?.variable?.componente?.equipo
+  if (eqVar?.ubicacionTecnica?.codigo) {
+    return eqVar.ubicacionTecnica
+  }
+  if (inspeccion.value?.ubicacionTecnica?.codigo) {
+    return inspeccion.value.ubicacionTecnica
+  }
+  return null
+})
+
+// Datos del equipo evaluado (de la cabecera o derivado de los componentes de las variables)
+const equipoEvaluado = computed(() => {
+  if (inspeccion.value?.equipo) {
+    return inspeccion.value.equipo
+  }
+  return inspeccion.value?.detalles?.[0]?.variable?.componente?.equipo || null
+})
+
+// Código abreviado del equipo (ej. COM_10003, GEN_20002 o identificacionAbreviada)
+const codigoAbreviadoEquipo = computed(() => {
+  const eq = equipoEvaluado.value
+  if (!eq) return '—'
+  if ((eq as any).montacargasDetalle?.identificacionAbreviada) {
+    return (eq as any).montacargasDetalle.identificacionAbreviada
+  }
+  const match = eq.codigo.match(/^[0-9]+([A-Z]+)([0-9]+)$/)
+  if (match) {
+    return `${match[1]}_${match[2]}`
+  }
+  return eq.codigo
+})
+
+// Nombre de supervisor aprobador: SOLO cuando la inspección ha sido formalmente APROBADA
+const nombreAprobador = computed(() => {
+  if (inspeccion.value?.estadoInspeccion === 'APROBADO' && inspeccion.value?.aprobadoPor?.nombre) {
+    return `${inspeccion.value.aprobadoPor.nombre} ${inspeccion.value.aprobadoPor.apellido || ''}`.trim()
+  }
+  return '____________________________________'
+})
+
 // Formateo de rangos de trabajo
 const formatearRango = (v?: any) => {
   if (!v) return '—'
@@ -171,8 +216,8 @@ defineExpose({ abrir, cerrar })
 <template>
   <v-dialog v-model="mostrarModal" max-width="920px" scrollable>
     <v-card v-if="inspeccion" class="rounded-lg bg-surface">
-      <!-- Barra superior no imprimible -->
-      <v-card-title class="py-3 px-4 d-flex align-center justify-space-between bg-slate-900 text-white d-print-none">
+      <!-- Barra superior no imprimible con contraste garantizado -->
+      <v-card-title class="py-3 px-4 d-flex align-center justify-space-between text-white d-print-none" style="background-color: #0f172a !important; color: #ffffff !important;">
         <div class="d-flex align-center">
           <v-icon start size="22" color="#5cb85c">mdi-printer</v-icon>
           <span class="font-weight-bold">Vista de Impresión: {{ inspeccion.codigoInspeccion }}</span>
@@ -264,27 +309,27 @@ defineExpose({ abrir, cerrar })
                   <td class="pa-1 align-top">
                     <div class="d-flex mb-1">
                       <span class="font-weight-medium mr-2" style="width: 60px;">Código:</span>
-                      <span class="font-mono">{{ inspeccion.ubicacionTecnica?.codigo || '—' }}</span>
+                      <span class="font-mono">{{ ubicacionTecnicaEquipo?.codigo || '—' }}</span>
                     </div>
                     <div class="d-flex">
                       <span class="font-weight-medium mr-2" style="width: 60px;">Nombre:</span>
-                      <span class="font-weight-bold">{{ inspeccion.ubicacionTecnica?.nombre || '—' }}</span>
+                      <span class="font-weight-bold">{{ ubicacionTecnicaEquipo?.nombre || '—' }}</span>
                     </div>
                   </td>
                   <td class="pa-1 align-top">
                     <div class="d-flex mb-1">
                       <span class="font-weight-medium mr-2" style="width: 110px;">Código Abreviado:</span>
                       <span class="font-weight-bold font-mono text-danger">
-                        {{ inspeccion.equipo?.codigo || '—' }}
+                        {{ codigoAbreviadoEquipo }}
                       </span>
                     </div>
                     <div class="d-flex mb-1">
                       <span class="font-weight-medium mr-2" style="width: 110px;">Código:</span>
-                      <span class="font-mono">{{ inspeccion.equipo?.codigo || '—' }}</span>
+                      <span class="font-mono">{{ equipoEvaluado?.codigo || '—' }}</span>
                     </div>
                     <div class="d-flex">
                       <span class="font-weight-medium mr-2" style="width: 110px;">Nombre:</span>
-                      <span class="font-weight-bold">{{ inspeccion.equipo?.nombre || '—' }}</span>
+                      <span class="font-weight-bold">{{ equipoEvaluado?.nombre || '—' }}</span>
                     </div>
                   </td>
                 </tr>
@@ -400,7 +445,7 @@ defineExpose({ abrir, cerrar })
                     REVISADO Y APROBADO POR:
                   </td>
                   <td class="pa-2 font-weight-bold font-mono text-danger text-uppercase" style="width: 65%;">
-                    {{ inspeccion.aprobadoPor?.nombre ? `${inspeccion.aprobadoPor.nombre} ${inspeccion.aprobadoPor.apellido || ''}` : (inspeccion.revisadoPor?.nombre ? `${inspeccion.revisadoPor.nombre} ${inspeccion.revisadoPor.apellido || ''}` : '____________________________________') }}
+                    {{ nombreAprobador }}
                   </td>
                 </tr>
               </tbody>
@@ -454,21 +499,21 @@ defineExpose({ abrir, cerrar })
                   <td class="pa-1 align-top">
                     <div class="d-flex mb-1">
                       <span class="font-weight-medium mr-2" style="width: 60px;">Código:</span>
-                      <span class="font-mono">{{ inspeccion.ubicacionTecnica?.codigo || '—' }}</span>
+                      <span class="font-mono">{{ ubicacionTecnicaEquipo?.codigo || '—' }}</span>
                     </div>
                     <div class="d-flex">
                       <span class="font-weight-medium mr-2" style="width: 60px;">Nombre:</span>
-                      <span class="font-weight-bold">{{ inspeccion.ubicacionTecnica?.nombre || '—' }}</span>
+                      <span class="font-weight-bold">{{ ubicacionTecnicaEquipo?.nombre || '—' }}</span>
                     </div>
                   </td>
                   <td class="pa-1 align-top">
                     <div class="d-flex mb-1">
                       <span class="font-weight-medium mr-2" style="width: 60px;">Código:</span>
-                      <span class="font-mono font-weight-bold">{{ inspeccion.equipo?.codigo || '—' }}</span>
+                      <span class="font-mono font-weight-bold">{{ equipoEvaluado?.codigo || '—' }}</span>
                     </div>
                     <div class="d-flex">
                       <span class="font-weight-medium mr-2" style="width: 60px;">Nombre:</span>
-                      <span class="font-weight-bold">{{ inspeccion.equipo?.nombre || '—' }}</span>
+                      <span class="font-weight-bold">{{ equipoEvaluado?.nombre || '—' }}</span>
                     </div>
                   </td>
                 </tr>
@@ -547,7 +592,7 @@ defineExpose({ abrir, cerrar })
                     REVISADO Y APROBADO POR:
                   </td>
                   <td class="pa-2 font-weight-bold font-mono text-danger text-uppercase" style="width: 65%;">
-                    {{ inspeccion.aprobadoPor?.nombre ? `${inspeccion.aprobadoPor.nombre} ${inspeccion.aprobadoPor.apellido || ''}` : (inspeccion.revisadoPor?.nombre ? `${inspeccion.revisadoPor.nombre} ${inspeccion.revisadoPor.apellido || ''}` : '____________________________________') }}
+                    {{ nombreAprobador }}
                   </td>
                 </tr>
               </tbody>

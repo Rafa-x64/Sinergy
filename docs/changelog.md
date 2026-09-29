@@ -48,6 +48,11 @@ El formato sigue el estándar [Keep a Changelog](https://keepachangelog.com/es/1
     - `ecosystem.config.cjs`: Archivo de configuración para despliegue y gestión de procesos con PM2.
 
 ### Fixed
+- **Resolución de Datos de Máquina y Trazabilidad en Reporte Impreso (`fix: ubicacion-tecnica-maquina-y-firma-reporte-impresion`)**:
+  - **Ubicación Técnica del Equipo Evaluado (`apps/backend/src/modules/inspecciones/inspecciones.service.ts` y `ModalImpresionInspeccion.vue`)**: Incluida la relación `ubicacionTecnica` directamente en el `equipo` y en los `componentes.equipo` devueltos por `obtenerPorId`, asegurando que la cabecera de la hoja de inspección muestre siempre el código y nombre de la ubicación técnica donde opera la máquina, incluso en capturas realizadas por tipo de equipo o flota.
+  - **Código Abreviado Dinámico (`ModalImpresionInspeccion.vue`)**: Derivación automática del código abreviado del equipo (ej. `1000GEN20002` &rarr; `GEN_20002`, `1000COM10003` &rarr; `COM_10003` o `identificacionAbreviada` de montacargas).
+  - **Firma de Supervisor Condicionada a Aprobación**: El nombre del supervisor revisor/aprobador solo se imprime cuando la inspección ha sido efectivamente marcada como `APROBADO`. Si la inspección está en estado `PENDIENTE` o borrador, se imprime una línea de firma física en blanco (`____________________________________`).
+  - **Contraste de Barra Superior**: Ajustado el fondo de la barra de título del modal de impresión a `#0f172a` con texto blanco de alto contraste.
 - **Estabilidad Backend y Optimización de Dependencias Frontend (`refactor: bigint-serialization-and-charts-cleanup`)**:
   - **Serialización Global Segura de `BigInt` (`apps/backend/src/core/server.ts`)**: Implementado polyfill en `BigInt.prototype.toJSON` para convertir valores `BigInt` a `string` de forma automática y transparente, eliminando el riesgo de excepciones no controladas `TypeError: Do not know how to serialize a BigInt` al responder objetos con llaves primarias PostgreSQL grandes.
   - **Depuración de Dependencias de Gráficos**: Removidas las librerías huérfanas `apexcharts`, `vue3-apexcharts`, `echarts` y `vue-echarts` del frontend, consolidando `chart.js` y `vue-chartjs` como el único motor de analítica y reduciendo significativamente el tamaño del bundle empaquetado.
