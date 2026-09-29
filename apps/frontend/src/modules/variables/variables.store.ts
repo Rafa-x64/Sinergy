@@ -6,6 +6,7 @@ import type { AxiosError } from 'axios'
 // ─── INTERFACES DE DOMINIO Y PAYLOADS ──────────────────────────────────────────
 
 export type TipoEvaluacion = 'NUMERICO_ENTERO' | 'NUMERICO_DECIMAL' | 'TEMPERATURA' | 'SELECCION'
+export type TipoInspeccion = 'VARIABLES_CRITICAS' | 'CHILLER' | 'COMPRESOR' | 'GENERADOR' | 'MONTACARGAS'
 
 export interface OpcionSeleccionItem {
   id?: number
@@ -38,6 +39,7 @@ export interface VariableInstancia {
 export interface PlantillaVariableItem {
   id: number
   tipoEquipoId: number
+  tipoInspeccion?: TipoInspeccion | null
   nombreComponente?: string | null
   nombre: string
   tipoEvaluacion: TipoEvaluacion
@@ -57,6 +59,7 @@ export interface PlantillaVariableItem {
     variablesInstancia: number
   }
 }
+
 
 export interface TipoEquipoItem {
   id: number
@@ -163,6 +166,7 @@ export interface GuardarVariableDTO {
 
 export interface GuardarPlantillaDTO {
   tipoEquipoId: number
+  tipoInspeccion?: TipoInspeccion | null
   nombreComponente?: string | null
   nombre: string
   tipoEvaluacion: TipoEvaluacion
@@ -190,6 +194,7 @@ export const useVariablesStore = defineStore('variables', () => {
   const tiposEquipo = ref<TipoEquipoItem[]>([])
   const plantillasPorTipo = ref<PlantillaVariableItem[]>([])
   const tipoEquipoSeleccionadoId = ref<number | null>(null)
+  const filtroTipoInspeccion = ref<TipoInspeccion | 'TODOS'>('TODOS')
 
   const cargandoJerarquia = ref(false)
   const cargandoVariables = ref(false)
@@ -253,12 +258,23 @@ export const useVariablesStore = defineStore('variables', () => {
     }
   }
 
-  async function cargarPlantillasPorTipo(tipoEquipoId: number): Promise<RespuestaApi<PlantillaVariableItem[]>> {
+  async function cargarPlantillasPorTipo(
+    tipoEquipoId: number,
+    tipoInspeccion?: TipoInspeccion | 'TODOS'
+  ): Promise<RespuestaApi<PlantillaVariableItem[]>> {
     cargandoPlantillas.value = true
     tipoEquipoSeleccionadoId.value = tipoEquipoId
+    if (tipoInspeccion !== undefined) {
+      filtroTipoInspeccion.value = tipoInspeccion
+    }
     try {
+      const params: Record<string, any> = { tipoEquipoId }
+      if (filtroTipoInspeccion.value && filtroTipoInspeccion.value !== 'TODOS') {
+        params.tipoInspeccion = filtroTipoInspeccion.value
+      }
+
       const { data } = await api.get<RespuestaApi<PlantillaVariableItem[]>>('/variables-criticas/plantillas/listar', {
-        params: { tipoEquipoId }
+        params
       })
       if (data.status === 'ok' && data.data) {
         plantillasPorTipo.value = data.data
@@ -274,6 +290,7 @@ export const useVariablesStore = defineStore('variables', () => {
       cargandoPlantillas.value = false
     }
   }
+
 
   async function cargarVariablesComponente(componenteId: number): Promise<RespuestaApi<VariableInstancia[]>> {
     cargandoVariables.value = true
@@ -697,6 +714,7 @@ export const useVariablesStore = defineStore('variables', () => {
     tiposEquipo,
     plantillasPorTipo,
     tipoEquipoSeleccionadoId,
+    filtroTipoInspeccion,
     cargandoJerarquia,
     cargandoVariables,
     cargandoPlantillas,

@@ -81,8 +81,8 @@ export const useAuthStore = defineStore('auth', () => {
   /** Solo el Administrador puede crear, editar o eliminar maquinarias, componentes y variables */
   const puedeGestionarMaquinas = computed<boolean>(() => esAdmin.value)
 
-  /** Técnicos y Administradores pueden registrar nuevas inspecciones */
-  const puedeRegistrarInspecciones = computed<boolean>(() => esAdmin.value || esTecnico.value)
+  /** Técnicos, Supervisores y Administradores pueden registrar nuevas inspecciones */
+  const puedeRegistrarInspecciones = computed<boolean>(() => esAdmin.value || esTecnico.value || esSupervisor.value)
 
   /** Supervisores y Administradores pueden revisar, evaluar, aprobar o rechazar inspecciones */
   const puedeEvaluarInspecciones = computed<boolean>(() => esAdmin.value || esSupervisor.value)
