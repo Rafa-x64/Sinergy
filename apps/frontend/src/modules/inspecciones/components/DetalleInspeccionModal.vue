@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useToast } from 'vue-toastification'
 import { useInspeccionesStore } from '../inspecciones.store'
+import ModalImpresionInspeccion from './ModalImpresionInspeccion.vue'
 
 const toast = useToast()
 const store = useInspeccionesStore()
@@ -9,6 +10,7 @@ const store = useInspeccionesStore()
 const mostrarModal = ref(false)
 const mostrarFormRechazo = ref(false)
 const motivoRechazoText = ref('')
+const refModalImpresion = ref<InstanceType<typeof ModalImpresionInspeccion> | null>(null)
 
 const abrir = () => {
   mostrarModal.value = true
@@ -18,6 +20,12 @@ const abrir = () => {
 
 const cerrar = () => {
   mostrarModal.value = false
+}
+
+const imprimirInspeccion = () => {
+  if (store.inspeccionActiva) {
+    refModalImpresion.value?.abrir(store.inspeccionActiva)
+  }
 }
 
 const aprobarInspeccion = async () => {
@@ -68,9 +76,21 @@ defineExpose({ abrir, cerrar })
           <v-icon start size="22">mdi-clipboard-text-search-outline</v-icon>
           <span class="font-weight-bold">Detalle de Inspección: {{ store.inspeccionActiva.codigoInspeccion }}</span>
         </div>
-        <v-btn icon variant="text" size="small" color="white" @click="cerrar">
-          <v-icon>mdi-close</v-icon>
-        </v-btn>
+        <div class="d-flex align-center gap-2">
+          <v-btn
+            size="small"
+            color="white"
+            variant="tonal"
+            prepend-icon="mdi-printer"
+            class="font-weight-bold mr-1"
+            @click="imprimirInspeccion"
+          >
+            Imprimir
+          </v-btn>
+          <v-btn icon variant="text" size="small" color="white" @click="cerrar">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </div>
       </v-card-title>
 
       <v-card-text class="pa-4 custom-scrollbar">
@@ -282,31 +302,46 @@ defineExpose({ abrir, cerrar })
         </v-expand-transition>
       </v-card-text>
 
-      <!-- Botones de Acción para Supervisores -->
-      <v-card-actions v-if="store.inspeccionActiva.estadoInspeccion === 'PENDIENTE'" class="pa-4 pt-0 justify-end gap-2 border-t">
+      <!-- Botones de Acción -->
+      <v-card-actions class="pa-4 pt-3 justify-space-between gap-2 border-t">
         <v-btn
-          v-if="!mostrarFormRechazo"
-          color="error"
+          color="primary"
           variant="tonal"
-          prepend-icon="mdi-close-circle-outline"
-          :disabled="store.cargandoAccion"
-          @click="mostrarFormRechazo = true"
+          prepend-icon="mdi-printer"
+          class="font-weight-bold"
+          @click="imprimirInspeccion"
         >
-          Rechazar Inspección
+          Imprimir
         </v-btn>
 
-        <v-btn
-          v-if="!mostrarFormRechazo"
-          color="#5cb85c"
-          variant="flat"
-          prepend-icon="mdi-check-decagram"
-          :loading="store.cargandoAccion"
-          @click="aprobarInspeccion"
-        >
-          Aprobar Inspección
-        </v-btn>
+        <div class="d-flex align-center gap-2" v-if="store.inspeccionActiva.estadoInspeccion === 'PENDIENTE'">
+          <v-btn
+            v-if="!mostrarFormRechazo"
+            color="error"
+            variant="tonal"
+            prepend-icon="mdi-close-circle-outline"
+            :disabled="store.cargandoAccion"
+            @click="mostrarFormRechazo = true"
+          >
+            Rechazar Inspección
+          </v-btn>
+
+          <v-btn
+            v-if="!mostrarFormRechazo"
+            color="#5cb85c"
+            variant="flat"
+            prepend-icon="mdi-check-decagram"
+            :loading="store.cargandoAccion"
+            @click="aprobarInspeccion"
+          >
+            Aprobar Inspección
+          </v-btn>
+        </div>
       </v-card-actions>
     </v-card>
+
+    <!-- Modal de Impresión Oficial -->
+    <ModalImpresionInspeccion ref="refModalImpresion" />
   </v-dialog>
 </template>
 
