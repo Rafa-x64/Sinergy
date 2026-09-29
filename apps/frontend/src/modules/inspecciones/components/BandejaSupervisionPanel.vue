@@ -50,6 +50,8 @@ function formatearTipoInspeccion(tipo?: string) {
       return 'Rutina Generadores'
     case 'MONTACARGAS':
       return 'Rutina Montacargas'
+    case 'LUBRICACION':
+      return 'Rutina Lubricación'
     case 'VARIABLES_CRITICAS':
     default:
       return 'Variables Críticas'
@@ -66,6 +68,8 @@ function colorTipoInspeccion(tipo?: string) {
       return 'amber'
     case 'MONTACARGAS':
       return 'indigo'
+    case 'LUBRICACION':
+      return 'teal'
     case 'VARIABLES_CRITICAS':
     default:
       return 'primary'
@@ -168,7 +172,7 @@ function colorTipoInspeccion(tipo?: string) {
 
               <td class="text-center">
                 <v-chip
-                  v-if="item.codigoInspeccion.startsWith('INSP-LUB') || (item._count?.detalles ?? 0) === 0"
+                  v-if="item.tipoInspeccion === 'LUBRICACION'"
                   size="x-small"
                   variant="flat"
                   color="teal"

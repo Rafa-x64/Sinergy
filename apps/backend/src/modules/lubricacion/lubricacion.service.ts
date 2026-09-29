@@ -606,7 +606,7 @@ export const lubricacionService = {
       const nuevaInspeccion = await tx.inspeccion.create({
         data: {
           codigoInspeccion,
-          tipoInspeccion: 'VARIABLES_CRITICAS',
+          tipoInspeccion: 'LUBRICACION',
           plantaId: equipo.ubicacionTecnica?.plantaId ?? null,
           ubicacionTecnicaId: equipo.ubicacionTecnicaId,
           tipoEquipoId: equipo.tipoEquipoId,
