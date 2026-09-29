@@ -304,15 +304,6 @@ defineExpose({ abrir, cerrar })
 
       <!-- Botones de Acción -->
       <v-card-actions class="pa-4 pt-3 justify-space-between gap-2 border-t">
-        <v-btn
-          color="primary"
-          variant="tonal"
-          prepend-icon="mdi-printer"
-          class="font-weight-bold"
-          @click="imprimirInspeccion"
-        >
-          Imprimir
-        </v-btn>
 
         <div class="d-flex align-center gap-2" v-if="store.inspeccionActiva.estadoInspeccion === 'PENDIENTE'">
           <v-btn
