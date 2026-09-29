@@ -46,7 +46,7 @@ const solicitarFinalizar = () => {
   refResumenDialog.value?.abrir()
 }
 
-const manejarEnviadoExito = (data?: any) => {
+const manejarEnviadoExito = () => {
   modoWizardActivo.value = false
   pestañaActiva.value = authStore.puedeEvaluarInspecciones ? 'supervision' : 'historial'
   if (pestañaActiva.value === 'historial') {

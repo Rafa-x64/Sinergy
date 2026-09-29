@@ -4,7 +4,8 @@ import { useToast } from 'vue-toastification'
 import {
   useVariablesStore,
   type PlantillaVariableItem,
-  type TipoEvaluacion
+  type TipoEvaluacion,
+  type TipoInspeccion
 } from '../variables.store'
 import DialogoPlantillaVariable from './DialogoPlantillaVariable.vue'
 
@@ -12,8 +13,17 @@ const toast = useToast()
 const store = useVariablesStore()
 const refDialogoPlantilla = ref<InstanceType<typeof DialogoPlantillaVariable> | null>(null)
 
-// ─── FILTRO DE BÚSQUEDA ───────────────────────────────────────────────────────
+// ─── FILTRO DE BÚSQUEDA Y RUTINA ──────────────────────────────────────────────
 const busqueda = ref('')
+
+const opcionesFiltroInspeccion: { label: string; value: TipoInspeccion | 'TODOS'; icon: string; color: string }[] = [
+  { label: 'Todas las Rutinas', value: 'TODOS', icon: 'mdi-format-list-bulleted', color: 'primary' },
+  { label: 'Variables Críticas', value: 'VARIABLES_CRITICAS', icon: 'mdi-alert-decagram-outline', color: 'teal-darken-1' },
+  { label: 'Chillers', value: 'CHILLER', icon: 'mdi-snowflake', color: 'cyan-darken-1' },
+  { label: 'Compresores', value: 'COMPRESOR', icon: 'mdi-gauge', color: 'deep-orange-darken-1' },
+  { label: 'Generadores', value: 'GENERADOR', icon: 'mdi-generator-portable', color: 'amber-darken-2' },
+  { label: 'Montacargas', value: 'MONTACARGAS', icon: 'mdi-forklift', color: 'purple-darken-1' }
+]
 
 // ─── CONTROL DE DIÁLOGOS DE CONFIRMACIÓN ──────────────────────────────────────
 const mostrarDialogoEliminar = ref(false)
@@ -27,15 +37,26 @@ const tipoEquipoActual = computed(() => {
 })
 
 const plantillasFiltradas = computed(() => {
-  const termino = busqueda.value.trim().toLowerCase()
-  if (!termino) return store.plantillasPorTipo
+  let lista = store.plantillasPorTipo
 
-  return store.plantillasPorTipo.filter((p: PlantillaVariableItem) => {
+  if (store.filtroTipoInspeccion !== 'TODOS') {
+    if (store.filtroTipoInspeccion === 'VARIABLES_CRITICAS') {
+      lista = lista.filter((p) => !p.tipoInspeccion || p.tipoInspeccion === 'VARIABLES_CRITICAS')
+    } else {
+      lista = lista.filter((p) => p.tipoInspeccion === store.filtroTipoInspeccion)
+    }
+  }
+
+  const termino = busqueda.value.trim().toLowerCase()
+  if (!termino) return lista
+
+  return lista.filter((p: PlantillaVariableItem) => {
     return (
       p.nombre.toLowerCase().includes(termino) ||
       (p.nombreComponente && p.nombreComponente.toLowerCase().includes(termino)) ||
       (p.unidad && p.unidad.toLowerCase().includes(termino)) ||
-      p.tipoEvaluacion.toLowerCase().includes(termino)
+      p.tipoEvaluacion.toLowerCase().includes(termino) ||
+      (p.tipoInspeccion && p.tipoInspeccion.toLowerCase().includes(termino))
     )
   })
 })
@@ -126,6 +147,38 @@ const formatearTipo = (tipo: TipoEvaluacion): string => {
   }
 }
 
+const obtenerColorInspeccion = (tipo?: TipoInspeccion | null): string => {
+  switch (tipo) {
+    case 'CHILLER':
+      return 'cyan-darken-1'
+    case 'COMPRESOR':
+      return 'deep-orange-darken-1'
+    case 'GENERADOR':
+      return 'amber-darken-2'
+    case 'MONTACARGAS':
+      return 'purple-darken-1'
+    case 'VARIABLES_CRITICAS':
+    default:
+      return 'teal-darken-1'
+  }
+}
+
+const formatearInspeccion = (tipo?: TipoInspeccion | null): string => {
+  switch (tipo) {
+    case 'CHILLER':
+      return 'Chiller'
+    case 'COMPRESOR':
+      return 'Compresor'
+    case 'GENERADOR':
+      return 'Generador'
+    case 'MONTACARGAS':
+      return 'Montacargas'
+    case 'VARIABLES_CRITICAS':
+    default:
+      return 'Variables Críticas'
+  }
+}
+
 const formatearRango = (item: PlantillaVariableItem): string => {
   if (item.tipoEvaluacion === 'SELECCION') return 'No aplica (Selección)'
   const tieneMin = item.valorMinimo !== null && item.valorMinimo !== undefined && String(item.valorMinimo).trim() !== ''
@@ -135,6 +188,7 @@ const formatearRango = (item: PlantillaVariableItem): string => {
   if (tieneMax) return `Max: ${Number(item.valorMaximo)} ${item.unidad || ''}`.trim()
   return 'Sin límites'
 }
+
 </script>
 
 <template>
@@ -230,6 +284,28 @@ const formatearRango = (item: PlantillaVariableItem): string => {
         </div>
       </div>
 
+      <!-- Barra de Filtros por Tipo de Rutina / Inspección -->
+      <div class="d-flex align-center gap-1 mb-3 flex-wrap">
+        <v-chip-group
+          v-model="store.filtroTipoInspeccion"
+          selected-class="font-weight-bold"
+          mandatory
+        >
+          <v-chip
+            v-for="opt in opcionesFiltroInspeccion"
+            :key="opt.value"
+            :value="opt.value"
+            filter
+            variant="tonal"
+            :color="opt.color"
+            size="small"
+          >
+            <v-icon start size="15">{{ opt.icon }}</v-icon>
+            {{ opt.label }}
+          </v-chip>
+        </v-chip-group>
+      </div>
+
       <!-- Loading State -->
       <div v-if="store.cargandoPlantillas" class="d-flex flex-column align-center justify-center py-10">
         <v-progress-circular indeterminate color="primary" size="36" class="mb-3" />
@@ -243,12 +319,12 @@ const formatearRango = (item: PlantillaVariableItem): string => {
       >
         <v-icon size="48" color="grey-lighten-1" class="mb-2">mdi-clipboard-text-outline</v-icon>
         <h4 class="text-subtitle-1 font-weight-bold text-high-emphasis mb-1">
-          {{ busqueda ? 'No hay variables que coincidan con la búsqueda' : 'No hay variables configuradas en esta plantilla' }}
+          {{ busqueda || store.filtroTipoInspeccion !== 'TODOS' ? 'No hay variables que coincidan con el filtro' : 'No hay variables configuradas en esta plantilla' }}
         </h4>
         <p class="text-body-2 mb-3">
-          {{ busqueda ? 'Intenta con otro término de búsqueda' : `Comienza agregando las variables críticas estándar para ${tipoEquipoActual?.nombre ?? 'este tipo de equipo'}.` }}
+          {{ busqueda || store.filtroTipoInspeccion !== 'TODOS' ? 'Intenta cambiando el filtro de rutina o el término de búsqueda.' : `Comienza agregando las variables estándar para ${tipoEquipoActual?.nombre ?? 'este tipo de equipo'}.` }}
         </p>
-        <v-btn v-if="!busqueda" color="primary" variant="flat" prepend-icon="mdi-plus" size="small" @click="abrirCrear">
+        <v-btn v-if="!busqueda && store.filtroTipoInspeccion === 'TODOS'" color="primary" variant="flat" prepend-icon="mdi-plus" size="small" @click="abrirCrear">
           Agregar Primera Variable
         </v-btn>
       </div>
@@ -260,6 +336,7 @@ const formatearRango = (item: PlantillaVariableItem): string => {
             <tr class="table-header-row">
               <th class="text-left font-weight-bold text-high-emphasis">Nombre de Variable</th>
               <th class="text-left font-weight-bold text-high-emphasis">Componente Destino</th>
+              <th class="text-center font-weight-bold text-high-emphasis">Rutina / Inspección</th>
               <th class="text-center font-weight-bold text-high-emphasis">Tipo de Evaluación</th>
               <th class="text-center font-weight-bold text-high-emphasis">Unidad</th>
               <th class="text-center font-weight-bold text-high-emphasis">Rango Operativo</th>
@@ -295,6 +372,18 @@ const formatearRango = (item: PlantillaVariableItem): string => {
                   Todos (Global)
                 </v-chip>
               </td>
+
+              <td class="text-center">
+                <v-chip
+                  size="x-small"
+                  variant="tonal"
+                  :color="obtenerColorInspeccion(item.tipoInspeccion)"
+                  class="font-weight-bold"
+                >
+                  {{ formatearInspeccion(item.tipoInspeccion) }}
+                </v-chip>
+              </td>
+
 
               <td class="text-center">
                 <v-chip

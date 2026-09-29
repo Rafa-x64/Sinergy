@@ -4,10 +4,11 @@ import { RegistrarVariableDTO, EditarVariableDTO } from './variable-critica.sche
 import { variableCriticaService } from './variable-critica.service'
 import { parsearId } from '../../core/utils/parsearId'
 import { capitalizarPalabras } from '../../core/utils/capitalizarPalabras'
-import { Prisma, TipoEvaluacion } from '@prisma/client'
+import { Prisma, TipoEvaluacion, TipoInspeccion } from '@prisma/client'
 
 // Valores válidos del enum para reutilizar en validaciones y mensajes de error
 const TIPOS_EVALUACION_VALIDOS = Object.values(TipoEvaluacion)
+const TIPOS_INSPECCION_VALIDOS = Object.values(TipoInspeccion)
 
 export const variableCriticaController = {
   //------------------------------------------------------REGISTRAR-------------------------------------------------------
@@ -417,7 +418,8 @@ export const variableCriticaController = {
   ) {
     try {
       const tipoEquipoId = req.query.tipoEquipoId ? parsearId(req.query.tipoEquipoId as string) ?? undefined : undefined
-      const plantillas = await variableCriticaService.listarPlantillas(tipoEquipoId)
+      const tipoInspeccion = req.query.tipoInspeccion ? String(req.query.tipoInspeccion).trim().toUpperCase() : undefined
+      const plantillas = await variableCriticaService.listarPlantillas(tipoEquipoId, tipoInspeccion)
 
       return res.status(200).json({
         status: 'ok',
@@ -435,10 +437,17 @@ export const variableCriticaController = {
     next: NextFunction
   ) {
     try {
-      const { tipoEquipoId, nombreComponente, nombre, descripcion, tipoEvaluacion, unidad, valorMinimo, valorMaximo, ordenPosicion, opciones } = req.body
+      const { tipoEquipoId, tipoInspeccion, nombreComponente, nombre, descripcion, tipoEvaluacion, unidad, valorMinimo, valorMaximo, ordenPosicion, opciones } = req.body
 
       if (typeof tipoEquipoId !== 'number') {
         return res.status(400).json({ status: 'error', message: 'El ID del tipo de equipo es requerido y debe ser un número' })
+      }
+
+      if (tipoInspeccion !== undefined && tipoInspeccion !== null && !TIPOS_INSPECCION_VALIDOS.includes(tipoInspeccion as TipoInspeccion)) {
+        return res.status(400).json({
+          status: 'error',
+          message: `El tipo de inspección es inválido. Valores permitidos: ${TIPOS_INSPECCION_VALIDOS.join(', ')}`
+        })
       }
 
       if (nombreComponente !== undefined && nombreComponente !== null && typeof nombreComponente !== 'string') {
@@ -462,6 +471,7 @@ export const variableCriticaController = {
 
       const plantilla = await variableCriticaService.crearPlantilla({
         tipoEquipoId,
+        tipoInspeccion: (tipoInspeccion as TipoInspeccion) || 'VARIABLES_CRITICAS',
         nombreComponente: nombreComponente ? nombreComponente.trim().toUpperCase() : null,
         nombre: nombre.trim(),
         descripcion: descripcion?.trim() || null,
@@ -495,6 +505,14 @@ export const variableCriticaController = {
       }
 
       const datos = { ...req.body }
+
+      if (datos.tipoInspeccion !== undefined && datos.tipoInspeccion !== null && !TIPOS_INSPECCION_VALIDOS.includes(datos.tipoInspeccion)) {
+        return res.status(400).json({
+          status: 'error',
+          message: `El tipo de inspección es inválido. Valores permitidos: ${TIPOS_INSPECCION_VALIDOS.join(', ')}`
+        })
+      }
+
       if (datos.nombreComponente !== undefined) {
         if (datos.nombreComponente !== null && typeof datos.nombreComponente !== 'string') {
           return res.status(400).json({ status: 'error', message: 'El nombre del componente debe ser texto' })
@@ -516,6 +534,7 @@ export const variableCriticaController = {
       next(error)
     }
   },
+
 
   async eliminarPlantilla(
     req: Request,

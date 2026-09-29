@@ -6,11 +6,11 @@ import { autorizarRoles, ROL_ADMIN, ROL_SUPERVISOR, ROL_TECNICO } from '../../co
 const router = Router()
 
 // Endpoints del Módulo de Inspecciones por Planta (Data-Driven)
-// Equipos elegibles para inspeccionar: Técnico y Administrador
-router.get('/equipos-elegibles', validarJWT, autorizarRoles(ROL_ADMIN, ROL_TECNICO), inspeccionesController.obtenerEquiposElegibles)
+// Equipos elegibles para inspeccionar: Técnico, Supervisor y Administrador
+router.get('/equipos-elegibles', validarJWT, autorizarRoles(ROL_ADMIN, ROL_SUPERVISOR, ROL_TECNICO), inspeccionesController.obtenerEquiposElegibles)
 
-// Crear inspección: Solo Técnico y Administrador (Supervisores no registran inspecciones)
-router.post(['/', '/crear'], validarJWT, autorizarRoles(ROL_ADMIN, ROL_TECNICO), inspeccionesController.crearInspeccion)
+// Crear inspección: Técnico, Supervisor y Administrador
+router.post(['/', '/crear'], validarJWT, autorizarRoles(ROL_ADMIN, ROL_SUPERVISOR, ROL_TECNICO), inspeccionesController.crearInspeccion)
 
 // Pendientes de revisión y evaluación: Solo Supervisor y Administrador (Técnicos no evalúan)
 router.get('/pendientes', validarJWT, autorizarRoles(ROL_ADMIN, ROL_SUPERVISOR), inspeccionesController.obtenerPendientes)

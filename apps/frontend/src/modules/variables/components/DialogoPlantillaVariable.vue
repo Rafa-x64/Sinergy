@@ -5,7 +5,8 @@ import type { VuetifyForm } from '@/core/types/vuetifyForm'
 import {
   useVariablesStore,
   type PlantillaVariableItem,
-  type TipoEvaluacion
+  type TipoEvaluacion,
+  type TipoInspeccion
 } from '../variables.store'
 import {
   UNIDADES_MEDIDA_PREDETERMINADAS,
@@ -21,9 +22,18 @@ const mostrarDialogo = ref(false)
 const esEdicion = ref(false)
 const cargando = computed(() => store.ejecutandoAccion)
 
+const tiposInspeccion: { title: string; value: TipoInspeccion; icon: string }[] = [
+  { title: 'Variables Críticas (Inspección General)', value: 'VARIABLES_CRITICAS', icon: 'mdi-alert-decagram-outline' },
+  { title: 'Inspección de Chiller', value: 'CHILLER', icon: 'mdi-snowflake' },
+  { title: 'Inspección de Compresor', value: 'COMPRESOR', icon: 'mdi-gauge' },
+  { title: 'Inspección de Generador', value: 'GENERADOR', icon: 'mdi-generator-portable' },
+  { title: 'Inspección de Montacargas', value: 'MONTACARGAS', icon: 'mdi-forklift' }
+]
+
 const form = ref({
   id: 0,
   tipoEquipoId: 0,
+  tipoInspeccion: 'VARIABLES_CRITICAS' as TipoInspeccion,
   nombreComponente: '',
   nombre: '',
   tipoEvaluacion: 'NUMERICO_DECIMAL' as TipoEvaluacion,
@@ -121,9 +131,11 @@ watch(
 
 const abrirCrear = (tipoEquipoId: number) => {
   esEdicion.value = false
+  const tipoInspeccionInicial = (store.filtroTipoInspeccion !== 'TODOS' ? store.filtroTipoInspeccion : 'VARIABLES_CRITICAS') as TipoInspeccion
   form.value = {
     id: 0,
     tipoEquipoId,
+    tipoInspeccion: tipoInspeccionInicial,
     nombreComponente: '',
     nombre: '',
     tipoEvaluacion: 'NUMERICO_DECIMAL',
@@ -149,6 +161,7 @@ const abrirEditar = (plantilla: PlantillaVariableItem) => {
   form.value = {
     id: plantilla.id,
     tipoEquipoId: plantilla.tipoEquipoId,
+    tipoInspeccion: (plantilla.tipoInspeccion as TipoInspeccion) || 'VARIABLES_CRITICAS',
     nombreComponente: plantilla.nombreComponente ?? '',
     nombre: plantilla.nombre,
     tipoEvaluacion: plantilla.tipoEvaluacion,
@@ -184,6 +197,7 @@ const guardar = async () => {
 
   if (esEdicion.value) {
     const res = await store.editarPlantilla(form.value.id, {
+      tipoInspeccion: form.value.tipoInspeccion,
       nombreComponente: form.value.nombreComponente?.trim().toUpperCase() || null,
       nombre: form.value.nombre.trim(),
       tipoEvaluacion: form.value.tipoEvaluacion,
@@ -203,6 +217,7 @@ const guardar = async () => {
   } else {
     const res = await store.crearPlantilla({
       tipoEquipoId: form.value.tipoEquipoId,
+      tipoInspeccion: form.value.tipoInspeccion,
       nombreComponente: form.value.nombreComponente?.trim().toUpperCase() || null,
       nombre: form.value.nombre.trim(),
       tipoEvaluacion: form.value.tipoEvaluacion,
@@ -242,12 +257,35 @@ defineExpose({
             Tipo de Equipo: <strong>{{ tipoEquipoNombre }}</strong>
           </div>
 
+          <!-- Rutina / Tipo de Inspección -->
+          <v-select
+            v-model="form.tipoInspeccion"
+            :items="tiposInspeccion"
+            item-title="title"
+            item-value="value"
+            label="Rutina / Tipo de Inspección *"
+            variant="outlined"
+            density="comfortable"
+            prepend-inner-icon="mdi-clipboard-list-outline"
+            class="mb-3"
+            required
+          >
+            <template #item="{ props: itemProps, item }">
+              <v-list-item v-bind="itemProps" :title="item.raw.title">
+                <template #prepend>
+                  <v-icon size="18" color="primary">{{ item.raw.icon }}</v-icon>
+                </template>
+              </v-list-item>
+            </template>
+          </v-select>
+
           <v-combobox
             v-model="form.nombreComponente"
             :items="sugerenciasComponentes"
             :rules="variableRules.nombreComponente"
             label="Componente Destino"
             placeholder="Ej: MOTOR TRASLADO, TABLERO ELÉCTRICO, BOMBA DE LUBRICACIÓN"
+
             variant="outlined"
             density="comfortable"
             clearable

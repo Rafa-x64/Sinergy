@@ -6,7 +6,7 @@ import {
   RegistrarPlantillaVariableDTO,
   EditarPlantillaVariableDTO
 } from './variable-critica.schemas'
-import { Prisma } from '@prisma/client'
+import { Prisma, TipoInspeccion } from '@prisma/client'
 
 // Proyección estándar reutilizada en todas las respuestas del servicio
 const INCLUDE_VARIABLE_RELACIONES: Prisma.VariableInclude = {
@@ -223,10 +223,21 @@ class VariableCriticaService {
 
   // ─── PLANTILLAS DE VARIABLES ──────────────────────────────────────────────────
 
-  async listarPlantillas(tipoEquipoId?: number) {
+  async listarPlantillas(tipoEquipoId?: number, tipoInspeccion?: TipoInspeccion | string) {
     const where: Prisma.PlantillaVariableWhereInput = { activa: true }
     if (tipoEquipoId) {
       where.tipoEquipoId = tipoEquipoId
+    }
+
+    if (tipoInspeccion && tipoInspeccion !== 'TODOS') {
+      if (tipoInspeccion === 'VARIABLES_CRITICAS') {
+        where.OR = [
+          { tipoInspeccion: 'VARIABLES_CRITICAS' },
+          { tipoInspeccion: null }
+        ]
+      } else {
+        where.tipoInspeccion = tipoInspeccion as TipoInspeccion
+      }
     }
 
     return prisma.plantillaVariable.findMany({
@@ -256,6 +267,7 @@ class VariableCriticaService {
       const plantilla = await tx.plantillaVariable.create({
         data: {
           ...camposPlantilla,
+          tipoInspeccion: camposPlantilla.tipoInspeccion || 'VARIABLES_CRITICAS',
           ...(opciones && opciones.length > 0
             ? {
                 opcionesSeleccion: {
@@ -275,6 +287,7 @@ class VariableCriticaService {
           opcionesSeleccion: { orderBy: { ordenPosicion: 'asc' } }
         }
       })
+
 
       // Propagar automáticamente como variable instancia a los componentes activos cuyo nombre coincida
       const equipos = await tx.equipo.findMany({

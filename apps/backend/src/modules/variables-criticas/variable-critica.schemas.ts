@@ -1,4 +1,4 @@
-import { TipoEvaluacion } from '@prisma/client'
+import { TipoEvaluacion, TipoInspeccion } from '@prisma/client'
 
 export interface RegistrarOpcionSeleccionDTO {
   clave: string        // Código corto de la opción, máx 10 chars — ej: "OK", "NOK", "NA"
@@ -37,6 +37,7 @@ export interface FiltrosVariable {
 
 export interface RegistrarPlantillaVariableDTO {
   tipoEquipoId: number
+  tipoInspeccion?: TipoInspeccion | null
   nombreComponente?: string | null
   nombre: string
   descripcion?: string | null
@@ -49,6 +50,7 @@ export interface RegistrarPlantillaVariableDTO {
 }
 
 export interface EditarPlantillaVariableDTO {
+  tipoInspeccion?: TipoInspeccion | null
   nombreComponente?: string | null
   nombre?: string
   descripcion?: string | null
@@ -60,3 +62,4 @@ export interface EditarPlantillaVariableDTO {
   activa?: boolean
   opciones?: RegistrarOpcionSeleccionDTO[]
 }
+
