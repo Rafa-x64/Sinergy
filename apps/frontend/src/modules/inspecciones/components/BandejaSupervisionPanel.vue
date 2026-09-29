@@ -2,9 +2,12 @@
 import { onMounted, ref } from 'vue'
 import { useInspeccionesStore, type InspeccionMaestra } from '../inspecciones.store'
 import DetalleInspeccionModal from './DetalleInspeccionModal.vue'
+import ModalImpresionInspeccion from './ModalImpresionInspeccion.vue'
 
 const store = useInspeccionesStore()
 const refDetalleModal = ref<InstanceType<typeof DetalleInspeccionModal> | null>(null)
+const refModalImpresion = ref<InstanceType<typeof ModalImpresionInspeccion> | null>(null)
+const cargandoImpresionId = ref<string | null>(null)
 
 onMounted(async () => {
   await store.cargarPendientes()
@@ -13,6 +16,18 @@ onMounted(async () => {
 const abrirDetalle = async (inspeccion: InspeccionMaestra) => {
   await store.cargarDetalleInspeccion(inspeccion.id)
   refDetalleModal.value?.abrir()
+}
+
+const imprimirInspeccion = async (inspeccion: InspeccionMaestra) => {
+  cargandoImpresionId.value = inspeccion.id
+  try {
+    const res = await store.cargarDetalleInspeccion(inspeccion.id)
+    if (res.status === 'ok' && store.inspeccionActiva) {
+      refModalImpresion.value?.abrir(store.inspeccionActiva)
+    }
+  } finally {
+    cargandoImpresionId.value = null
+  }
 }
 
 const formatearFecha = (f?: string) => {
@@ -174,15 +189,26 @@ function colorTipoInspeccion(tipo?: string) {
               </td>
 
               <td class="text-center">
-                <v-btn
-                  color="#5cb85c"
-                  size="x-small"
-                  variant="flat"
-                  prepend-icon="mdi-eye-outline"
-                  @click="abrirDetalle(item)"
-                >
-                  Revisar
-                </v-btn>
+                <div class="d-flex align-center justify-center gap-1">
+                  <v-btn
+                    color="#5cb85c"
+                    size="x-small"
+                    variant="flat"
+                    prepend-icon="mdi-eye-outline"
+                    @click="abrirDetalle(item)"
+                  >
+                    Revisar
+                  </v-btn>
+                  <v-btn
+                    size="x-small"
+                    variant="tonal"
+                    color="primary"
+                    icon="mdi-printer"
+                    title="Imprimir"
+                    :loading="cargandoImpresionId === item.id"
+                    @click="imprimirInspeccion(item)"
+                  />
+                </div>
               </td>
             </tr>
           </tbody>
@@ -192,6 +218,9 @@ function colorTipoInspeccion(tipo?: string) {
 
     <!-- Modal de Detalle y Evaluación -->
     <DetalleInspeccionModal ref="refDetalleModal" />
+
+    <!-- Modal de Impresión Oficial -->
+    <ModalImpresionInspeccion ref="refModalImpresion" />
   </div>
 </template>
 
