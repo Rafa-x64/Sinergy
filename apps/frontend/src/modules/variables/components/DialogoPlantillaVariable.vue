@@ -24,7 +24,8 @@ const cargando = computed(() => store.ejecutandoAccion)
 
 const tiposInspeccion: { title: string; value: TipoInspeccion; icon: string }[] = [
   { title: 'Variables Críticas (Inspección General)', value: 'VARIABLES_CRITICAS', icon: 'mdi-alert-decagram-outline' },
-  { title: 'Inspección de Chiller', value: 'CHILLER', icon: 'mdi-snowflake' },
+  { title: 'Chillers — Rutina Diaria', value: 'CHILLER_DIARIO', icon: 'mdi-snowflake' },
+  { title: 'Chillers — Rutina Semanal', value: 'CHILLER_SEMANAL', icon: 'mdi-snowflake-variant' },
   { title: 'Inspección de Compresor', value: 'COMPRESOR', icon: 'mdi-gauge' },
   { title: 'Inspección de Generador', value: 'GENERADOR', icon: 'mdi-generator-portable' },
   { title: 'Inspección de Montacargas', value: 'MONTACARGAS', icon: 'mdi-forklift' }
@@ -299,15 +300,30 @@ defineExpose({
             </template>
           </v-combobox>
 
-          <v-text-field
-            v-model="form.nombre"
-            :rules="variableRules.nombre"
-            label="Nombre de la Variable *"
-            placeholder="Ej: Presión de Succión, Temperatura Aceite, Nivel de Aceite"
-            variant="outlined"
-            density="comfortable"
-            class="mb-2"
-          />
+          <v-row dense class="mb-1">
+            <v-col cols="12" sm="9">
+              <v-text-field
+                v-model="form.nombre"
+                :rules="variableRules.nombre"
+                label="Nombre de la Variable *"
+                placeholder="Ej: Presión de Succión, Temperatura Aceite, Nivel de Aceite"
+                variant="outlined"
+                density="comfortable"
+              />
+            </v-col>
+            <v-col cols="12" sm="3">
+              <v-text-field
+                v-model.number="form.ordenPosicion"
+                label="Orden #"
+                type="number"
+                min="0"
+                variant="outlined"
+                density="comfortable"
+                hint="Posición en lista"
+                persistent-hint
+              />
+            </v-col>
+          </v-row>
 
           <v-row dense>
             <v-col cols="12" sm="7">

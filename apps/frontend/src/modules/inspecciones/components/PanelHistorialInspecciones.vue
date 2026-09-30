@@ -47,7 +47,11 @@ const imprimirInspeccion = async (inspeccion: InspeccionMaestra) => {
 function formatearTipoInspeccion(tipo?: string) {
   switch (tipo) {
     case 'CHILLER':
-      return 'Rutina Chillers'
+      return 'Rutina Chillers (Legado)'
+    case 'CHILLER_DIARIO':
+      return 'Chillers — Diaria'
+    case 'CHILLER_SEMANAL':
+      return 'Chillers — Semanal'
     case 'COMPRESOR':
       return 'Rutina Compresores'
     case 'GENERADOR':
@@ -65,6 +69,8 @@ function formatearTipoInspeccion(tipo?: string) {
 function colorTipoInspeccion(tipo?: string) {
   switch (tipo) {
     case 'CHILLER':
+    case 'CHILLER_DIARIO':
+    case 'CHILLER_SEMANAL':
       return 'cyan'
     case 'COMPRESOR':
       return 'teal'
@@ -159,7 +165,9 @@ onMounted(async () => {
             :items="[
               { title: 'Todas las Rutinas', value: '' },
               { title: 'Variables Críticas de Planta', value: 'VARIABLES_CRITICAS' },
-              { title: 'Rutina de Inspección Chillers', value: 'CHILLER' },
+              { title: 'Chillers — Rutina Diaria', value: 'CHILLER_DIARIO' },
+              { title: 'Chillers — Rutina Semanal', value: 'CHILLER_SEMANAL' },
+              { title: 'Chillers (Legado)', value: 'CHILLER' },
               { title: 'Rutina de Inspección Compresores', value: 'COMPRESOR' },
               { title: 'Rutina de Inspección Generadores', value: 'GENERADOR' },
               { title: 'Rutina de Inspección Montacargas', value: 'MONTACARGAS' }

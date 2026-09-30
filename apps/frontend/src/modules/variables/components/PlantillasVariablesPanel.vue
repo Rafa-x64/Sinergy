@@ -19,7 +19,8 @@ const busqueda = ref('')
 const opcionesFiltroInspeccion: { label: string; value: TipoInspeccion | 'TODOS'; icon: string; color: string }[] = [
   { label: 'Todas las Rutinas', value: 'TODOS', icon: 'mdi-format-list-bulleted', color: 'primary' },
   { label: 'Variables Críticas', value: 'VARIABLES_CRITICAS', icon: 'mdi-alert-decagram-outline', color: 'teal-darken-1' },
-  { label: 'Chillers', value: 'CHILLER', icon: 'mdi-snowflake', color: 'cyan-darken-1' },
+  { label: 'Chillers (Diaria)', value: 'CHILLER_DIARIO', icon: 'mdi-snowflake', color: 'cyan-darken-1' },
+  { label: 'Chillers (Semanal)', value: 'CHILLER_SEMANAL', icon: 'mdi-snowflake-variant', color: 'cyan-darken-3' },
   { label: 'Compresores', value: 'COMPRESOR', icon: 'mdi-gauge', color: 'deep-orange-darken-1' },
   { label: 'Generadores', value: 'GENERADOR', icon: 'mdi-generator-portable', color: 'amber-darken-2' },
   { label: 'Montacargas', value: 'MONTACARGAS', icon: 'mdi-forklift', color: 'purple-darken-1' }
@@ -150,7 +151,11 @@ const formatearTipo = (tipo: TipoEvaluacion): string => {
 const obtenerColorInspeccion = (tipo?: TipoInspeccion | null): string => {
   switch (tipo) {
     case 'CHILLER':
+      return 'cyan-darken-2'
+    case 'CHILLER_DIARIO':
       return 'cyan-darken-1'
+    case 'CHILLER_SEMANAL':
+      return 'cyan-darken-3'
     case 'COMPRESOR':
       return 'deep-orange-darken-1'
     case 'GENERADOR':
@@ -166,7 +171,11 @@ const obtenerColorInspeccion = (tipo?: TipoInspeccion | null): string => {
 const formatearInspeccion = (tipo?: TipoInspeccion | null): string => {
   switch (tipo) {
     case 'CHILLER':
-      return 'Chiller'
+      return 'Chillers (Legado)'
+    case 'CHILLER_DIARIO':
+      return 'Chillers (Diaria)'
+    case 'CHILLER_SEMANAL':
+      return 'Chillers (Semanal)'
     case 'COMPRESOR':
       return 'Compresor'
     case 'GENERADOR':

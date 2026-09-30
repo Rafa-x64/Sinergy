@@ -696,15 +696,30 @@ defineExpose({
               Componente: <strong>{{ nodoComponenteActivo.nombre }}</strong>
             </div>
 
-            <v-text-field
-              v-model="formVariable.nombre"
-              :rules="variableRules.nombre"
-              label="Nombre de la Variable *"
-              placeholder="Ej: Temperatura Zona 1, Presión de Aceite, Nivel de Aceite"
-              variant="outlined"
-              density="comfortable"
-              class="mb-2"
-            />
+            <v-row dense class="mb-1">
+              <v-col cols="12" sm="9">
+                <v-text-field
+                  v-model="formVariable.nombre"
+                  :rules="variableRules.nombre"
+                  label="Nombre de la Variable *"
+                  placeholder="Ej: Temperatura Zona 1, Presión de Aceite, Nivel de Aceite"
+                  variant="outlined"
+                  density="comfortable"
+                />
+              </v-col>
+              <v-col cols="12" sm="3">
+                <v-text-field
+                  v-model.number="formVariable.ordenPosicion"
+                  label="Orden #"
+                  type="number"
+                  min="0"
+                  variant="outlined"
+                  density="comfortable"
+                  hint="Posición"
+                  persistent-hint
+                />
+              </v-col>
+            </v-row>
 
             <v-row dense>
               <v-col cols="12" sm="7">

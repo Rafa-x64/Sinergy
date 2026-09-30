@@ -20,13 +20,18 @@ const cerrar = () => {
 // Determinar si es una rutina de maquinaria auxiliar (FIM003) o variables críticas generales (FIM006)
 const esRutinaEspecifica = computed(() => {
   const tipo = inspeccion.value?.tipoInspeccion
-  return tipo === 'CHILLER' || tipo === 'COMPRESOR' || tipo === 'GENERADOR' || tipo === 'MONTACARGAS'
+  return tipo === 'CHILLER' || tipo === 'CHILLER_DIARIO' || tipo === 'CHILLER_SEMANAL' ||
+         tipo === 'COMPRESOR' || tipo === 'GENERADOR' || tipo === 'MONTACARGAS'
 })
 
 const tituloRutina = computed(() => {
   switch (inspeccion.value?.tipoInspeccion) {
     case 'CHILLER':
       return 'RUTINA DE INSPECCION CHILLERS'
+    case 'CHILLER_DIARIO':
+      return 'RUTINA DE INSPECCION CHILLERS — DIARIA'
+    case 'CHILLER_SEMANAL':
+      return 'RUTINA DE INSPECCION CHILLERS — SEMANAL'
     case 'COMPRESOR':
       return 'RUTINA DE INSPECCION COMPRESORES'
     case 'GENERADOR':

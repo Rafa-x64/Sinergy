@@ -34,7 +34,9 @@ enum TipoInspeccion {
   MONTACARGAS
   COMPRESOR
   GENERADOR
-  CHILLER
+  CHILLER         // Legado: registros anteriores a la división diaria/semanal
+  CHILLER_DIARIO
+  CHILLER_SEMANAL
   LUBRICACION
 }
 

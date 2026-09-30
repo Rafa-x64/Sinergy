@@ -165,14 +165,24 @@ export const authController = {
         if (typeof email !== 'string' || !esEmailValido(email)) {
           return res.status(400).json({ status: 'error', message: 'El correo electrónico no es válido' })
         }
-        datosActualizados.email = email.trim()
+        const emailLimpio = email.trim()
+        const propietarioEmail = await authService.buscarPorEmail(emailLimpio)
+        if (propietarioEmail !== null && propietarioEmail.id !== id) {
+          return res.status(409).json({ status: 'error', message: `El correo electrónico ${emailLimpio} ya está en uso por otro usuario` })
+        }
+        datosActualizados.email = emailLimpio
       }
 
       if (nombreUsuario !== undefined) {
         if (typeof nombreUsuario !== 'string' || !nombreUsuario.trim()) {
           return res.status(400).json({ status: 'error', message: 'El nombre de usuario no es válido' })
         }
-        datosActualizados.nombreUsuario = nombreUsuario.trim()
+        const nombreUsuarioLimpio = nombreUsuario.trim()
+        const propietarioNombre = await authService.buscarPorNombreUsuario(nombreUsuarioLimpio)
+        if (propietarioNombre !== null && propietarioNombre.id !== id) {
+          return res.status(409).json({ status: 'error', message: `El nombre de usuario ${nombreUsuarioLimpio} ya está en uso por otro usuario` })
+        }
+        datosActualizados.nombreUsuario = nombreUsuarioLimpio
       }
 
       if (password !== undefined) {

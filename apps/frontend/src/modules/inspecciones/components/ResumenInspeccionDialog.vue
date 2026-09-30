@@ -53,7 +53,11 @@ defineExpose({ abrir, cerrar })
           <v-chip size="small" color="#5cb85c" variant="tonal" class="font-weight-bold">
             {{
               store.tipoInspeccionSeleccionado === 'CHILLER'
-                ? 'Rutina de Inspección Chillers'
+                ? 'Rutina Chillers (Legado)'
+                : store.tipoInspeccionSeleccionado === 'CHILLER_DIARIO'
+                ? 'Chillers — Rutina Diaria'
+                : store.tipoInspeccionSeleccionado === 'CHILLER_SEMANAL'
+                ? 'Chillers — Rutina Semanal'
                 : store.tipoInspeccionSeleccionado === 'COMPRESOR'
                 ? 'Rutina de Inspección Compresores'
                 : store.tipoInspeccionSeleccionado === 'GENERADOR'

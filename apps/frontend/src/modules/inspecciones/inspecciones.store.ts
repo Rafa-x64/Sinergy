@@ -4,7 +4,7 @@ import api from '@/core/api'
 
 export type AlcanceInspeccion = 'POR_TIPO_EQUIPO' | 'POR_EQUIPO' | 'POR_LINEA'
 export type EstadoInspeccion = 'BORRADOR' | 'PENDIENTE' | 'APROBADO' | 'RECHAZADO'
-export type TipoInspeccion = 'VARIABLES_CRITICAS' | 'CHILLER' | 'COMPRESOR' | 'GENERADOR' | 'MONTACARGAS' | 'LUBRICACION'
+export type TipoInspeccion = 'VARIABLES_CRITICAS' | 'CHILLER' | 'CHILLER_DIARIO' | 'CHILLER_SEMANAL' | 'COMPRESOR' | 'GENERADOR' | 'MONTACARGAS' | 'LUBRICACION'
 
 export interface OpcionSeleccion {
   id: number
