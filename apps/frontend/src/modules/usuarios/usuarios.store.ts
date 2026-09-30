@@ -55,6 +55,7 @@ export interface ActualizarUsuarioDTO {
     apellido?: string
     email?: string
     nombreUsuario?: string
+    password?: string
     activo?: boolean
     rolId?: number
     plantaId?: number | null
