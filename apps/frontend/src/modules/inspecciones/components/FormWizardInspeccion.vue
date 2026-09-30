@@ -176,7 +176,53 @@ const guardarPaso = () => {
         />
       </v-card>
 
+      <!-- Banner de Estado del Aceite (solo para Generadores) -->
+      <v-alert
+        v-if="equipoActual.infoAceite"
+        :type="equipoActual.infoAceite.estadoAceite === 'CRITICO' ? 'error' : equipoActual.infoAceite.estadoAceite === 'ADVERTENCIA' ? 'warning' : 'success'"
+        variant="tonal"
+        density="compact"
+        class="mb-3 rounded-lg"
+        :icon="equipoActual.infoAceite.estadoAceite === 'CRITICO' ? 'mdi-alert-octagon' : equipoActual.infoAceite.estadoAceite === 'ADVERTENCIA' ? 'mdi-alert' : 'mdi-check-circle'"
+      >
+        <div class="d-flex align-center justify-space-between flex-wrap gap-2">
+          <div>
+            <div class="text-caption font-weight-bold mb-1">
+              <span v-if="equipoActual.infoAceite.estadoAceite === 'CRITICO'">
+                ALERTA CRITICA — Aceite del Motor requiere cambio urgente
+              </span>
+              <span v-else-if="equipoActual.infoAceite.estadoAceite === 'ADVERTENCIA'">
+                ADVERTENCIA — Aceite del Motor próximo al límite de vida útil
+              </span>
+              <span v-else>
+                Aceite del Motor dentro de rango operativo normal
+              </span>
+            </div>
+            <div class="text-caption text-medium-emphasis">
+              Horómetro actual: <strong>{{ equipoActual.infoAceite.horometroActual.toLocaleString() }} hrs</strong>
+              &bull; Último cambio: <strong>{{ equipoActual.infoAceite.horometroUltimoCambio.toLocaleString() }} hrs</strong>
+            </div>
+          </div>
+          <div class="d-flex align-center gap-2">
+            <v-chip
+              :color="equipoActual.infoAceite.estadoAceite === 'CRITICO' ? 'error' : equipoActual.infoAceite.estadoAceite === 'ADVERTENCIA' ? 'warning' : 'success'"
+              variant="flat"
+              size="small"
+              class="font-weight-bold"
+            >
+              {{ equipoActual.infoAceite.horasUsoAceite.toLocaleString() }} hrs de uso
+            </v-chip>
+            <div class="text-caption text-medium-emphasis" style="min-width: 80px;">
+              <span v-if="equipoActual.infoAceite.estadoAceite === 'CRITICO'">Límite: 250 hrs</span>
+              <span v-else-if="equipoActual.infoAceite.estadoAceite === 'ADVERTENCIA'">Alerta crítica: 250 hrs</span>
+              <span v-else>Aviso: 120 hrs</span>
+            </div>
+          </div>
+        </div>
+      </v-alert>
+
       <!-- Lista de Componentes y Variables del Equipo Actual -->
+
       <v-card
         v-for="componente in equipoActual.componentes"
         :key="componente.id"

@@ -137,6 +137,8 @@ export class InspeccionesService {
       }
     }
 
+    const esGenerador = tipoInspeccion === 'GENERADOR'
+
     const equipos = await prisma.equipo.findMany({
       where: whereCondition,
       orderBy: [
@@ -151,6 +153,25 @@ export class InspeccionesService {
           select: { id: true, nombre: true },
         },
         montacargasDetalle: true,
+        // Solo para generadores: obtener datos de lubricación del aceite del motor
+        ...(esGenerador && {
+          puntosLubricacion: {
+            where: { activo: true },
+            select: {
+              id: true,
+              nombrePunto: true,
+              horometroUltimoCambio: true,
+              limiteHorasCambio: true
+            },
+            orderBy: { id: 'asc' },
+            take: 1
+          },
+          historialHorometros: {
+            orderBy: { id: 'desc' },
+            take: 1,
+            select: { valorHorometro: true }
+          }
+        }),
         componentes: {
           where: { activo: true },
           orderBy: { ordenPosicion: 'asc' },
@@ -271,6 +292,35 @@ export class InspeccionesService {
         }
       }).filter((c) => c.variables.length > 0) // Excluir componentes sin variables evaluables
 
+      // Calcular info de aceite para generadores
+      let infoAceite: {
+        horometroActual: number
+        horometroUltimoCambio: number
+        horasUsoAceite: number
+        estadoAceite: 'NORMAL' | 'ADVERTENCIA' | 'CRITICO'
+      } | null = null
+
+      if (esGenerador) {
+        const equipoConDatos = equipo as any
+        const ultimoHorometro = equipoConDatos.historialHorometros?.[0]
+        const primerPunto = equipoConDatos.puntosLubricacion?.[0]
+
+        if (ultimoHorometro && primerPunto) {
+          const horometroActual = Number(ultimoHorometro.valorHorometro)
+          const horometroUltimoCambio = Number(primerPunto.horometroUltimoCambio)
+          const horasUsoAceite = Math.max(0, horometroActual - horometroUltimoCambio)
+
+          let estadoAceite: 'NORMAL' | 'ADVERTENCIA' | 'CRITICO' = 'NORMAL'
+          if (horasUsoAceite >= 250) {
+            estadoAceite = 'CRITICO'
+          } else if (horasUsoAceite >= 120) {
+            estadoAceite = 'ADVERTENCIA'
+          }
+
+          infoAceite = { horometroActual, horometroUltimoCambio, horasUsoAceite, estadoAceite }
+        }
+      }
+
       return {
         id: equipo.id,
         codigo: equipo.codigo,
@@ -283,6 +333,7 @@ export class InspeccionesService {
         tipoEquipo: equipo.tipoEquipo,
         montacargasDetalle: equipo.montacargasDetalle,
         tieneEsquemaDePlantilla,
+        infoAceite,
         componentes: componentesResueltos
       }
     }).filter((e) => e.componentes.length > 0) // Excluir equipos sin variables evaluables

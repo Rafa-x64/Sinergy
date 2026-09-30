@@ -17,6 +17,10 @@ El formato sigue el estándar [Keep a Changelog](https://keepachangelog.com/es/1
 ## [Unreleased]
 
 ### Added
+- **Cálculo Automático de Horas de Aceite del Motor en Inspección de Generadores (`feat: alerta-aceite-motor-generadores`)**:
+  - **Backend (`inspecciones.service.ts`)**: El endpoint `/api/inspecciones/equipos-elegibles` enriquece la respuesta de cada generador con un objeto `infoAceite` calculado en tiempo real: `horometroActual` (última lectura del historial), `horometroUltimoCambio` (del punto de lubricación activo), `horasUsoAceite` (delta entre ambos) y `estadoAceite` (`NORMAL` / `ADVERTENCIA` a las 120 h / `CRITICO` a las 250 h). Si el generador no tiene horómetro registrado o puntos de lubricación configurados, `infoAceite` llega como `null` y el banner no se renderiza.
+  - **Store (`inspecciones.store.ts` — `EquipoElegible`)**: Tipado del nuevo campo `infoAceite` con interfaz estricta; `estadoAceite` es un literal union `'NORMAL' | 'ADVERTENCIA' | 'CRITICO'`.
+  - **Wizard de Captura (`FormWizardInspeccion.vue`)**: Banner contextual insertado entre la barra de progreso y el listado de componentes. Muestra verde (`success`) dentro del rango, amarillo (`warning`) con advertencia a las 120 h y rojo (`error`) con alerta crítica a las 250 h, incluyendo los valores de horómetro para referencia del técnico. El técnico ya no necesita calcular manualmente las horas de uso.
 - **División de Rutinas de Chillers en Frecuencia Diaria y Semanal (`feat: division-rutinas-chillers-diaria-semanal`)**:
   - **Doble Esquema de Inspección para Chillers (`CHILLER_DIARIO` y `CHILLER_SEMANAL`)**:
     - **Base de Datos (`schema.prisma`)**: Incorporados los valores `CHILLER_DIARIO` y `CHILLER_SEMANAL` al enum `TipoInspeccion`, preservando `CHILLER` con fines de compatibilidad histórica y auditoría de registros previos.

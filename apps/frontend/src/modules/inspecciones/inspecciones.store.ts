@@ -46,6 +46,12 @@ export interface EquipoElegible {
   modelo?: string | null
   estadoOperativo: string
   tieneEsquemaDePlantilla: boolean
+  infoAceite?: {
+    horometroActual: number
+    horometroUltimoCambio: number
+    horasUsoAceite: number
+    estadoAceite: 'NORMAL' | 'ADVERTENCIA' | 'CRITICO'
+  } | null
   montacargasDetalle?: {
     id: number
     denominacion: string
