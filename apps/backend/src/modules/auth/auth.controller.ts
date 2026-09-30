@@ -185,7 +185,7 @@ export const authController = {
         datosActualizados.nombreUsuario = nombreUsuarioLimpio
       }
 
-      if (password !== undefined) {
+      if (password !== undefined && password !== null && String(password).trim() !== '') {
         if (typeof password !== 'string' || password.length < 6) {
           return res.status(400).json({ status: 'error', message: 'La contraseña debe tener al menos 6 caracteres' })
         }
@@ -226,7 +226,15 @@ export const authController = {
           return res.status(404).json({ status: 'error', message: `El usuario con el ID ${req.params.id} no existe` })
         }
         if (error.code === 'P2002') {
-          return res.status(409).json({ status: 'error', message: 'El nombre de usuario o correo electrónico ya está en uso' })
+          const target = (error.meta?.target as string[] | string) || ''
+          const targetStr = Array.isArray(target) ? target.join(', ') : String(target)
+          if (targetStr.includes('email')) {
+            return res.status(409).json({ status: 'error', message: 'El correo electrónico ya está en uso por otro usuario' })
+          }
+          if (targetStr.includes('nombreUsuario') || targetStr.includes('nombre_usuario')) {
+            return res.status(409).json({ status: 'error', message: 'El nombre de usuario ya está en uso por otro usuario' })
+          }
+          return res.status(409).json({ status: 'error', message: `Conflicto de unicidad en la base de datos (${targetStr || 'registro duplicado'})` })
         }
       }
       next(error)

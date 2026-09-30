@@ -158,7 +158,7 @@ export class AuthService {
 
   async actualizar(id: number, datos: ActualizarUsuarioDTO) {
     let passwordHash: string | undefined = undefined
-    if (datos.password !== undefined) {
+    if (datos.password !== undefined && datos.password !== null && String(datos.password).trim() !== '') {
       passwordHash = await encriptar(datos.password)
     }
 
@@ -204,8 +204,14 @@ export class AuthService {
       })
 
       if (datos.rolId !== undefined) {
-        await tx.usuarioRol.deleteMany({ where: { usuarioId: id } })
-        await tx.usuarioRol.create({ data: { usuarioId: id, rolId: datos.rolId } })
+        const rolActual = await tx.usuarioRol.findFirst({
+          where: { usuarioId: id },
+        })
+
+        if (!rolActual || rolActual.rolId !== datos.rolId) {
+          await tx.usuarioRol.deleteMany({ where: { usuarioId: id } })
+          await tx.usuarioRol.create({ data: { usuarioId: id, rolId: datos.rolId } })
+        }
       }
 
       return tx.usuario.findUnique({
