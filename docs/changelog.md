@@ -17,6 +17,13 @@ El formato sigue el estándar [Keep a Changelog](https://keepachangelog.com/es/1
 ## [Unreleased]
 
 ### Added
+- **División de Rutinas de Chillers en Frecuencia Diaria y Semanal (`feat: division-rutinas-chillers-diaria-semanal`)**:
+  - **Doble Esquema de Inspección para Chillers (`CHILLER_DIARIO` y `CHILLER_SEMANAL`)**:
+    - **Base de Datos (`schema.prisma`)**: Incorporados los valores `CHILLER_DIARIO` y `CHILLER_SEMANAL` al enum `TipoInspeccion`, preservando `CHILLER` con fines de compatibilidad histórica y auditoría de registros previos.
+    - **Backend (`inspecciones.service.ts`, `variable-critica.controller.ts`)**: Mapeo automático de ambos tipos al tipo de equipo físico Chiller en elegibilidad y resolución de plantillas operativas.
+    - **Frontend (`WizardSeleccionAlcance.vue`, `PlantillasVariablesPanel.vue`, `DialogoPlantillaVariable.vue`)**: Nuevas opciones especializadas con iconografía y paleta cian diferenciada (`mdi-snowflake-thermometer` para Diaria y `mdi-calendar-week` para Semanal).
+    - **Supervisión, Historiales e Impresión (`BandejaSupervisionPanel.vue`, `PanelHistorialInspecciones.vue`, `PanelReportes.vue`, `TablaHistorialInspecciones.vue`, `ModalImpresionInspeccion.vue`)**: Trazabilidad completa y formato impreso FIM003 adaptado con títulos claros *RUTINA DE INSPECCIÓN CHILLERS (DIARIA)* y *RUTINA DE INSPECCIÓN CHILLERS (SEMANAL)*.
+
 - **Emisión e Impresión de Detalle de Inspección en Formatos Oficiales (`feat: impresion-inspecciones-formatos-oficiales`)**:
   - **Componente Oficial de Impresión y Exportación PDF (`ModalImpresionInspeccion.vue`)**:
     - **Formato FIM003 para Rutinas Específicas (`CHILLER`, `COMPRESOR`, `GENERADOR`, `MONTACARGAS`)**: Renderizado del formato físico oficial con logotipo institucional de Tubrica, título de rutina en mayúsculas, grilla de metadatos temporales (**Semana ISO**, **Fecha**, **Día**, **Hora**), bloques estructurados de **Ubicación Técnica** y **Equipo** (Código, Código Abreviado, Nombre), tabla principal de evaluación de items con badges de estado condicionales (Normal en `#c8e6c9`, Anormal en `#ff5252`), sub-bloques para parámetros cuantitativos agrupados por componente con sus valores numéricos y unidades, áreas de texto para **Observaciones** y **Valores Nominales**, y bloque final de firmas (**Elaborado por** y **Revisado y Aprobado por**) con código oficial de formato `FIM003`.

@@ -6,7 +6,7 @@ import type { AxiosError } from 'axios'
 // ─── INTERFACES DE DOMINIO Y PAYLOADS ──────────────────────────────────────────
 
 export type TipoEvaluacion = 'NUMERICO_ENTERO' | 'NUMERICO_DECIMAL' | 'TEMPERATURA' | 'SELECCION'
-export type TipoInspeccion = 'VARIABLES_CRITICAS' | 'CHILLER' | 'COMPRESOR' | 'GENERADOR' | 'MONTACARGAS'
+export type TipoInspeccion = 'VARIABLES_CRITICAS' | 'CHILLER' | 'CHILLER_DIARIO' | 'CHILLER_SEMANAL' | 'COMPRESOR' | 'GENERADOR' | 'MONTACARGAS'
 
 export interface OpcionSeleccionItem {
   id?: number

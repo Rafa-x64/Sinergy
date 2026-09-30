@@ -43,7 +43,11 @@ const formatearFecha = (f?: string) => {
 function formatearTipoInspeccion(tipo?: string) {
   switch (tipo) {
     case 'CHILLER':
-      return 'Rutina Chillers'
+      return 'Rutina Chillers (Legado)'
+    case 'CHILLER_DIARIO':
+      return 'Chillers — Diaria'
+    case 'CHILLER_SEMANAL':
+      return 'Chillers — Semanal'
     case 'COMPRESOR':
       return 'Rutina Compresores'
     case 'GENERADOR':
@@ -61,6 +65,8 @@ function formatearTipoInspeccion(tipo?: string) {
 function colorTipoInspeccion(tipo?: string) {
   switch (tipo) {
     case 'CHILLER':
+    case 'CHILLER_DIARIO':
+    case 'CHILLER_SEMANAL':
       return 'cyan'
     case 'COMPRESOR':
       return 'teal'

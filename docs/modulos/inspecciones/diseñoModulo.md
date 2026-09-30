@@ -53,6 +53,12 @@ El **Módulo de Inspecciones** sustituye los formularios impresos y planillas de
   1. Si el usuario logueado no es Administrador y cuenta con una planta fija asignada en su perfil, el selector de planta se oculta de la vista para reducir fricción cognitiva, mostrando un badge informativo compacto con la planta asignada.
   2. En el diálogo resumen de envío (`ResumenInspeccionDialog`), se incorpora un cálculo en tiempo real de variables pendientes. Si existen variables sin responder, se muestra una alerta preventiva (warning) para que el técnico decida si envía parcial o completa la evaluación.
 
+### ADR-06: Separación de Rutinas de Inspección para Chillers (Diaria y Semanal)
+- **Decisión:** Dividir el tipo de inspección para chillers en `CHILLER_DIARIO` y `CHILLER_SEMANAL` a nivel de enum de base de datos (`TipoInspeccion`) y plantillas de variables. Ambas rutinas apuntan al mismo tipo físico de equipo (`chiller`), lo que permite que en las plantillas de variables en Excel o en el sistema solo se deba asignar el `tipoInspeccion` correspondiente (`CHILLER_DIARIO` o `CHILLER_SEMANAL`) sin alterar la clasificación de los equipos. El valor previo `CHILLER` se preserva como valor legado para trazabilidad de registros históricos.
+- **Alternativas Descartadas:**
+  - *Crear dos tipos de equipo distintos en base de datos (`Chiller Diario` y `Chiller Semanal`):* Descartada porque un chiller físico es una única entidad y duplicaría la maquinaria en inventario.
+- **Trade-off:** Requiere que los filtros de backend en elegibilidad de equipos mapeen ambos enums a la misma búsqueda de categoría (`chiller`), y que la UI presente opciones claras de frecuencia en el wizard y en la gestión de plantillas.
+
 ---
 
 ## 3. Modelo de Datos (Prisma Schema)

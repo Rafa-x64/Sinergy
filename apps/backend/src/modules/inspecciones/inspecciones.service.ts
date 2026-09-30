@@ -52,7 +52,7 @@ export class InspeccionesService {
     }
 
     // Filtro por tipo de inspección específico (Chillers, Compresores, Generadores, Montacargas)
-    if (tipoInspeccion === 'CHILLER') {
+    if (tipoInspeccion === 'CHILLER' || tipoInspeccion === 'CHILLER_DIARIO' || tipoInspeccion === 'CHILLER_SEMANAL') {
       whereCondition.tipoEquipo = { nombre: { contains: 'chiller', mode: 'insensitive' } }
     } else if (tipoInspeccion === 'COMPRESOR') {
       whereCondition.tipoEquipo = { nombre: { contains: 'compresor', mode: 'insensitive' } }

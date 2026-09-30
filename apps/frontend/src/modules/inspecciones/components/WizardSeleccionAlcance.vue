@@ -34,10 +34,16 @@ const opcionesTiposInspeccion = [
     desc: 'Evaluación general de control operativo por línea o maquinaria general'
   },
   {
-    title: 'Rutina de Inspección Chillers',
-    value: 'CHILLER',
+    title: 'Chillers — Rutina Diaria',
+    value: 'CHILLER_DIARIO',
     icon: 'mdi-snowflake',
-    desc: 'Rutina interdiaria: sistemas de agua, compresores, ventiladores y bombas'
+    desc: 'Variables operativas diarias: temperaturas, presiones, niveles de agua y estado de bombas'
+  },
+  {
+    title: 'Chillers — Rutina Semanal',
+    value: 'CHILLER_SEMANAL',
+    icon: 'mdi-snowflake-variant',
+    desc: 'Variables de revisión semanal: estado de circuitos, filtraciones, vibración y limpieza'
   },
   {
     title: 'Rutina de Inspección Compresores',
@@ -64,7 +70,9 @@ const esRutinaEspecifica = computed(() => tipoInspeccion.value !== 'VARIABLES_CR
 
 const nombreCategoria = computed(() => {
   switch (tipoInspeccion.value) {
-    case 'CHILLER': return 'Chillers'
+    case 'CHILLER':
+    case 'CHILLER_DIARIO':
+    case 'CHILLER_SEMANAL': return 'Chillers'
     case 'COMPRESOR': return 'Compresores'
     case 'GENERADOR': return 'Generadores'
     case 'MONTACARGAS': return 'Montacargas'
@@ -266,7 +274,7 @@ const equiposRutinaEspecifica = computed(() => {
   }
 
   // Filtro por Categoría
-  if (tipoInspeccion.value === 'CHILLER') {
+  if (tipoInspeccion.value === 'CHILLER' || tipoInspeccion.value === 'CHILLER_DIARIO' || tipoInspeccion.value === 'CHILLER_SEMANAL') {
     filtrados = filtrados.filter((e) => (e.tipoEquipo?.nombre || '').toLowerCase().includes('chiller'))
   } else if (tipoInspeccion.value === 'COMPRESOR') {
     filtrados = filtrados.filter((e) => (e.tipoEquipo?.nombre || '').toLowerCase().includes('compresor'))

@@ -33,10 +33,11 @@ const { ubicaciones } = storeToRefs(ubicacionStore)
 const tipoFiltro = computed<string>(() => (route.meta.tipoFiltro as string) || '')
 const tituloVista = computed<string>(() => (route.meta.titulo as string) || 'Equipos')
 
-// Determina el tipo de inspección técnica asociado a la categoría actual
+// Determina el tipo de inspección técnica asociado a la categoría actual.
+// Para chillers prellenamos la rutina Diaria; el técnico puede cambiarla a Semanal desde el wizard.
 const tipoInspeccionAsociado = computed<TipoInspeccion | null>(() => {
   const t = tipoFiltro.value.toLowerCase().trim()
-  if (t.includes('chiller')) return 'CHILLER'
+  if (t.includes('chiller')) return 'CHILLER_DIARIO'
   if (t.includes('compresor')) return 'COMPRESOR'
   if (t.includes('generador')) return 'GENERADOR'
   if (t.includes('montacarg')) return 'MONTACARGAS'

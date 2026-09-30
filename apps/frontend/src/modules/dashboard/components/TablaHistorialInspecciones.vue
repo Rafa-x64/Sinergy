@@ -12,7 +12,9 @@ const fechaFin = ref("")
 const opcionesTiposInspeccion = [
   { title: "Todas las rutinas", value: "" },
   { title: "Variables Críticas de Planta", value: "VARIABLES_CRITICAS" },
-  { title: "Rutina Chillers", value: "CHILLER" },
+  { title: "Chillers — Rutina Diaria", value: "CHILLER_DIARIO" },
+  { title: "Chillers — Rutina Semanal", value: "CHILLER_SEMANAL" },
+  { title: "Chillers (Legado)", value: "CHILLER" },
   { title: "Rutina Compresores", value: "COMPRESOR" },
   { title: "Rutina Generadores", value: "GENERADOR" },
   { title: "Rutina Montacargas", value: "MONTACARGAS" }
@@ -40,7 +42,9 @@ async function cargar() {
 
 function etiquetaRutina(tipo?: string) {
   switch (tipo) {
-    case 'CHILLER': return 'Chillers'
+    case 'CHILLER': return 'Chillers (Legado)'
+    case 'CHILLER_DIARIO': return 'Chillers Diaria'
+    case 'CHILLER_SEMANAL': return 'Chillers Semanal'
     case 'COMPRESOR': return 'Compresores'
     case 'GENERADOR': return 'Generadores'
     case 'MONTACARGAS': return 'Montacargas'
@@ -51,7 +55,9 @@ function etiquetaRutina(tipo?: string) {
 
 function colorRutina(tipo?: string) {
   switch (tipo) {
-    case 'CHILLER': return 'cyan'
+    case 'CHILLER':
+    case 'CHILLER_DIARIO':
+    case 'CHILLER_SEMANAL': return 'cyan'
     case 'COMPRESOR': return 'indigo'
     case 'GENERADOR': return 'amber'
     case 'MONTACARGAS': return 'deep-orange'
