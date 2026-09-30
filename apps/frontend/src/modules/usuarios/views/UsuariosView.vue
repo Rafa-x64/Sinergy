@@ -4,7 +4,7 @@ import { storeToRefs } from 'pinia'
 import { useToast } from 'vue-toastification'
 import AppTabs from '../../../components/AppTabs.vue'
 import FormularioUsuario from '../components/FormularioUsuario.vue'
-import { useUsuarioStore, type RegistrarUsuarioDTO, type Usuario } from '../usuarios.store.ts'
+import { useUsuarioStore, type RegistrarUsuarioDTO, type ActualizarUsuarioDTO, type Usuario } from '../usuarios.store.ts'
 import type { TabItem } from '../../../core/types/tabs'
 import { useRolesStore } from '../../auth/roles.store.ts'
 import { usePlantasStore } from '../../plantas/plantas.store.ts'
@@ -107,7 +107,8 @@ const prepararEdicion = (usuario: Usuario): void => {
         nombreUsuario: usuario.nombreUsuario,
         activo: usuario.activo,
         rolId: usuario.rolesUsuario?.[0]?.rolId,
-        plantaId: usuario.plantaId
+        plantaId: usuario.plantaId,
+        supervisorId: usuario.supervisorId
     }
     pestañaActiva.value = 'editar'
 }
@@ -126,7 +127,11 @@ const manejarGuardado = async (datosEmitidos: RegistrarUsuarioDTO): Promise<void
             resultado = await usuarioStore.registrarUsuario(datosEmitidos)
         } else {
             if (!idUsuarioEditar.value) throw new Error('ID no válido para edición')
-            resultado = await usuarioStore.editarUsuario(idUsuarioEditar.value, datosEmitidos)
+            const payload: ActualizarUsuarioDTO = { ...datosEmitidos }
+            if (!payload.password || !payload.password.trim()) {
+                delete payload.password
+            }
+            resultado = await usuarioStore.editarUsuario(idUsuarioEditar.value, payload)
         }
 
         if (resultado.status === 'ok') {
