@@ -1,7 +1,7 @@
 # ============================================================
-#  Sinergy - Script de detención segura de procesos
+#  Sinergy - Script de detencion total y segura de procesos
 #  Uso: .\stop-sinergy.ps1
-#  Uso con puertos custom: .\stop-sinergy.ps1 -BackendPort 3080 -FrontendPort 8080
+#  Uso con puertos custom: .\stop-sinergy.ps1 -BackendPort 3000 -FrontendPort 4173
 # ============================================================
 
 param(
@@ -9,9 +9,13 @@ param(
     [int]$FrontendPort = 4173
 )
 
+$ROOT     = $PSScriptRoot
+$LOGS_DIR = Join-Path $ROOT "logs"
+$PID_FILE = Join-Path $LOGS_DIR "sinergy.pids"
+
 Write-Host ""
 Write-Host "============================================================" -ForegroundColor Cyan
-Write-Host "  Sinergy - Deteniendo servicios en ejecucion" -ForegroundColor Cyan
+Write-Host "  Sinergy - Deteniendo servicios y liberando puertos" -ForegroundColor Cyan
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host "  Backend Port  : $($BackendPort)" -ForegroundColor DarkGray
 Write-Host "  Frontend Port : $($FrontendPort)" -ForegroundColor DarkGray
@@ -19,39 +23,52 @@ Write-Host "============================================================" -Foreg
 Write-Host ""
 
 $pidsToKill = [System.Collections.Generic.HashSet[int]]::new()
-$targetPorts = @($BackendPort, $FrontendPort)
+$targetPorts = @($BackendPort, $FrontendPort, 3000, 3010, 4173) | Select-Object -Unique
 
-# ─── 1. Buscar PIDs por puertos TCP en escucha ─────────────────────────────
+# ─── 1. Leer PIDs guardados en archivo de estado ─────────────────────────────
+if (Test-Path $PID_FILE) {
+    try {
+        $raw = Get-Content -Path $PID_FILE -Raw -ErrorAction SilentlyContinue
+        if ($raw) {
+            $json = $raw | ConvertFrom-Json
+            if ($json.BackendPid -and $json.BackendPid -gt 0 -and $json.BackendPid -ne $PID) {
+                $null = $pidsToKill.Add([int]$json.BackendPid)
+            }
+            if ($json.FrontendPid -and $json.FrontendPid -gt 0 -and $json.FrontendPid -ne $PID) {
+                $null = $pidsToKill.Add([int]$json.FrontendPid)
+            }
+        }
+    } catch {
+        # Ignorar errores de parseo
+    }
+}
+
+# ─── 2. Buscar PIDs por puertos TCP en escucha ─────────────────────────────
 foreach ($port in $targetPorts) {
     try {
         $connections = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
         foreach ($conn in $connections) {
-            $pidFound = $conn.OwningProcess
+            $pidFound = [int]$conn.OwningProcess
             if ($pidFound -and $pidFound -gt 0 -and $pidFound -ne $PID) {
-                # Validar que el proceso pertenezca al stack (node, powershell, cmd)
-                $proc = Get-Process -Id $pidFound -ErrorAction SilentlyContinue
-                if ($proc -and ($proc.ProcessName -match "node|powershell|pwsh|cmd")) {
-                    $null = $pidsToKill.Add($pidFound)
-                    Write-Host "[DETECTADO] Puerto $($port) ocupado por PID $($pidFound) ($($proc.ProcessName))" -ForegroundColor Yellow
-                }
+                $null = $pidsToKill.Add($pidFound)
+                Write-Host "[DETECTADO] Puerto $($port) ocupado por PID $($pidFound)" -ForegroundColor Yellow
             }
         }
     } catch {
-        # Ignorar si Get-NetTCPConnection no encuentra registros
+        # Ignorar
     }
 }
 
-# ─── 2. Buscar procesos por CommandLine especifico de Sinergy ───────────────
+# ─── 3. Buscar procesos por CommandLine especifico de Sinergy ───────────────
 try {
     $processes = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {
         $cmd = $_.CommandLine
         if ([string]::IsNullOrWhiteSpace($cmd)) { return $false }
 
-        return ($cmd -like "*sinergy-backend.ps1*" -or `
-                $cmd -like "*sinergy-frontend.ps1*" -or `
-                $cmd -like "*apps\backend\dist\src\index.js*" -or `
-                ($cmd -like "*vite preview*" -and $cmd -like "*$FrontendPort*") -or `
-                ($cmd -like "*start-sinergy.ps1*"))
+        return ($cmd -like "*apps\backend\dist\src\index.js*" -or `
+                $cmd -like "*apps/backend/dist/src/index.js*" -or `
+                $cmd -like "*vite*preview*" -and ($cmd -like "*$FrontendPort*" -or $cmd -like "*4173*") -or `
+                ($cmd -like "*start-sinergy.ps1*" -and $_.ProcessId -ne $PID))
     }
 
     foreach ($proc in $processes) {
@@ -65,67 +82,55 @@ try {
     Write-Host "[WARN] No se pudo consultar Win32_Process: $_" -ForegroundColor DarkGray
 }
 
-# ─── 3. Terminar arboles de procesos detectados ──────────────────────────────
-if ($pidsToKill.Count -eq 0) {
-    Write-Host "[OK] No se encontraron procesos de Sinergy en ejecucion." -ForegroundColor Green
-    Write-Host ""
-    exit 0
-}
+# ─── 4. Terminar todos los arboles de procesos detectados ───────────────────
+if ($pidsToKill.Count -gt 0) {
+    Write-Host "Terminando $($pidsToKill.Count) proceso(s) de Sinergy..." -ForegroundColor Cyan
 
-Write-Host ""
-Write-Host "Terminando $($pidsToKill.Count) proceso(s) y sus subprocesos..." -ForegroundColor Cyan
-
-$huboAccesoDenegado = $false
-
-foreach ($targetPid in $pidsToKill) {
-    try {
-        $proc = Get-Process -Id $targetPid -ErrorAction SilentlyContinue
-        if ($proc) {
-            # taskkill /T /F asegura matar el proceso padre y todos sus hijos/hilos
-            $resultado = & taskkill.exe /PID $targetPid /T /F 2>&1
-            if ($LASTEXITCODE -eq 0) {
-                Write-Host "  [X] PID $($targetPid) ($($proc.ProcessName)) terminado exitosamente." -ForegroundColor Green
-            } else {
-                if ($resultado -like "*Acceso denegado*" -or $resultado -like "*Access is denied*") {
-                    $huboAccesoDenegado = $true
-                    Write-Host "  [!] PID $($targetPid) ($($proc.ProcessName)): Acceso denegado (Requiere PowerShell como Administrador)." -ForegroundColor Red
-                } else {
-                    Write-Host "  [!] PID $($targetPid): $($resultado)" -ForegroundColor DarkYellow
-                }
+    foreach ($targetPid in $pidsToKill) {
+        try {
+            $proc = Get-Process -Id $targetPid -ErrorAction SilentlyContinue
+            if ($proc) {
+                & taskkill.exe /PID $targetPid /T /F 2>&1 | Out-Null
+                Write-Host "  [X] PID $($targetPid) ($($proc.ProcessName)) terminado." -ForegroundColor Green
             }
+        } catch {
+            Write-Host "  [!] Error al detener PID $($targetPid): $_" -ForegroundColor DarkYellow
         }
-    } catch {
-        Write-Host "  [!] Error al detener PID $($targetPid): $_" -ForegroundColor DarkYellow
     }
+} else {
+    Write-Host "[OK] No se detectaron procesos residuales." -ForegroundColor Green
 }
 
-# ─── 4. Limpieza de scripts temporales generados ─────────────────────────────
-$tempBackend = Join-Path $env:TEMP "sinergy-backend.ps1"
-$tempFrontend = Join-Path $env:TEMP "sinergy-frontend.ps1"
-
-if (Test-Path $tempBackend) {
-    Remove-Item $tempBackend -Force -ErrorAction SilentlyContinue
-}
-if (Test-Path $tempFrontend) {
-    Remove-Item $tempFrontend -Force -ErrorAction SilentlyContinue
+# ─── 5. Limpieza de archivo de estado ─────────────────────────────────────────
+if (Test-Path $PID_FILE) {
+    Remove-Item $PID_FILE -Force -ErrorAction SilentlyContinue
 }
 
-# ─── 5. Verificacion final de puertos ────────────────────────────────────────
-Start-Sleep -Milliseconds 500
+# ─── 6. Verificacion y espera activa de liberacion de puertos ────────────────
+$todosLiberados = $false
+for ($intento = 0; $intento -lt 6; $intento++) {
+    Start-Sleep -Milliseconds 400
+    $ocupados = @()
+    foreach ($port in @($BackendPort, $FrontendPort)) {
+        $conn = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
+        if ($conn -and $conn.OwningProcess -ne $PID) {
+            $ocupados += $port
+            # Forzar cierre del proceso que retiene el puerto
+            & taskkill.exe /PID $conn.OwningProcess /T /F 2>&1 | Out-Null
+        }
+    }
 
-$puertosAunOcupados = @()
-foreach ($port in $targetPorts) {
-    $check = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
-    if ($check) {
-        $puertosAunOcupados += $port
+    if ($ocupados.Count -eq 0) {
+        $todosLiberados = $true
+        break
     }
 }
 
 Write-Host ""
-if ($puertosAunOcupados.Count -eq 0) {
-    Write-Host "[OK] Todos los procesos de Sinergy fueron detenidos y los puertos liberados." -ForegroundColor Green
+if ($todosLiberados) {
+    Write-Host "[OK] Todos los servicios fueron detenidos y los puertos estan 100% disponibles." -ForegroundColor Green
 } else {
-    Write-Host "[ALERTA] Los siguientes puertos siguen ocupados: $($puertosAunOcupados -join ', ')" -ForegroundColor DarkYellow
+    Write-Host "[WARN] Uno o mas puertos continuan respondiendo." -ForegroundColor Yellow
 }
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host ""
