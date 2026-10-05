@@ -8,13 +8,7 @@ let io: Server
 export function inicializarWebSockets(server: HttpServer): void {
     io = new Server(server, {
         cors: {
-            origin: (origin, callback) => {
-                if (esOrigenPermitido(origin)) {
-                    callback(null, true)
-                } else {
-                    callback(new Error(`WebSocket bloqueado por CORS: ${origin}`))
-                }
-            },
+            origin: true,
             methods: ['GET', 'POST'],
             credentials: true
         }
