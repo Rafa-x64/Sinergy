@@ -103,6 +103,91 @@ const guardarPaso = () => {
   store.guardarBorradorLocal()
   toast.success('Borrador guardado localmente')
 }
+
+// ─── CÁLCULO AUTOMÁTICO DE HORAS DE USO DEL ACEITE ───────────────────────────
+// Disparadores: "Horómetro Digital" O "Horómetro Analógico" (el actual, no el del último cambio)
+//               + el campo base "Horómetro del Analógico (último cambio de Aceite)"
+// Resultado:    horActual - horUltimoCambio  →  "Horas de uso del Aceite Actual"
+// Prioridad del horómetro actual: Analógico si tiene valor, si no, Digital.
+
+const FRAG_ULTIMO_CAMBIO = 'último cambio de aceite'
+const FRAG_HORAS_USO     = 'horas de uso del aceite'
+const FRAG_DIGITAL       = 'digital'
+
+// "Horómetro Analógico" corriente: contiene "analógico" pero NO "último cambio"
+const esHorometroAnalogicoCorriente = (nombre: string): boolean => {
+  const n = nombre.toLowerCase()
+  return n.includes('analógico') && !n.includes('último cambio')
+}
+
+function encontrarVariablePorFragmento(fragmento: string): VariableElegible | null {
+  if (!equipoActual.value) return null
+  for (const comp of equipoActual.value.componentes) {
+    for (const v of comp.variables) {
+      if (v.nombre.toLowerCase().includes(fragmento)) return v
+    }
+  }
+  return null
+}
+
+function encontrarHorometroAnalogicoCorriente(): VariableElegible | null {
+  if (!equipoActual.value) return null
+  for (const comp of equipoActual.value.componentes) {
+    for (const v of comp.variables) {
+      if (esHorometroAnalogicoCorriente(v.nombre)) return v
+    }
+  }
+  return null
+}
+
+function recalcularHorasAceite() {
+  const varAnalogico = encontrarHorometroAnalogicoCorriente()
+  const varDigital   = encontrarVariablePorFragmento(FRAG_DIGITAL)
+  const varCambio    = encontrarVariablePorFragmento(FRAG_ULTIMO_CAMBIO)
+  const varHorasUso  = encontrarVariablePorFragmento(FRAG_HORAS_USO)
+
+  if (!varCambio || !varHorasUso) return
+
+  // Usar Analógico si tiene valor; si no, usar Digital
+  const horActual =
+    (varAnalogico && store.respuestasWizard[varAnalogico.id]?.valorNumerico != null)
+      ? store.respuestasWizard[varAnalogico.id]!.valorNumerico!
+      : (varDigital && store.respuestasWizard[varDigital.id]?.valorNumerico != null)
+        ? store.respuestasWizard[varDigital.id]!.valorNumerico!
+        : null
+
+  const horCambio = store.respuestasWizard[varCambio.id]?.valorNumerico ?? null
+
+  if (horActual === null || horCambio === null) return
+
+  const horas = Math.max(0, horActual - horCambio)
+  store.guardarRespuestaVariable(varHorasUso.id, {
+    valorNumerico: horas,
+    observaciones: store.respuestasWizard[varHorasUso.id]?.observaciones ?? null
+  })
+}
+
+function esDisparadorAceite(v: VariableElegible): boolean {
+  const n = v.nombre.toLowerCase()
+  return (
+    esHorometroAnalogicoCorriente(v.nombre) ||
+    n.includes(FRAG_DIGITAL) ||
+    n.includes(FRAG_ULTIMO_CAMBIO)
+  )
+}
+
+function guardarYRecalcular(v: VariableElegible, parcial: { valorNumerico?: number | null }) {
+  store.guardarRespuestaVariable(v.id, {
+    valorNumerico:  parcial.valorNumerico ?? null,
+    valorSeleccion: store.respuestasWizard[v.id]?.valorSeleccion ?? null,
+    observaciones:  store.respuestasWizard[v.id]?.observaciones  ?? null
+  })
+  if (esDisparadorAceite(v)) recalcularHorasAceite()
+}
+
+function esVariableHorasUso(v: VariableElegible): boolean {
+  return v.nombre.toLowerCase().includes(FRAG_HORAS_USO)
+}
 </script>
 
 <template>
@@ -287,9 +372,11 @@ const guardarPaso = () => {
                   variant="outlined"
                   hide-details
                   :placeholder="v.unidad ? `Valor (${v.unidad})` : 'Ingrese valor'"
+                  :readonly="esVariableHorasUso(v)"
+                  :bg-color="esVariableHorasUso(v) ? 'grey-lighten-4' : undefined"
                   class="input-valor"
                   @update:model-value="
-                    store.guardarRespuestaVariable(v.id, {
+                    guardarYRecalcular(v, {
                       valorNumerico: $event !== '' && $event !== null ? Number($event) : null
                     })
                   "
@@ -303,6 +390,16 @@ const guardarPaso = () => {
                 >
                   <v-icon start size="11">mdi-alert</v-icon>
                   Fuera de Rango
+                </v-chip>
+                <v-chip
+                  v-if="esVariableHorasUso(v) && store.respuestasWizard[v.id]?.valorNumerico !== null && store.respuestasWizard[v.id]?.valorNumerico !== undefined"
+                  size="x-small"
+                  color="blue-grey"
+                  variant="tonal"
+                  class="flex-shrink-0"
+                >
+                  <v-icon start size="11">mdi-calculator</v-icon>
+                  Calculado
                 </v-chip>
               </div>
 

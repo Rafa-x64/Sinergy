@@ -1,18 +1,31 @@
-# stop.ps1 — Sinergy Production Shutdown
-# Lee los PIDs guardados por start.ps1 y termina los procesos limpiamente.
+# stop.ps1 - Sinergy Production Shutdown
+# Lee los PIDs guardados y asegura la liberacion total de puertos y procesos.
 
-$pidsFile = "$PSScriptRoot\.sinergy.pids"
+$root = $PSScriptRoot
+$pidsFile = "$root\.sinergy.pids"
 
-if (-not (Test-Path $pidsFile)) {
-    Write-Host "No hay procesos de Sinergy activos (archivo .sinergy.pids no encontrado)."
-    exit 0
+# 1. Detener procesos por archivo de PID
+if (Test-Path $pidsFile) {
+    Get-Content $pidsFile | ForEach-Object {
+        $id = [int]$_
+        if ($id -gt 0) {
+            Stop-Process -Id $id -Force -ErrorAction SilentlyContinue
+            & taskkill.exe /PID $id /F /T 2>$null
+            Write-Host "Proceso $id terminado."
+        }
+    }
+    Remove-Item $pidsFile -Force -ErrorAction SilentlyContinue
 }
 
-Get-Content $pidsFile | ForEach-Object {
-    $id = [int]$_
-    Stop-Process -Id $id -Force -ErrorAction SilentlyContinue
-    Write-Host "Proceso $id detenido."
+# 2. Asegurar que los puertos 3000 y 4173 esten liberados
+@(3000, 4173) | ForEach-Object {
+    $conn = Get-NetTCPConnection -LocalPort $_ -State Listen -ErrorAction SilentlyContinue
+    if ($conn -and $conn.OwningProcess) {
+        $pidToKill = $conn.OwningProcess
+        Stop-Process -Id $pidToKill -Force -ErrorAction SilentlyContinue
+        & taskkill.exe /PID $pidToKill /F /T 2>$null
+        Write-Host "Puerto $_ liberado (PID $pidToKill terminado)."
+    }
 }
 
-Remove-Item $pidsFile -Force
-Write-Host "Sinergy detenido."
+Write-Host "Sinergy detenido correctamente."

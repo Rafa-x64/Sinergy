@@ -17,10 +17,12 @@ El formato sigue el estándar [Keep a Changelog](https://keepachangelog.com/es/1
 ## [Unreleased]
 
 ### Added
-- **Scripts de Inicio/Parada sin dependencias externas (`refactor: scripts-inicio-nativo`)**:
-  - **`start.ps1`**: Lanza backend (`node dist/index.js`) y frontend (`node .../vite.js preview`) como procesos ocultos con `Start-Process -WindowStyle Hidden`. Guarda los PIDs en `.sinergy.pids`.
-  - **`stop.ps1`**: Lee `.sinergy.pids` y termina los procesos limpiamente. Sin matar por nombre ni por puerto.
-  - **`register-autostart.ps1`**: Registra `start.ps1` en el **Programador de Tareas de Windows** (nativo, sin PM2, sin NSSM). Se ejecuta una sola vez como Administrador; desde ahí Sinergy arranca automáticamente en cada reinicio del servidor.
+- **Robustez y Corrección del Auto-Arranque en Windows (`fix: autostart-system-service-dual-trigger`)**:
+  - **`register-autostart.ps1`**: Registra la tarea programada explícitamente bajo la cuenta nativa **`SYSTEM`** con privilegios máximos (`RunLevel Highest`), eliminando el bloqueo que impedía iniciar servicios antes del inicio de sesión interactivo. Incorpora doble disparador (`AtStartup` al boot y `AtLogOn` como respaldo) y control estricto de elevación de privilegios.
+  - **`start.ps1`**: Añadida detección de servicios ya activos para evitar colisiones de puertos (`3000` y `4173`), limpieza de procesos zombies, resolución resiliente de la ruta de `node.exe`, redirección de logs de depuración a `logs/` y flag `--host 0.0.0.0` en Vite preview para accesibilidad LAN.
+  - **`stop.ps1`**: Garantiza la terminación en árbol (`taskkill /F /T`) de procesos y la liberación estricta de los puertos.
+- **Cálculo Dinámico de Horas de Aceite en Wizard de Inspección (`feat: calculo-reactivo-horas-aceite-wizard`)**:
+  - **Captura en Vivo (`FormWizardInspeccion.vue`)**: Cálculo automático del campo *"Horas de uso del Aceite Actual"* en función de los horómetros capturados (con prioridad al analógico sobre el digital) y el horómetro del último cambio. El campo resultante pasa a ser de solo lectura con chip distintivo *"Calculado"*.
 - **Cálculo Automático de Horas de Aceite del Motor en Inspección de Generadores (`feat: alerta-aceite-motor-generadores`)**:
   - **Backend (`inspecciones.service.ts`)**: El endpoint `/api/inspecciones/equipos-elegibles` enriquece la respuesta de cada generador con un objeto `infoAceite` calculado en tiempo real: `horometroActual` (última lectura del historial), `horometroUltimoCambio` (del punto de lubricación activo), `horasUsoAceite` (delta entre ambos) y `estadoAceite` (`NORMAL` / `ADVERTENCIA` a las 120 h / `CRITICO` a las 250 h). Si el generador no tiene horómetro registrado o puntos de lubricación configurados, `infoAceite` llega como `null` y el banner no se renderiza.
   - **Store (`inspecciones.store.ts` — `EquipoElegible`)**: Tipado del nuevo campo `infoAceite` con interfaz estricta; `estadoAceite` es un literal union `'NORMAL' | 'ADVERTENCIA' | 'CRITICO'`.
