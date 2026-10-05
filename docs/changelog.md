@@ -16,6 +16,8 @@ El formato sigue el estándar [Keep a Changelog](https://keepachangelog.com/es/1
 
 ## [Unreleased]
 
+- **Detección Dinámica de Puerto del Backend en Vite (`fix: vite-proxy-dynamic-backend-port`)**:
+  - **`vite.config.ts`**: Auto-detección del puerto configurado en `apps/backend/.env` (ej. `PORT=3080`) o variables de entorno para el proxy de `/api` y `/socket.io`. Resuelve de forma definitiva el error de conexión cuando el backend corre en puertos diferentes a 3000 (como el 3080 en el servidor).
 - **Deshabilitación de Restricciones CORS (`fix: disable-cors-restrictions`)**:
   - **`cors.ts` y `notification.socket.ts`**: Eliminadas todas las listas blancas y filtros de origen. Se configuró `origin: true` de forma dinámica en Express y Socket.IO con soporte total de credenciales (`credentials: true`), permitiendo cualquier origen, IP de LAN, puerto o dominio sin generar bloqueos por política CORS en ningún entorno.
 - **Robustez y Corrección del Auto-Arranque en Windows (`fix: autostart-system-service-dual-trigger`)**:

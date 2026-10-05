@@ -6,18 +6,27 @@ export default defineConfig(({ mode }) => {
   // Carga las variables del .env antes de que Vite las exponga a import.meta.env.
   // Necesario para usarlas en la configuración del proxy del servidor de desarrollo.
   const env = loadEnv(mode, process.cwd(), '')
+  const backendEnv = loadEnv(mode, fileURLToPath(new URL('../backend', import.meta.url)), '')
 
   // Determina el origen del backend para el proxy (dev y preview).
-  const rawUrl = process.env.BACKEND_URL || env.VITE_API_URL || 'http://localhost:3000'
-  let backendOrigin = 'http://localhost:3000'
+  // Detecta automáticamente el PORT configurado en apps/backend/.env (ej. 3080)
+  const backendPort =
+    process.env.BACKEND_PORT ||
+    env.BACKEND_PORT ||
+    backendEnv.PORT ||
+    '3080'
+
+  const rawUrl =
+    process.env.BACKEND_URL ||
+    env.BACKEND_URL ||
+    (env.VITE_API_URL?.startsWith('http') ? env.VITE_API_URL : null) ||
+    `http://localhost:${backendPort}`
+
+  let backendOrigin = `http://localhost:${backendPort}`
   try {
-    if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
-      backendOrigin = new URL(rawUrl).origin
-    } else if (process.env.BACKEND_URL) {
-      backendOrigin = new URL(process.env.BACKEND_URL).origin
-    }
+    backendOrigin = new URL(rawUrl).origin
   } catch {
-    backendOrigin = 'http://localhost:3000'
+    backendOrigin = `http://localhost:${backendPort}`
   }
 
   const proxyConfig = {
