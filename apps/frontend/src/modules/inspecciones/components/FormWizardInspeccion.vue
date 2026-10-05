@@ -158,7 +158,13 @@ function recalcularHorasAceite() {
 
   const horCambio = store.respuestasWizard[varCambio.id]?.valorNumerico ?? null
 
-  if (horActual === null || horCambio === null) return
+  if (horActual === null || horCambio === null) {
+    store.guardarRespuestaVariable(varHorasUso.id, {
+      valorNumerico: null,
+      observaciones: store.respuestasWizard[varHorasUso.id]?.observaciones ?? null
+    })
+    return
+  }
 
   const horas = Math.max(0, horActual - horCambio)
   store.guardarRespuestaVariable(varHorasUso.id, {
@@ -188,6 +194,42 @@ function guardarYRecalcular(v: VariableElegible, parcial: { valorNumerico?: numb
 function esVariableHorasUso(v: VariableElegible): boolean {
   return v.nombre.toLowerCase().includes(FRAG_HORAS_USO)
 }
+
+// Variable "Horas de uso del Aceite Actual" del equipo en pantalla
+const varHorasUsoActual = computed<VariableElegible | null>(() => {
+  if (!equipoActual.value) return null
+  for (const comp of equipoActual.value.componentes) {
+    for (const v of comp.variables) {
+      if (v.nombre.toLowerCase().includes(FRAG_HORAS_USO)) return v
+    }
+  }
+  return null
+})
+
+// Fuente unificada de estado del aceite:
+// Prioridad 1 — valor calculado en tiempo real desde el formulario.
+// Prioridad 2 — datos pre-cargados del servidor (infoAceite).
+const UMBRAL_ADVERTENCIA = 120
+const UMBRAL_CRITICO     = 250
+
+const infoAceiteEfectiva = computed(() => {
+  const varHorasUso = varHorasUsoActual.value
+  if (varHorasUso) {
+    const horasUsoAceite = store.respuestasWizard[varHorasUso.id]?.valorNumerico ?? null
+    if (horasUsoAceite !== null) {
+      let estadoAceite: 'NORMAL' | 'ADVERTENCIA' | 'CRITICO' = 'NORMAL'
+      if (horasUsoAceite >= UMBRAL_CRITICO)     estadoAceite = 'CRITICO'
+      else if (horasUsoAceite >= UMBRAL_ADVERTENCIA) estadoAceite = 'ADVERTENCIA'
+      return {
+        horometroActual:       equipoActual.value?.infoAceite?.horometroActual       ?? 0,
+        horometroUltimoCambio: equipoActual.value?.infoAceite?.horometroUltimoCambio ?? 0,
+        horasUsoAceite,
+        estadoAceite
+      }
+    }
+  }
+  return equipoActual.value?.infoAceite ?? null
+})
 </script>
 
 <template>
@@ -263,44 +305,44 @@ function esVariableHorasUso(v: VariableElegible): boolean {
 
       <!-- Banner de Estado del Aceite (solo para Generadores) -->
       <v-alert
-        v-if="equipoActual.infoAceite"
-        :type="equipoActual.infoAceite.estadoAceite === 'CRITICO' ? 'error' : equipoActual.infoAceite.estadoAceite === 'ADVERTENCIA' ? 'warning' : 'success'"
+        v-if="infoAceiteEfectiva"
+        :type="infoAceiteEfectiva.estadoAceite === 'CRITICO' ? 'error' : infoAceiteEfectiva.estadoAceite === 'ADVERTENCIA' ? 'warning' : 'success'"
         variant="tonal"
         density="compact"
         class="mb-3 rounded-lg"
-        :icon="equipoActual.infoAceite.estadoAceite === 'CRITICO' ? 'mdi-alert-octagon' : equipoActual.infoAceite.estadoAceite === 'ADVERTENCIA' ? 'mdi-alert' : 'mdi-check-circle'"
+        :icon="infoAceiteEfectiva.estadoAceite === 'CRITICO' ? 'mdi-alert-octagon' : infoAceiteEfectiva.estadoAceite === 'ADVERTENCIA' ? 'mdi-alert' : 'mdi-check-circle'"
       >
         <div class="d-flex align-center justify-space-between flex-wrap gap-2">
           <div>
             <div class="text-caption font-weight-bold mb-1">
-              <span v-if="equipoActual.infoAceite.estadoAceite === 'CRITICO'">
-                ALERTA CRITICA — Aceite del Motor requiere cambio urgente
+              <span v-if="infoAceiteEfectiva.estadoAceite === 'CRITICO'">
+                ALERTA CRÍTICA — Cambio inmediato de kit y aceite requerido
               </span>
-              <span v-else-if="equipoActual.infoAceite.estadoAceite === 'ADVERTENCIA'">
-                ADVERTENCIA — Aceite del Motor próximo al límite de vida útil
+              <span v-else-if="infoAceiteEfectiva.estadoAceite === 'ADVERTENCIA'">
+                ADVERTENCIA — Prepare el kit de cambio de aceite
               </span>
               <span v-else>
                 Aceite del Motor dentro de rango operativo normal
               </span>
             </div>
             <div class="text-caption text-medium-emphasis">
-              Horómetro actual: <strong>{{ equipoActual.infoAceite.horometroActual.toLocaleString() }} hrs</strong>
-              &bull; Último cambio: <strong>{{ equipoActual.infoAceite.horometroUltimoCambio.toLocaleString() }} hrs</strong>
+              Horómetro actual: <strong>{{ infoAceiteEfectiva.horometroActual.toLocaleString() }} hrs</strong>
+              &bull; Último cambio: <strong>{{ infoAceiteEfectiva.horometroUltimoCambio.toLocaleString() }} hrs</strong>
             </div>
           </div>
           <div class="d-flex align-center gap-2">
             <v-chip
-              :color="equipoActual.infoAceite.estadoAceite === 'CRITICO' ? 'error' : equipoActual.infoAceite.estadoAceite === 'ADVERTENCIA' ? 'warning' : 'success'"
+              :color="infoAceiteEfectiva.estadoAceite === 'CRITICO' ? 'error' : infoAceiteEfectiva.estadoAceite === 'ADVERTENCIA' ? 'warning' : 'success'"
               variant="flat"
               size="small"
               class="font-weight-bold"
             >
-              {{ equipoActual.infoAceite.horasUsoAceite.toLocaleString() }} hrs de uso
+              {{ infoAceiteEfectiva.horasUsoAceite.toLocaleString() }} hrs de uso
             </v-chip>
             <div class="text-caption text-medium-emphasis" style="min-width: 80px;">
-              <span v-if="equipoActual.infoAceite.estadoAceite === 'CRITICO'">Límite: 250 hrs</span>
-              <span v-else-if="equipoActual.infoAceite.estadoAceite === 'ADVERTENCIA'">Alerta crítica: 250 hrs</span>
-              <span v-else>Aviso: 120 hrs</span>
+              <span v-if="infoAceiteEfectiva.estadoAceite === 'CRITICO'">Límite superado: 250 hrs</span>
+              <span v-else-if="infoAceiteEfectiva.estadoAceite === 'ADVERTENCIA'">Umbral de aviso: 120 hrs</span>
+              <span v-else>Próximo aviso: 120 hrs</span>
             </div>
           </div>
         </div>
