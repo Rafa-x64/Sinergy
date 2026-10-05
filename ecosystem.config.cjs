@@ -1,39 +1,42 @@
 /**
- * PM2 Ecosystem Config — Sinergy Production
+ * PM2 Ecosystem — Sinergy Production
  *
- * Uso:
- *   pm2 start ecosystem.config.cjs    → iniciar
- *   pm2 save                          → persistir lista de procesos
- *   pm2 startup                       → generar comando de arranque automático al boot
- *   pm2 stop sinergy-backend          → detener
- *   pm2 logs sinergy-backend          → ver logs en tiempo real
+ * Comandos útiles:
+ *   pm2 start ecosystem.config.cjs   → iniciar todos los servicios
+ *   pm2 stop all                     → detener todos
+ *   pm2 restart all                  → reiniciar todos
+ *   pm2 logs                         → ver logs en tiempo real
+ *   pm2 save                         → persistir lista (correr después del primer start)
+ *   pm2 startup                      → generar comando de autoarranque al boot del SO
  */
 module.exports = {
   apps: [
     {
       name: 'sinergy-backend',
-      script: './apps/backend/dist/index.js',
-      cwd: __dirname,
-
-      // Reiniciar automáticamente si el proceso cae
+      script: 'node',
+      args: 'dist/index.js',
+      cwd: './apps/backend',
       autorestart: true,
-
-      // No usar watch en producción (eso es para dev)
       watch: false,
-
-      // Variables de entorno de producción
-      env_production: {
-        NODE_ENV: 'production',
-      },
-
-      // Logs separados por fecha para facilitar debugging
-      error_file: './logs/backend-error.log',
-      out_file: './logs/backend-out.log',
+      env: { NODE_ENV: 'production' },
+      error_file: '../../logs/backend-error.log',
+      out_file: '../../logs/backend-out.log',
       merge_logs: true,
       time: true,
-
-      // Límite de memoria antes de reiniciar el proceso
       max_memory_restart: '500M',
+    },
+    {
+      name: 'sinergy-frontend',
+      script: 'node',
+      args: './node_modules/.bin/vite preview',
+      cwd: './apps/frontend',
+      autorestart: true,
+      watch: false,
+      env: { NODE_ENV: 'production' },
+      error_file: '../../logs/frontend-error.log',
+      out_file: '../../logs/frontend-out.log',
+      merge_logs: true,
+      time: true,
     },
   ],
 }
