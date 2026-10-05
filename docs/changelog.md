@@ -16,7 +16,8 @@ El formato sigue el estándar [Keep a Changelog](https://keepachangelog.com/es/1
 
 ## [Unreleased]
 
-### Added
+- **Corrección de Política CORS para Red LAN Intranet (`fix: cors-lan-allowance-production`)**:
+  - **`cors.ts`**: Habilitada la validación de redes privadas LAN (`10.x.x.x`, `192.168.x.x`, `172.16-31.x.x`) y orígenes locales independientemente del valor de `NODE_ENV`. Se agregaron por defecto los puertos `4173` (Vite preview) junto con `3000` y `5173`, evitando que el backend rechace solicitudes de inicio de sesión (`/api/auth/login`) desde otras máquinas o terminales en la intranet corporativa.
 - **Robustez y Corrección del Auto-Arranque en Windows (`fix: autostart-system-service-dual-trigger`)**:
   - **`register-autostart.ps1`**: Registra la tarea programada explícitamente bajo la cuenta nativa **`SYSTEM`** con privilegios máximos (`RunLevel Highest`), eliminando el bloqueo que impedía iniciar servicios antes del inicio de sesión interactivo. Incorpora doble disparador (`AtStartup` al boot y `AtLogOn` como respaldo) y control estricto de elevación de privilegios.
   - **`start.ps1`**: Añadida detección de servicios ya activos para evitar colisiones de puertos (`3000` y `4173`), limpieza de procesos zombies, resolución resiliente de la ruta de `node.exe`, redirección de logs de depuración a `logs/` y flag `--host 0.0.0.0` en Vite preview para accesibilidad LAN.

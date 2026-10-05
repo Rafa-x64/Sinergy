@@ -10,24 +10,22 @@ export function esOrigenPermitido(origin: string | undefined): boolean {
   // Peticiones sin origin (móviles, Postman, curl, reverse proxy interno)
   if (!origin) return true
 
-  const esProduccion = process.env.NODE_ENV === 'production'
+  // Permitir localhost y 127.0.0.1 con cualquier puerto (3000, 4173, 5173, etc.)
+  const esLocal = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
+  if (esLocal) return true
 
-  if (!esProduccion) {
-    // Permitir localhost y 127.0.0.1 con cualquier puerto
-    const esLocal = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
-    if (esLocal) return true
-
-    // Permitir redes privadas LAN (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
-    const esRedPrivada = /^https?:\/\/(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3})(:\d+)?$/.test(origin)
-    if (esRedPrivada) return true
-  }
+  // Permitir redes privadas LAN corporativas (192.168.x.x, 10.x.x.x, 172.16-31.x.x) en cualquier puerto
+  const esRedPrivada = /^https?:\/\/(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3})(:\d+)?$/.test(origin)
+  if (esRedPrivada) return true
 
   const origenesConfigurados = process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
     : [
         'http://localhost:3000',
+        'http://localhost:4173',
         'http://localhost:5173',
         'http://127.0.0.1:3000',
+        'http://127.0.0.1:4173',
         'http://127.0.0.1:5173'
       ]
 
