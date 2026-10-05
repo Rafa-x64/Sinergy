@@ -17,10 +17,10 @@ El formato sigue el estándar [Keep a Changelog](https://keepachangelog.com/es/1
 ## [Unreleased]
 
 ### Added
-- **Scripts de Inicio/Parada con PM2 (`refactor: scripts-inicio-pm2`)**:
-  - **`ecosystem.config.cjs`**: Actualizado para gestionar los dos procesos (`sinergy-backend` vía `node dist/index.js` y `sinergy-frontend` vía `vite preview`). PM2 provee reinicio automático, gestión de logs con timestamp y autoarranque al boot del SO sin lógica propia.
-  - **`start.ps1`** y **`stop.ps1`**: Scripts de una sola responsabilidad. `start.ps1` lanza PM2 con el ecosystem y persiste el estado (`pm2 save`). `stop.ps1` detiene todos los servicios de forma limpia. Sin ventanas emergentes, sin procesos huérfanos.
-  - **Para autoarranque en el servidor**: ejecutar `pm2 startup` (genera el comando exacto para el SO) y luego `pm2 save` tras el primer `pm2 start`. Desde ese momento el servidor levanta Sinergy solo en cada reinicio.
+- **Scripts de Inicio/Parada sin dependencias externas (`refactor: scripts-inicio-nativo`)**:
+  - **`start.ps1`**: Lanza backend (`node dist/index.js`) y frontend (`node .../vite.js preview`) como procesos ocultos con `Start-Process -WindowStyle Hidden`. Guarda los PIDs en `.sinergy.pids`.
+  - **`stop.ps1`**: Lee `.sinergy.pids` y termina los procesos limpiamente. Sin matar por nombre ni por puerto.
+  - **`register-autostart.ps1`**: Registra `start.ps1` en el **Programador de Tareas de Windows** (nativo, sin PM2, sin NSSM). Se ejecuta una sola vez como Administrador; desde ahí Sinergy arranca automáticamente en cada reinicio del servidor.
 - **Cálculo Automático de Horas de Aceite del Motor en Inspección de Generadores (`feat: alerta-aceite-motor-generadores`)**:
   - **Backend (`inspecciones.service.ts`)**: El endpoint `/api/inspecciones/equipos-elegibles` enriquece la respuesta de cada generador con un objeto `infoAceite` calculado en tiempo real: `horometroActual` (última lectura del historial), `horometroUltimoCambio` (del punto de lubricación activo), `horasUsoAceite` (delta entre ambos) y `estadoAceite` (`NORMAL` / `ADVERTENCIA` a las 120 h / `CRITICO` a las 250 h). Si el generador no tiene horómetro registrado o puntos de lubricación configurados, `infoAceite` llega como `null` y el banner no se renderiza.
   - **Store (`inspecciones.store.ts` — `EquipoElegible`)**: Tipado del nuevo campo `infoAceite` con interfaz estricta; `estadoAceite` es un literal union `'NORMAL' | 'ADVERTENCIA' | 'CRITICO'`.
