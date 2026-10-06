@@ -10,12 +10,12 @@ import {
   LinearScale
 } from "chart.js"
 import { Bar } from "vue-chartjs"
-import type { TopFallaItem } from "../dashboard.store"
+import type { TopRiesgoItem } from "../dashboard.store"
 
 ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale)
 
 const props = defineProps<{
-  datos: TopFallaItem[]
+  datos: TopRiesgoItem[]
   cargando: boolean
 }>()
 
@@ -23,13 +23,13 @@ const chartData = computed(() => ({
   labels: props.datos.map(d => `${d.codigo} — ${d.nombre.length > 18 ? d.nombre.slice(0, 18) + '...' : d.nombre}`),
   datasets: [
     {
-      label: "% Variables Fuera de Rango",
-      data: props.datos.map(d => d.porcentajeFallas),
+      label: "Score de Riesgo",
+      data: props.datos.map(d => d.scoreTotal),
       backgroundColor: (context: any) => {
         const val = context.raw || 0
-        if (val >= 40) return "#f43f5e" // Rose
-        if (val >= 20) return "#f59e0b" // Ámbar
-        return "#38bdf8" // Sky
+        if (val >= 50) return "#f43f5e"
+        if (val >= 25) return "#f59e0b"
+        return "#38bdf8"
       },
       borderRadius: 6,
       maxBarThickness: 16
@@ -65,15 +65,26 @@ const chartOptions = {
       bodyColor: "#cbd5e1",
       borderColor: "rgba(244, 63, 94, 0.3)",
       borderWidth: 1,
-      padding: 12,
+      padding: 14,
       cornerRadius: 8,
       callbacks: {
         label: (context: any) => {
           const item = props.datos[context.dataIndex]
+          if (!item) return []
+          const d = item.desglose
+          const estadoLabel = item.estadoOperativo === 'INOPERATIVO'
+            ? 'Inoperativo (+15 pts)'
+            : item.estadoOperativo === 'EN_MANTENIMIENTO'
+              ? 'En Mantenimiento (+8 pts)'
+              : 'Operativo'
           return [
-            ` ${context.raw}% de lecturas fuera de límites`,
-            ` Desvíos: ${item?.fueraDeRango || 0} de ${item?.totalVariables || 0} variables evaluadas`,
-            ` Sede: ${item?.plantaNombre || 'General'}`
+            ` Score total: ${item.scoreTotal} / 100`,
+            ` Sede: ${item.plantaNombre}`,
+            `─────────────────────────`,
+            ` Variables fuera de rango: ${d.variables.porcentaje}%  (${d.variables.fueraRango}/${d.variables.total} vars)`,
+            ` Lubricación vencida:      ${d.lubricacion.porcentaje}%  (${d.lubricacion.puntosVencidos}/${d.lubricacion.totalPuntos} puntos fuera de plazo)`,
+            ` Rutinas con fuga:         ${d.fugas.porcentaje}%  (${d.fugas.rutinasConFuga}/${d.fugas.totalRutinas} rutinas)`,
+            ` Estado operativo:         ${estadoLabel}`
           ]
         }
       }
@@ -87,17 +98,19 @@ const chartOptions = {
     <div class="d-flex align-center justify-space-between mb-1">
       <div class="text-subtitle-1 font-weight-bold text-slate-800 d-flex align-center gap-1">
         <v-icon size="20" color="error">mdi-alert-octagon-outline</v-icon>
-        Top 10 Equipos con más Fallas
+        Top 10 Equipos con Mayor Riesgo
       </div>
       <v-chip size="x-small" color="error" variant="tonal" class="font-weight-bold">Críticos</v-chip>
     </div>
-    <div class="text-caption text-medium-emphasis mb-3">% histórico de variables fuera de límites normativos</div>
+    <div class="text-caption text-medium-emphasis mb-3">
+      Score compuesto: variables fuera de rango · lubricación vencida · fugas · estado operativo
+    </div>
 
     <div v-if="cargando" class="d-flex justify-center align-center flex-grow-1" style="min-height: 260px;">
       <v-progress-circular indeterminate color="error" />
     </div>
     <div v-else-if="datos.length === 0" class="d-flex justify-center align-center flex-grow-1 text-caption text-medium-emphasis" style="min-height: 260px;">
-      No se registran desvíos fuera de rango en la flota
+      No se registran señales de riesgo en la flota
     </div>
     <div v-else class="flex-grow-1 position-relative" style="min-height: 260px;">
       <Bar :data="chartData" :options="chartOptions" />

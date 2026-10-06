@@ -14,9 +14,18 @@ Todos los gráficos fueron desarrollados con **Chart.js** y `vue-chartjs` con di
 - **Gráficos**: Donut Chart (distribución general) + Stacked Bar Chart horizontal (desglose por planta).
 - **Métrica**: % de equipos `OPERATIVO`, `INOPERATIVO` y `EN_MANTENIMIENTO`.
 
-### B. Top 10 Equipos con más Fallas (KPI C)
-- **Gráfico**: Horizontal Bar Chart con esquinas redondeadas y colores dinámicos según severidad de desvío.
-- **Métrica**: % histórico de variables fuera de límites normativos.
+### B. Top 10 Equipos con Mayor Riesgo (KPI C2)
+- **Gráfico**: Horizontal Bar Chart con esquinas redondeadas y colores dinámicos según severidad.
+- **Métrica**: Score de Riesgo Compuesto (0–100) calculado en backend como suma ponderada de 4 señales:
+
+  | Señal | Peso | Fuente de datos |
+  |---|---|---|
+  | % variables numéricas fuera de límites normativos | 40% | `inspeccion_detalles` + `variables` |
+  | % puntos de lubricación en estado CRÍTICO | 25% | `puntos_lubricacion.estado_semaforo` |
+  | % rutinas de lubricación (últimos 90 días) con fuga detectada | 20% | `detalles_rutina_lubricacion.presenta_fuga` |
+  | Penalización por estado operativo (INOPERATIVO=15, EN_MANTENIMIENTO=8) | 15% | `equipos.estado_operativo` |
+
+- **Tooltip**: Al hacer hover sobre cada barra, el tooltip despliega el desglose numérico de las 4 señales para ese equipo.
 
 ### C. Evolución de Disponibilidad (KPI G)
 - **Gráfico**: Line / Area Chart con área degradada y curva suave sobre los últimos 6 meses.
@@ -52,7 +61,8 @@ La carga se realiza mediante `Promise.allSettled`, asegurando que la indisponibi
 | Método | Endpoint | Parámetros Query | Descripción |
 |---|---|---|---|
 | `GET` | `/api/dashboard/disponibilidad` | `plantaId?` | Distribución global y por planta de estados operativos. |
-| `GET` | `/api/dashboard/top-fallas` | `plantaId?`, `limite?` | Ranking de equipos con mayor % de fallas. |
+| `GET` | `/api/dashboard/top-fallas` | `plantaId?`, `limite?` | Ranking de equipos por % de variables fuera de rango (señal única, mantenido). |
+| `GET` | `/api/dashboard/top-riesgo` | `plantaId?`, `limite?` | **Ranking de equipos por Score de Riesgo Compuesto (4 señales ponderadas).** |
 | `GET` | `/api/dashboard/evolucion-disponibilidad` | `plantaId?` | Serie temporal de disponibilidad últimos 6 meses. |
 | `GET` | `/api/dashboard/carga-tecnico` | `plantaId?`, `mes?` | Productividad mensual por técnico. |
 | `GET` | `/api/dashboard/reporte-flota` | `plantaId?`, `tipoEquipoId?`, `estadoOperativo?` | Reporte R1 de inventario de flota. |
@@ -61,3 +71,4 @@ La carga se realiza mediante `Promise.allSettled`, asegurando que la indisponibi
 | `GET` | `/api/dashboard/no-conformidades` | `plantaId?`, `fechaInicio?`, `fechaFin?` | Reporte R3 de variables críticas fuera de rango. |
 | `GET` | `/api/dashboard/inspecciones-periodo` | `plantaId?`, `estado?`, `fechaInicio?`, `fechaFin?` | Reporte R2 de inspecciones del período. |
 | `GET` | `/api/dashboard/tarjeta-ronda/:equipoId` | N/A | Reporte R6 con estructura para formato impreso F-MANT-04. |
+

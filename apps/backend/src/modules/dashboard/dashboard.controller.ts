@@ -37,6 +37,17 @@ export class DashboardController {
     }
   }
 
+  async topRiesgo(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const plantaId = this.resolverPlantaId(req, req.query.plantaId as string)
+      const limite = req.query.limite ? parseInt(req.query.limite as string, 10) : 10
+      const data = await dashboardService.topEquiposRiesgoCompuesto(plantaId, limite)
+      res.json({ status: 'ok', data })
+    } catch (error) {
+      next(error)
+    }
+  }
+
   async evolucionDisponibilidad(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const plantaId = this.resolverPlantaId(req, req.query.plantaId as string)

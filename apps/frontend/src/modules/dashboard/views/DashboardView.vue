@@ -99,8 +99,8 @@ onMounted(() => {
           <v-col cols="12" lg="6" class="d-flex">
             <div class="w-100">
               <GraficoTopFallas
-                :datos="store.topFallas"
-                :cargando="store.cargandoTopFallas"
+                :datos="store.topRiesgo"
+                :cargando="store.cargandoTopRiesgo"
               />
             </div>
           </v-col>

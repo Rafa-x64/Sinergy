@@ -25,6 +25,21 @@ export interface TopFallaItem {
   porcentajeFallas: number
 }
 
+export interface TopRiesgoItem {
+  equipoId: number
+  codigo: string
+  nombre: string
+  plantaNombre: string
+  estadoOperativo: string
+  scoreTotal: number
+  desglose: {
+    variables:   { total: number; fueraRango: number; porcentaje: number }
+    lubricacion: { totalPuntos: number; puntosVencidos: number; porcentaje: number }
+    fugas:       { totalRutinas: number; rutinasConFuga: number; porcentaje: number }
+    penalizacionEstado: number
+  }
+}
+
 export interface EvolucionMes {
   mes: string
   porcentaje: number
@@ -154,6 +169,10 @@ export const useDashboardStore = defineStore('dashboard', () => {
   const topFallas = ref<TopFallaItem[]>([])
   const cargandoTopFallas = ref(false)
 
+  // Estado top riesgo compuesto (KPI C2)
+  const topRiesgo = ref<TopRiesgoItem[]>([])
+  const cargandoTopRiesgo = ref(false)
+
   // Estado evolucion (KPI G)
   const evolucion = ref<EvolucionMes[]>([])
   const cargandoEvolucion = ref(false)
@@ -204,6 +223,16 @@ export const useDashboardStore = defineStore('dashboard', () => {
       if (res.data?.status === 'ok') topFallas.value = res.data.data
     } finally {
       cargandoTopFallas.value = false
+    }
+  }
+
+  async function cargarTopRiesgo(plantaId?: number, limite = 10) {
+    cargandoTopRiesgo.value = true
+    try {
+      const res = await api.get('/dashboard/top-riesgo', { params: { limite, ...(plantaId ? { plantaId } : {}) } })
+      if (res.data?.status === 'ok') topRiesgo.value = res.data.data
+    } finally {
+      cargandoTopRiesgo.value = false
     }
   }
 
@@ -300,6 +329,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
     await Promise.all([
       cargarDisponibilidad(plantaId),
       cargarTopFallas(plantaId),
+      cargarTopRiesgo(plantaId),
       cargarEvolucion(plantaId),
       cargarCargaTecnico(plantaId)
     ])
@@ -311,6 +341,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
     cargandoDisponibilidad,
     topFallas,
     cargandoTopFallas,
+    topRiesgo,
+    cargandoTopRiesgo,
     evolucion,
     cargandoEvolucion,
     cargaTecnico,
@@ -327,6 +359,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
     cargandoInspecciones,
     cargarDisponibilidad,
     cargarTopFallas,
+    cargarTopRiesgo,
     cargarEvolucion,
     cargarCargaTecnico,
     cargarReporteFlota,

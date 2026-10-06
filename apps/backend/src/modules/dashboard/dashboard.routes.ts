@@ -1,4 +1,4 @@
-﻿import { Router } from 'express'
+import { Router } from 'express'
 import { dashboardController } from './dashboard.controller'
 import { validarJWT } from '../../core/middlewares/autenticar'
 
@@ -7,6 +7,7 @@ const router = Router()
 // KPIs Dashboard
 router.get('/disponibilidad',           validarJWT, (req, res, next) => dashboardController.disponibilidadEquipos(req, res, next))
 router.get('/top-fallas',               validarJWT, (req, res, next) => dashboardController.topFallas(req, res, next))
+router.get('/top-riesgo',               validarJWT, (req, res, next) => dashboardController.topRiesgo(req, res, next))
 router.get('/evolucion-disponibilidad', validarJWT, (req, res, next) => dashboardController.evolucionDisponibilidad(req, res, next))
 router.get('/carga-tecnico',            validarJWT, (req, res, next) => dashboardController.cargaTecnico(req, res, next))
 

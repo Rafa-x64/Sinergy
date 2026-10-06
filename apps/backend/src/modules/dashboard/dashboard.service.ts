@@ -650,6 +650,166 @@ export class DashboardService {
       }
     })
   }
+
+  /**
+   * KPI C2 — Top N equipos por Score de Riesgo Compuesto.
+   * Combina 4 señales: variables fuera de rango, lubricación vencida,
+   * fugas detectadas en rutinas y penalización por estado operativo.
+   *
+   * Ponderación:
+   *   40% → % de variables numéricas fuera de límites normativos
+   *   25% → % de puntos de lubricación vencidos (horas uso >= limite_horas_cambio)
+   *   20% → % de rutinas (últimos 90 días) con al menos una fuga reportada
+   *   15% → penalización fija: INOPERATIVO=15, EN_MANTENIMIENTO=8, OPERATIVO=0
+   *
+   * Nota: estado_semaforo no existe como columna; se calcula comparando
+   * el horómetro actual (última lectura en historial_horometros) con
+   * horometro_ultimo_cambio + limite_horas_cambio del punto.
+   */
+  async topEquiposRiesgoCompuesto(plantaId?: number, limite = 10) {
+    const filtroPlanta = plantaId ? `AND pl.id = ${Number(plantaId)}` : ''
+
+    type FilaRaw = {
+      equipo_id:        number
+      codigo:           string
+      nombre:           string
+      planta_nombre:    string
+      estado_operativo: string
+      total_variables:  bigint
+      fuera_de_rango:   bigint
+      total_puntos_lub: bigint
+      puntos_vencidos:  bigint
+      total_rutinas:    bigint
+      rutinas_con_fuga: bigint
+    }
+
+    const filas: FilaRaw[] = await prisma.$queryRawUnsafe(`
+      WITH vars_por_equipo AS (
+        SELECT
+          e2.id                                               AS equipo_id,
+          COUNT(id2.id)                                       AS total_variables,
+          COUNT(CASE
+            WHEN id2.valor_numerico IS NOT NULL
+              AND v.valor_minimo IS NOT NULL AND v.valor_maximo IS NOT NULL
+              AND (id2.valor_numerico < v.valor_minimo OR id2.valor_numerico > v.valor_maximo) THEN 1
+            WHEN id2.valor_numerico IS NOT NULL
+              AND v.valor_minimo IS NOT NULL AND v.valor_maximo IS NULL
+              AND id2.valor_numerico < v.valor_minimo THEN 1
+            WHEN id2.valor_numerico IS NOT NULL
+              AND v.valor_maximo IS NOT NULL AND v.valor_minimo IS NULL
+              AND id2.valor_numerico > v.valor_maximo THEN 1
+          END)                                                AS fuera_de_rango
+        FROM equipos e2
+        JOIN componentes c2  ON c2.equipo_id = e2.id
+        JOIN variables v     ON v.componente_id = c2.id
+        JOIN inspeccion_detalles id2 ON id2.variable_id = v.id
+                                    AND id2.valor_numerico IS NOT NULL
+        GROUP BY e2.id
+      ),
+      horometro_actual AS (
+        SELECT DISTINCT ON (equipo_id)
+          equipo_id,
+          valor_horometro
+        FROM historial_horometros
+        ORDER BY equipo_id, fecha_lectura DESC
+      )
+      SELECT
+        e.id                                                  AS equipo_id,
+        e.codigo,
+        e.nombre,
+        pl.nombre                                             AS planta_nombre,
+        e.estado_operativo,
+
+        COALESCE(ve.total_variables, 0)                       AS total_variables,
+        COALESCE(ve.fuera_de_rango, 0)                        AS fuera_de_rango,
+
+        COUNT(DISTINCT pl_lub.id)                             AS total_puntos_lub,
+        COUNT(DISTINCT CASE
+          WHEN ha.valor_horometro IS NOT NULL
+            AND (ha.valor_horometro - pl_lub.horometro_ultimo_cambio) >= pl_lub.limite_horas_cambio
+          THEN pl_lub.id
+        END)                                                  AS puntos_vencidos,
+
+        COUNT(DISTINCT rul.id)                                AS total_rutinas,
+        COUNT(DISTINCT CASE WHEN rld.presenta_fuga = true THEN rul.id END) AS rutinas_con_fuga
+
+      FROM equipos e
+      JOIN ubicaciones_tecnicas ut  ON ut.id = e.ubicacion_tecnica_id
+      JOIN plantas pl               ON pl.id = ut.planta_id
+      LEFT JOIN vars_por_equipo ve  ON ve.equipo_id = e.id
+      LEFT JOIN puntos_lubricacion pl_lub ON pl_lub.equipo_id = e.id
+                                         AND pl_lub.activo = true
+      LEFT JOIN horometro_actual ha ON ha.equipo_id = e.id
+      LEFT JOIN rutinas_lubricacion rul ON rul.equipo_id = e.id
+                                       AND rul.fecha_ejecucion >= NOW() - INTERVAL '90 days'
+      LEFT JOIN rutina_lubricacion_detalles rld ON rld.rutina_id = rul.id
+
+      WHERE 1=1
+        ${filtroPlanta}
+
+      GROUP BY e.id, e.codigo, e.nombre, pl.nombre, e.estado_operativo,
+               ve.total_variables, ve.fuera_de_rango
+
+      HAVING (
+        COALESCE(ve.total_variables, 0) > 0
+        OR COUNT(DISTINCT pl_lub.id) > 0
+        OR COUNT(DISTINCT rul.id) > 0
+      )
+    `)
+
+    const resultado = filas.map(r => {
+      const totalVar    = Number(r.total_variables)
+      const fueraRango  = Number(r.fuera_de_rango)
+      const totalPuntos = Number(r.total_puntos_lub)
+      const puntosVenc  = Number(r.puntos_vencidos)
+      const totalRut    = Number(r.total_rutinas)
+      const rutFuga     = Number(r.rutinas_con_fuga)
+
+      const scoreVariables   = totalVar    > 0 ? (fueraRango / totalVar)   * 100 : 0
+      const scoreLubricacion = totalPuntos > 0 ? (puntosVenc / totalPuntos) * 100 : 0
+      const scoreFugas       = totalRut    > 0 ? (rutFuga    / totalRut)   * 100 : 0
+      const penalizacion     = r.estado_operativo === 'INOPERATIVO'      ? 15
+                             : r.estado_operativo === 'EN_MANTENIMIENTO' ? 8 : 0
+
+      const scoreTotal = Math.min(100, Math.round(
+        (scoreVariables   * 0.40) +
+        (scoreLubricacion * 0.25) +
+        (scoreFugas       * 0.20) +
+        penalizacion
+      ))
+
+      return {
+        equipoId:        Number(r.equipo_id),
+        codigo:          r.codigo,
+        nombre:          r.nombre,
+        plantaNombre:    r.planta_nombre,
+        estadoOperativo: r.estado_operativo,
+        scoreTotal,
+        desglose: {
+          variables: {
+            total:      totalVar,
+            fueraRango,
+            porcentaje: Math.round(scoreVariables)
+          },
+          lubricacion: {
+            totalPuntos,
+            puntosVencidos: puntosVenc,
+            porcentaje:     Math.round(scoreLubricacion)
+          },
+          fugas: {
+            totalRutinas:   totalRut,
+            rutinasConFuga: rutFuga,
+            porcentaje:     Math.round(scoreFugas)
+          },
+          penalizacionEstado: penalizacion
+        }
+      }
+    })
+
+    return resultado
+      .sort((a, b) => b.scoreTotal - a.scoreTotal)
+      .slice(0, Number(limite))
+  }
 }
 
 export const dashboardService = new DashboardService()
