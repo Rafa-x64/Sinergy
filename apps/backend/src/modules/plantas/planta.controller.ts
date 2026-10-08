@@ -17,9 +17,20 @@ export const plantaController = {
     //ver plantas
     async verPlantas(req: Request, res: Response<ResponseDTO>, next: NextFunction){
         try {
-            // PBAC: los admins (plantaId=undefined) ven todas; los usuarios ven solo la suya.
+            const esAdmin = req.usuario?.roles?.some((r) =>
+                r.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().includes('ADMINISTRADOR')
+            ) ?? false
+            const usuarioPlantas: number[] = Array.isArray(req.usuario?.plantas) ? req.usuario.plantas : []
             const usuarioPlantaId: number | undefined = req.usuario?.plantaId ? Number(req.usuario.plantaId) : undefined
-            const plantas = await plantaService.obtener(usuarioPlantaId)
+
+            let plantas: any[] = []
+            if (esAdmin) {
+                plantas = await plantaService.obtener()
+            } else if (usuarioPlantas.length > 0) {
+                plantas = await plantaService.obtener(undefined, usuarioPlantas)
+            } else {
+                plantas = await plantaService.obtener(usuarioPlantaId)
+            }
             if(plantas.length === 0){
                 return res.status(404).json({ status: 'error', message: 'no hay plantas registradas'})
             }

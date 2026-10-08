@@ -12,6 +12,16 @@ export interface RolUsuario {
     rol: Rol
 }
 
+export interface PlantaUsuarioItem {
+    id: number
+    plantaId: number
+    planta: {
+        id: number
+        codigo: string
+        nombre: string
+    }
+}
+
 export interface Usuario {
     id: number
     nombre: string
@@ -26,6 +36,7 @@ export interface Usuario {
         codigo: string
         nombre: string
     } | null
+    plantasUsuario?: PlantaUsuarioItem[]
     rolesUsuario: RolUsuario[]
     supervisorId: number | null
     supervisor: {
@@ -47,6 +58,7 @@ export interface RegistrarUsuarioDTO {
     activo: boolean
     rolId: number
     plantaId?: number | null
+    plantasIds?: number[]
     supervisorId?: number | null
 }
 
@@ -59,6 +71,7 @@ export interface ActualizarUsuarioDTO {
     activo?: boolean
     rolId?: number
     plantaId?: number | null
+    plantasIds?: number[]
     supervisorId?: number | null
 }
 

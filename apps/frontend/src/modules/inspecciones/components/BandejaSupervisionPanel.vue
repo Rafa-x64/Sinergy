@@ -53,7 +53,11 @@ function formatearTipoInspeccion(tipo?: string) {
     case 'GENERADOR':
       return 'Rutina Generadores'
     case 'MONTACARGAS':
-      return 'Rutina Montacargas'
+      return 'Rutina Montacargas (Legado)'
+    case 'MONTACARGAS_DIARIO':
+      return 'Montacargas — Diaria'
+    case 'MONTACARGAS_SEMANAL':
+      return 'Montacargas — Semanal'
     case 'LUBRICACION':
       return 'Rutina Lubricación'
     case 'VARIABLES_CRITICAS':
@@ -73,6 +77,8 @@ function colorTipoInspeccion(tipo?: string) {
     case 'GENERADOR':
       return 'amber'
     case 'MONTACARGAS':
+    case 'MONTACARGAS_DIARIO':
+    case 'MONTACARGAS_SEMANAL':
       return 'indigo'
     case 'LUBRICACION':
       return 'teal'
@@ -185,10 +191,10 @@ function colorTipoInspeccion(tipo?: string) {
                   class="font-weight-medium"
                 >
                   <v-icon start size="13">mdi-oil</v-icon>
-                  Rutina Lubricación
+                  {{ item._count?.detalles ?? item.detalles?.length ?? 0 }} vars
                 </v-chip>
                 <v-chip v-else size="x-small" variant="flat" color="info">
-                  {{ item._count?.detalles ?? 0 }} variables
+                  {{ item._count?.detalles ?? item.detalles?.length ?? 0 }} variables
                 </v-chip>
               </td>
 
@@ -227,7 +233,7 @@ function colorTipoInspeccion(tipo?: string) {
     </v-card>
 
     <!-- Modal de Detalle y Evaluación -->
-    <DetalleInspeccionModal ref="refDetalleModal" />
+    <DetalleInspeccionModal ref="refDetalleModal" @evaluada="store.cargarPendientes" />
 
     <!-- Modal de Impresión Oficial -->
     <ModalImpresionInspeccion ref="refModalImpresion" />

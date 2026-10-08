@@ -17,34 +17,42 @@ const cerrar = () => {
   mostrarModal.value = false
 }
 
-// Determinar si es una rutina de maquinaria auxiliar (FIM003) o variables críticas generales (FIM006)
-const esRutinaEspecifica = computed(() => {
-  const tipo = inspeccion.value?.tipoInspeccion
-  return tipo === 'CHILLER' || tipo === 'CHILLER_DIARIO' || tipo === 'CHILLER_SEMANAL' ||
-         tipo === 'COMPRESOR' || tipo === 'GENERADOR' || tipo === 'MONTACARGAS'
-})
-
+// Título dinámico según el tipo de inspección / rutina
 const tituloRutina = computed(() => {
   switch (inspeccion.value?.tipoInspeccion) {
+    case 'LUBRICACION':
+      return 'RUTINA DE LUBRICACIÓN'
     case 'CHILLER':
-      return 'RUTINA DE INSPECCION CHILLERS'
+      return 'RUTINA DE INSPECCIÓN CHILLERS'
     case 'CHILLER_DIARIO':
-      return 'RUTINA DE INSPECCION CHILLERS — DIARIA'
+      return 'RUTINA DE INSPECCIÓN CHILLERS — DIARIA'
     case 'CHILLER_SEMANAL':
-      return 'RUTINA DE INSPECCION CHILLERS — SEMANAL'
+      return 'RUTINA DE INSPECCIÓN CHILLERS — SEMANAL'
     case 'COMPRESOR':
-      return 'RUTINA DE INSPECCION COMPRESORES'
+      return 'RUTINA DE INSPECCIÓN COMPRESORES'
     case 'GENERADOR':
-      return 'RUTINA DE INSPECCION GENERADORES'
+      return 'RUTINA DE INSPECCIÓN GENERADORES'
     case 'MONTACARGAS':
-      return 'RUTINA DE INSPECCION MONTACARGAS'
+      return 'RUTINA DE INSPECCIÓN MONTACARGAS'
+    case 'MONTACARGAS_DIARIO':
+      return 'RUTINA DE INSPECCIÓN MONTACARGAS — DIARIA'
+    case 'MONTACARGAS_SEMANAL':
+      return 'RUTINA DE INSPECCIÓN MONTACARGAS — SEMANAL'
+    case 'VARIABLES_CRITICAS':
     default:
       return 'INSPECCIÓN DE VARIABLES CRÍTICAS'
   }
 })
 
 const codigoFormato = computed(() => {
-  return esRutinaEspecifica.value ? 'FIM003' : 'FIM006'
+  if (inspeccion.value?.tipoInspeccion === 'LUBRICACION') return 'FLUB001'
+  if (inspeccion.value?.tipoInspeccion?.startsWith('CHILLER') ||
+      inspeccion.value?.tipoInspeccion === 'COMPRESOR' ||
+      inspeccion.value?.tipoInspeccion === 'GENERADOR' ||
+      inspeccion.value?.tipoInspeccion?.startsWith('MONTACARGAS')) {
+    return 'FIM003'
+  }
+  return 'FIM006'
 })
 
 // Metadatos calculados de tiempo
@@ -75,34 +83,6 @@ const semanaISO = computed(() => {
   target.setUTCDate(target.getUTCDate() + 4 - dayNr)
   const jan1 = new Date(Date.UTC(target.getUTCFullYear(), 0, 1))
   return Math.ceil((((target.getTime() - jan1.getTime()) / 86400000) + 1) / 7)
-})
-
-// Agrupación de variables para FIM003: cualitativas vs cuantitativas/numéricas
-const variablesCualitativas = computed(() => {
-  if (!inspeccion.value?.detalles) return []
-  return inspeccion.value.detalles.filter(d => {
-    return d.variable?.tipoEvaluacion === 'SELECCION' || (d.valorNumerico === null || d.valorNumerico === undefined)
-  })
-})
-
-const variablesCuantitativas = computed(() => {
-  if (!inspeccion.value?.detalles) return []
-  return inspeccion.value.detalles.filter(d => {
-    return d.valorNumerico !== null && d.valorNumerico !== undefined
-  })
-})
-
-// Agrupación cuantitativa por componente o bloque
-const gruposCuantitativos = computed(() => {
-  const grupos: Record<string, typeof variablesCuantitativas.value> = {}
-  for (const d of variablesCuantitativas.value) {
-    const compNombre = d.variable?.componente?.nombre || 'General'
-    if (!grupos[compNombre]) {
-      grupos[compNombre] = []
-    }
-    grupos[compNombre].push(d)
-  }
-  return grupos
 })
 
 // Ubicación Técnica de la máquina (priorizando siempre el equipo evaluado)
@@ -168,17 +148,33 @@ const formatearRango = (v?: any) => {
   return '—'
 }
 
+// Observaciones generales limpias (omite el resumen tecnico concatenado autogenerado)
+const observacionesGeneralesLimpias = computed(() => {
+  const texto = inspeccion.value?.observacionesGenerales
+  if (!texto || !texto.trim()) {
+    return 'Sin observaciones registradas durante la ronda.'
+  }
+  if (texto.includes('[RUTINA DE LUBRICACIÓN Y HORÓMETROS') || texto.includes('Resumen de Puntos Evaluados')) {
+    const match = texto.match(/Observaciones del Técnico:\s*([\s\S]*?)(?=\nResumen de Puntos Evaluados|$)/)
+    if (match && match[1]?.trim()) {
+      return match[1].trim()
+    }
+    return 'Sin observaciones registradas durante la ronda.'
+  }
+  return texto
+})
+
 // Estilos de evaluación cualitativa
 const esEstadoPositivo = (valor?: string | null) => {
   if (!valor) return false
   const v = valor.trim().toLowerCase()
-  return v === 'normal' || v === 'conforme' || v === 'operativo' || v === 'si' || v === 'sí' || v === 'ok'
+  return v === 'normal' || v === 'conforme' || v === 'operativo' || v === 'si' || v === 'sí' || v === 'ok' || v === 'completado'
 }
 
 const esEstadoNegativo = (valor?: string | null) => {
   if (!valor) return false
   const v = valor.trim().toLowerCase()
-  return v === 'anormal' || v === 'no conforme' || v === 'falla' || v === 'inoperativo' || v === 'no' || v === 'crítico'
+  return v === 'anormal' || v === 'no conforme' || v === 'falla' || v === 'inoperativo' || v === 'no' || v === 'crítico' || v === 'critico' || v === 'no_completado' || v === 'no completado'
 }
 
 // Acciones de exportación e impresión
@@ -203,9 +199,25 @@ const descargarPDF = async () => {
       unit: 'mm',
       format: 'a4'
     })
+
     const imgWidth = 210
+    const pageHeight = 295 // Alto imprimible por página A4 con margen seguro
     const imgHeight = (canvas.height * imgWidth) / canvas.width
-    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight)
+    let heightLeft = imgHeight
+    let position = 0
+
+    // Primera página
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+    heightLeft -= pageHeight
+
+    // Páginas siguientes para inspecciones largas
+    while (heightLeft > 0) {
+      position -= pageHeight
+      pdf.addPage()
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+      heightLeft -= pageHeight
+    }
+
     const codigo = inspeccion.value?.codigoInspeccion || 'inspeccion'
     pdf.save(`${codigoFormato.value}_${codigo}.pdf`)
   } catch (error) {
@@ -256,358 +268,194 @@ defineExpose({ abrir, cerrar })
       </v-card-title>
 
       <v-card-text class="pa-4 bg-grey-lighten-4 custom-scrollbar">
-        <!-- DOCUMENTO IMPRIMIBLE OFICIAL -->
+        <!-- DOCUMENTO IMPRIMIBLE OFICIAL UNIFICADO -->
         <div id="documento-impresion-iso" class="formato-iso-contenedor pa-5 bg-white text-black mx-auto">
 
-          <!-- ================================================================= -->
-          <!-- FORMATO A: FIM003 (RUTINAS DE COMPRESORES, CHILLERS, GENERADORES) -->
-          <!-- ================================================================= -->
-          <template v-if="esRutinaEspecifica">
-            <!-- Encabezado con Logo y Título -->
-            <div class="iso-header-grid mb-2">
-              <div class="iso-logo-cell">
-                <img src="/LOGO_TUBRICA_AZUL.png" alt="TUBRICA" class="iso-logo-img" />
-              </div>
-              <div class="iso-title-cell text-center font-weight-bold">
-                {{ tituloRutina }}
-              </div>
+          <!-- Encabezado con Logo y Título -->
+          <div class="iso-header-grid mb-2">
+            <div class="iso-logo-cell">
+              <img src="/LOGO_TUBRICA_AZUL.png" alt="TUBRICA" class="iso-logo-img" />
             </div>
+            <div class="iso-title-cell text-center font-weight-bold">
+              {{ tituloRutina }}
+            </div>
+          </div>
 
-            <!-- Fila de Metadatos de Tiempo: SEMANA, FECHA, DIA, HORA -->
-            <table class="iso-table-grid mb-2 text-caption">
-              <tbody>
-                <tr>
-                  <td class="iso-cell-header text-center" style="width: 12%;">SEMANA</td>
-                  <td class="iso-cell-data text-center font-weight-bold font-mono text-danger" style="width: 13%;">
-                    {{ semanaISO }}
-                  </td>
-                  <td class="iso-cell-header text-center" style="width: 12%;">FECHA</td>
-                  <td class="iso-cell-data text-center font-weight-medium font-mono text-danger" style="width: 23%;">
-                    {{ fechaStr }}
-                  </td>
-                  <td class="iso-cell-header text-center" style="width: 10%;">DIA</td>
-                  <td class="iso-cell-data text-center font-weight-medium text-danger" style="width: 15%;">
-                    {{ diaStr }}
-                  </td>
-                  <td class="iso-cell-header text-center" style="width: 8%;">HORA</td>
-                  <td class="iso-cell-data text-center font-weight-medium font-mono text-danger" style="width: 7%;">
-                    {{ horaStr }}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <!-- Fila de Metadatos de Tiempo: SEMANA, FECHA, DIA, HORA -->
+          <table class="iso-table-grid mb-2 text-caption">
+            <tbody>
+              <tr>
+                <td class="iso-cell-header text-center" style="width: 12%;">SEMANA</td>
+                <td class="iso-cell-data text-center font-weight-bold font-mono text-danger" style="width: 13%;">
+                  {{ semanaISO }}
+                </td>
+                <td class="iso-cell-header text-center" style="width: 12%;">FECHA</td>
+                <td class="iso-cell-data text-center font-weight-medium font-mono text-danger" style="width: 23%;">
+                  {{ fechaStr }}
+                </td>
+                <td class="iso-cell-header text-center" style="width: 10%;">DIA</td>
+                <td class="iso-cell-data text-center font-weight-medium text-danger" style="width: 15%;">
+                  {{ diaStr }}
+                </td>
+                <td class="iso-cell-header text-center" style="width: 8%;">HORA</td>
+                <td class="iso-cell-data text-center font-weight-medium font-mono text-danger" style="width: 7%;">
+                  {{ horaStr }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
 
-            <!-- Ubicación Técnica y Nombre del Equipo -->
-            <table class="iso-table-grid mb-2 text-caption">
-              <thead>
-                <tr>
-                  <th class="iso-cell-header text-center font-weight-bold" style="width: 50%;">
-                    UBICACIÓN TÉCNICA
-                  </th>
-                  <th class="iso-cell-header text-center font-weight-bold" style="width: 50%;">
-                    NOMBRE DEL EQUIPO
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td class="pa-1 align-top">
-                    <div class="d-flex mb-1">
-                      <span class="font-weight-medium mr-2" style="width: 60px;">Código:</span>
-                      <span class="font-mono">{{ ubicacionTecnicaEquipo?.codigo || '—' }}</span>
-                    </div>
-                    <div class="d-flex">
-                      <span class="font-weight-medium mr-2" style="width: 60px;">Nombre:</span>
-                      <span class="font-weight-bold">{{ ubicacionTecnicaEquipo?.nombre || '—' }}</span>
-                    </div>
-                  </td>
-                  <td class="pa-1 align-top">
-                    <div class="d-flex mb-1">
-                      <span class="font-weight-medium mr-2" style="width: 110px;">Código Abreviado:</span>
-                      <span class="font-weight-bold font-mono text-danger">
-                        {{ codigoAbreviadoEquipo }}
-                      </span>
-                    </div>
-                    <div class="d-flex mb-1">
-                      <span class="font-weight-medium mr-2" style="width: 110px;">Código:</span>
-                      <span class="font-mono">{{ equipoEvaluado?.codigo || '—' }}</span>
-                    </div>
-                    <div class="d-flex">
-                      <span class="font-weight-medium mr-2" style="width: 110px;">Nombre:</span>
-                      <span class="font-weight-bold">{{ equipoEvaluado?.nombre || '—' }}</span>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <!-- Ubicación Técnica y Nombre del Equipo -->
+          <table class="iso-table-grid mb-2 text-caption">
+            <thead>
+              <tr>
+                <th class="iso-cell-header text-center font-weight-bold" style="width: 50%;">
+                  UBICACIÓN TÉCNICA
+                </th>
+                <th class="iso-cell-header text-center font-weight-bold" style="width: 50%;">
+                  DATOS DEL EQUIPO
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="pa-2 align-top">
+                  <div class="d-flex mb-1">
+                    <span class="font-weight-medium mr-2" style="width: 60px;">Código:</span>
+                    <span class="font-mono">{{ ubicacionTecnicaEquipo?.codigo || '—' }}</span>
+                  </div>
+                  <div class="d-flex">
+                    <span class="font-weight-medium mr-2" style="width: 60px;">Nombre:</span>
+                    <span class="font-weight-bold">{{ ubicacionTecnicaEquipo?.nombre || '—' }}</span>
+                  </div>
+                </td>
+                <td class="pa-2 align-top">
+                  <div class="d-flex mb-1" v-if="codigoAbreviadoEquipo !== '—' && codigoAbreviadoEquipo !== equipoEvaluado?.codigo">
+                    <span class="font-weight-medium mr-2" style="width: 110px;">Código Abreviado:</span>
+                    <span class="font-weight-bold font-mono text-danger">
+                      {{ codigoAbreviadoEquipo }}
+                    </span>
+                  </div>
+                  <div class="d-flex mb-1">
+                    <span class="font-weight-medium mr-2" style="width: 110px;">Código:</span>
+                    <span class="font-mono font-weight-bold">{{ equipoEvaluado?.codigo || '—' }}</span>
+                  </div>
+                  <div class="d-flex">
+                    <span class="font-weight-medium mr-2" style="width: 110px;">Nombre:</span>
+                    <span class="font-weight-bold">{{ equipoEvaluado?.nombre || '—' }}</span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
 
-            <!-- Tabla Principal: ITEM A INSPECCIONAR / ESTADO (Cualitativas) -->
-            <table v-if="variablesCualitativas.length > 0" class="iso-table-grid mb-2 text-caption">
-              <thead>
-                <tr>
-                  <th class="iso-cell-header text-center font-weight-bold" style="width: 65%;">
-                    ITEM A INSPECCIONAR
-                  </th>
-                  <th class="iso-cell-header text-center font-weight-bold" style="width: 35%;">
-                    ESTADO
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="item in variablesCualitativas" :key="item.id">
-                  <td class="pa-1 px-2 font-weight-medium text-uppercase">
-                    {{ item.variable?.nombre }}
-                  </td>
-                  <td
-                    class="pa-1 text-center font-weight-bold"
-                    :class="{
-                      'iso-badge-normal': esEstadoPositivo(item.valorSeleccion),
-                      'iso-badge-anormal': esEstadoNegativo(item.valorSeleccion)
-                    }"
-                  >
-                    {{ item.valorSeleccion || '—' }}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <!-- Tabla Principal de Inspección (Componente, Variable / Punto, Valor Medido / Estado, Rango de Trabajo) -->
+          <table class="iso-table-grid mb-2 text-caption">
+            <thead>
+              <tr>
+                <th colspan="4" class="iso-cell-header text-center font-weight-bold py-1">
+                  {{ inspeccion.tipoInspeccion === 'LUBRICACION' ? 'PUNTOS Y VARIABLES DE LUBRICACIÓN' : 'DATOS PARA LA INSPECCIÓN' }}
+                </th>
+              </tr>
+              <tr>
+                <th class="iso-cell-header text-center font-weight-bold" style="width: 25%;">Componente</th>
+                <th class="iso-cell-header text-center font-weight-bold" style="width: 35%;">
+                  {{ inspeccion.tipoInspeccion === 'LUBRICACION' ? 'Punto de Lubricación' : 'Variable / Item' }}
+                </th>
+                <th class="iso-cell-header text-center font-weight-bold" style="width: 20%;">
+                  {{ inspeccion.tipoInspeccion === 'LUBRICACION' ? 'Estado / Cantidad' : 'Valor Medido / Estado' }}
+                </th>
+                <th class="iso-cell-header text-center font-weight-bold" style="width: 20%;">
+                  {{ inspeccion.tipoInspeccion === 'LUBRICACION' ? 'Dosis Estimada' : 'Rango de Trabajo' }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="d in inspeccion.detalles"
+                :key="d.id"
+                :class="{ 'iso-badge-anormal': d.fueraDeRango }"
+              >
+                <!-- Componente -->
+                <td class="pa-1 px-2 font-weight-medium">
+                  {{ d.variable?.componente?.nombre || 'General' }}
+                </td>
 
-            <!-- Mediciones Cuantitativas Agrupadas (Temperaturas, Amperajes, Horómetros) -->
-            <div v-if="variablesCuantitativas.length > 0" class="mb-2">
-              <table class="iso-table-grid text-caption">
-                <thead>
-                  <tr>
-                    <th class="iso-cell-header text-center font-weight-bold" style="width: 65%;" colspan="2">
-                      MEDICIONES Y PARÁMETROS OPERATIVOS
-                    </th>
-                    <th class="iso-cell-header text-center font-weight-bold" style="width: 35%;">
-                      VALOR MEDIDO
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <template v-for="(vars, compNombre) in gruposCuantitativos" :key="compNombre">
-                    <tr v-for="(v, idx) in vars" :key="v.id">
-                      <!-- Celda de componente agrupado -->
-                      <td
-                        v-if="idx === 0"
-                        :rowspan="vars.length"
-                        class="pa-1 px-2 font-weight-bold text-uppercase iso-cell-header align-middle"
-                        style="width: 35%; background-color: #f1f5f9;"
-                      >
-                        {{ compNombre }}
-                      </td>
-                      <!-- Nombre de la variable específica -->
-                      <td class="pa-1 px-2 font-weight-medium text-uppercase" style="width: 30%;">
-                        {{ v.variable?.nombre }}
-                      </td>
-                      <!-- Valor medido numérico con unidad -->
-                      <td
-                        class="pa-1 text-center font-weight-bold font-mono"
-                        :class="{ 'iso-badge-anormal': v.fueraDeRango }"
-                        style="width: 35%;"
-                      >
-                        {{ v.valorNumerico }} {{ v.variable?.unidad || '' }}
-                      </td>
-                    </tr>
+                <!-- Variable / Punto de Lubricación -->
+                <td class="pa-1 px-2 font-weight-medium">
+                  {{ d.variable?.nombre || '—' }}
+                </td>
+
+                <!-- Valor Medido / Estado -->
+                <td class="pa-1 text-center font-weight-bold font-mono">
+                  <template v-if="d.valorNumerico !== null && d.valorNumerico !== undefined && d.valorSeleccion">
+                    <span :class="{ 'iso-badge-normal': esEstadoPositivo(d.valorSeleccion), 'iso-badge-anormal': esEstadoNegativo(d.valorSeleccion) }" class="px-1 rounded">
+                      {{ d.valorSeleccion }}
+                    </span>
+                    <span class="ml-1">({{ d.valorNumerico }} {{ d.variable?.unidad || '' }})</span>
                   </template>
-                </tbody>
-              </table>
-            </div>
-
-            <!-- Sección: Observaciones -->
-            <div class="iso-box-container mb-2">
-              <div class="iso-cell-header text-center font-weight-bold pa-1">
-                OBSERVACIONES
-              </div>
-              <div class="pa-2 text-caption font-weight-medium min-h-40">
-                {{ inspeccion.observacionesGenerales || 'Sin observaciones registradas durante la ronda.' }}
-              </div>
-            </div>
-
-            <!-- Sección: Valores Nominales -->
-            <div class="iso-box-container mb-3">
-              <div class="iso-cell-header text-center font-weight-bold pa-1">
-                VALORES NOMINALES
-              </div>
-              <div class="pa-2 text-caption text-medium-emphasis min-h-30">
-                Parámetros y rangos ajustados al manual del fabricante y especificaciones técnicas vigentes.
-              </div>
-            </div>
-
-            <!-- Sección de Firmas de Responsabilidad -->
-            <table class="iso-table-grid mb-1 text-caption">
-              <tbody>
-                <tr>
-                  <td class="pa-2 font-weight-bold text-uppercase" style="width: 35%;">
-                    ELABORADO POR:
-                  </td>
-                  <td class="pa-2 font-weight-bold font-mono text-danger text-uppercase" style="width: 65%;">
-                    {{ inspeccion.elaboradoPor?.nombre }} {{ inspeccion.elaboradoPor?.apellido }}
-                  </td>
-                </tr>
-                <tr>
-                  <td class="pa-2 font-weight-bold text-uppercase" style="width: 35%;">
-                    REVISADO Y APROBADO POR:
-                  </td>
-                  <td class="pa-2 font-weight-bold font-mono text-danger text-uppercase" style="width: 65%;">
-                    {{ nombreAprobador }}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-
-            <!-- Código Oficial de Formato FIM003 -->
-            <div class="text-caption font-weight-bold text-slate-800">
-              FIM003
-            </div>
-          </template>
-
-
-          <!-- ================================================================= -->
-          <!-- FORMATO B: FIM006 (INSPECCIÓN DE VARIABLES CRÍTICAS GENERALES)    -->
-          <!-- ================================================================= -->
-          <template v-else>
-            <!-- Encabezado con Logo, Título y Fecha/Semana -->
-            <div class="d-flex align-center justify-space-between border-b pb-2 mb-2">
-              <div style="width: 25%;">
-                <img src="/LOGO_TUBRICA_AZUL.png" alt="TUBRICA" class="iso-logo-img" />
-              </div>
-              <div class="text-center font-weight-bold text-h6" style="width: 50%;">
-                INSPECCIÓN DE VARIABLES CRÍTICAS
-              </div>
-              <div class="iso-header-dates text-caption" style="width: 25%;">
-                <div class="d-flex border mb-1">
-                  <span class="pa-1 iso-cell-header font-weight-bold" style="width: 50%;">Fecha:</span>
-                  <span class="pa-1 font-mono text-center font-weight-bold text-danger" style="width: 50%;">{{ fechaStr }}</span>
-                </div>
-                <div class="d-flex border">
-                  <span class="pa-1 iso-cell-header font-weight-bold" style="width: 50%;">Semana:</span>
-                  <span class="pa-1 font-mono text-center font-weight-bold text-danger" style="width: 50%;">{{ semanaISO }}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Grilla Ubicación Técnica y Equipo -->
-            <table class="iso-table-grid mb-2 text-caption">
-              <thead>
-                <tr>
-                  <th class="iso-cell-header text-center font-weight-bold" style="width: 50%;">
-                    UBICACIÓN TÉCNICA
-                  </th>
-                  <th class="iso-cell-header text-center font-weight-bold" style="width: 50%;">
-                    EQUIPO
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td class="pa-1 align-top">
-                    <div class="d-flex mb-1">
-                      <span class="font-weight-medium mr-2" style="width: 60px;">Código:</span>
-                      <span class="font-mono">{{ ubicacionTecnicaEquipo?.codigo || '—' }}</span>
-                    </div>
-                    <div class="d-flex">
-                      <span class="font-weight-medium mr-2" style="width: 60px;">Nombre:</span>
-                      <span class="font-weight-bold">{{ ubicacionTecnicaEquipo?.nombre || '—' }}</span>
-                    </div>
-                  </td>
-                  <td class="pa-1 align-top">
-                    <div class="d-flex mb-1">
-                      <span class="font-weight-medium mr-2" style="width: 60px;">Código:</span>
-                      <span class="font-mono font-weight-bold">{{ equipoEvaluado?.codigo || '—' }}</span>
-                    </div>
-                    <div class="d-flex">
-                      <span class="font-weight-medium mr-2" style="width: 60px;">Nombre:</span>
-                      <span class="font-weight-bold">{{ equipoEvaluado?.nombre || '—' }}</span>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-
-            <!-- Tabla de Variables Críticas: DATOS PARA LA INSPECCIÓN -->
-            <table class="iso-table-grid mb-2 text-caption">
-              <thead>
-                <tr>
-                  <th colspan="5" class="iso-cell-header text-center font-weight-bold py-1">
-                    DATOS PARA LA INSPECCIÓN
-                  </th>
-                </tr>
-                <tr>
-                  <th class="iso-cell-header text-center font-weight-bold" style="width: 25%;">Componente</th>
-                  <th class="iso-cell-header text-center font-weight-bold" style="width: 30%;">Variable Critica</th>
-                  <th class="iso-cell-header text-center font-weight-bold" style="width: 15%;">Valor Medido</th>
-                  <th class="iso-cell-header text-center font-weight-bold" style="width: 15%;">Rango de Trabajo</th>
-                  <th class="iso-cell-header text-center font-weight-bold" style="width: 15%;">Observaciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                  v-for="d in inspeccion.detalles"
-                  :key="d.id"
-                  :class="{ 'iso-badge-anormal': d.fueraDeRango }"
-                >
-                  <td class="pa-1 px-2 font-weight-medium">
-                    {{ d.variable?.componente?.nombre || 'General' }}
-                  </td>
-                  <td class="pa-1 px-2 font-weight-medium">
-                    {{ d.variable?.nombre }}
-                  </td>
-                  <td class="pa-1 text-center font-weight-bold font-mono">
-                    <span v-if="d.valorNumerico !== null && d.valorNumerico !== undefined">
-                      {{ d.valorNumerico }} {{ d.variable?.unidad || '' }}
+                  <template v-else-if="d.valorNumerico !== null && d.valorNumerico !== undefined">
+                    {{ d.valorNumerico }} {{ d.variable?.unidad || '' }}
+                  </template>
+                  <template v-else-if="d.valorSeleccion">
+                    <span :class="{ 'iso-badge-normal': esEstadoPositivo(d.valorSeleccion), 'iso-badge-anormal': esEstadoNegativo(d.valorSeleccion) }" class="px-1 rounded">
+                      {{ d.valorSeleccion }}
                     </span>
-                    <span v-else>
-                      {{ d.valorSeleccion || '—' }}
-                    </span>
-                  </td>
-                  <td class="pa-1 text-center font-mono">
-                    {{ formatearRango(d.variable) }}
-                  </td>
-                  <td class="pa-1 px-2 text-caption">
-                    {{ d.observaciones || '—' }}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                  </template>
+                  <template v-else>
+                    —
+                  </template>
+                </td>
 
-            <!-- Observaciones Generales (si existen) -->
-            <div v-if="inspeccion.observacionesGenerales" class="iso-box-container mb-2">
-              <div class="iso-cell-header text-center font-weight-bold pa-1">
-                OBSERVACIONES GENERALES
-              </div>
-              <div class="pa-2 text-caption font-weight-medium min-h-30">
-                {{ inspeccion.observacionesGenerales }}
-              </div>
+                <!-- Rango de Trabajo / Dosis Estimada -->
+                <td class="pa-1 text-center font-mono">
+                  {{ formatearRango(d.variable) }}
+                </td>
+              </tr>
+              <tr v-if="!inspeccion.detalles || inspeccion.detalles.length === 0">
+                <td colspan="4" class="pa-3 text-center text-medium-emphasis">
+                  No se registraron detalles específicos en esta inspección.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- Sección: Observaciones Generales -->
+          <div class="iso-box-container mb-2">
+            <div class="iso-cell-header text-center font-weight-bold pa-1 text-caption">
+              OBSERVACIONES GENERALES
             </div>
-
-            <!-- Sección de Firmas de Responsabilidad -->
-            <table class="iso-table-grid mb-1 text-caption">
-              <tbody>
-                <tr>
-                  <td class="pa-2 font-weight-bold text-uppercase" style="width: 35%;">
-                    ELABORADO POR:
-                  </td>
-                  <td class="pa-2 font-weight-bold font-mono text-danger text-uppercase" style="width: 65%;">
-                    {{ inspeccion.elaboradoPor?.nombre }} {{ inspeccion.elaboradoPor?.apellido }}
-                  </td>
-                </tr>
-                <tr>
-                  <td class="pa-2 font-weight-bold text-uppercase" style="width: 35%;">
-                    REVISADO Y APROBADO POR:
-                  </td>
-                  <td class="pa-2 font-weight-bold font-mono text-danger text-uppercase" style="width: 65%;">
-                    {{ nombreAprobador }}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-
-            <!-- Código Oficial de Formato FIM006 -->
-            <div class="text-caption font-weight-bold text-slate-800">
-              FIM006
+            <div class="pa-2 text-caption font-weight-medium min-h-40">
+              {{ observacionesGeneralesLimpias }}
             </div>
-          </template>
+          </div>
+
+          <!-- Sección de Firmas de Responsabilidad -->
+          <table class="iso-table-grid mb-1 text-caption">
+            <tbody>
+              <tr>
+                <td class="pa-2 font-weight-bold text-uppercase" style="width: 35%;">
+                  ELABORADO POR:
+                </td>
+                <td class="pa-2 font-weight-bold font-mono text-danger text-uppercase" style="width: 65%;">
+                  {{ inspeccion.elaboradoPor?.nombre }} {{ inspeccion.elaboradoPor?.apellido }}
+                </td>
+              </tr>
+              <tr>
+                <td class="pa-2 font-weight-bold text-uppercase" style="width: 35%;">
+                  REVISADO Y APROBADO POR:
+                </td>
+                <td class="pa-2 font-weight-bold font-mono text-danger text-uppercase" style="width: 65%;">
+                  {{ nombreAprobador }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- Código Oficial de Formato -->
+          <div class="text-caption font-weight-bold text-slate-800">
+            {{ codigoFormato }}
+          </div>
 
         </div>
       </v-card-text>
@@ -713,6 +561,28 @@ defineExpose({ abrir, cerrar })
 
 /* Reglas Estrictas de Impresión del Navegador */
 @media print {
+  html, body {
+    overflow: visible !important;
+    height: auto !important;
+    background: #ffffff !important;
+  }
+
+  /* Desactivar scroll containers y fijaciones de modales de Vuetify */
+  .v-overlay,
+  .v-overlay__content,
+  .v-card,
+  .v-card-text {
+    position: static !important;
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
   body * {
     visibility: hidden !important;
   }
@@ -723,17 +593,22 @@ defineExpose({ abrir, cerrar })
   }
 
   #documento-impresion-iso {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
+    position: static !important;
     width: 100% !important;
     margin: 0 !important;
-    padding: 10mm !important;
+    padding: 6mm !important;
     border: none !important;
     background: #ffffff !important;
     color: #000000 !important;
+    page-break-after: auto;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+  }
+
+  /* Evitar cortes antiestéticos dentro de filas de tablas */
+  tr, .iso-table-grid tr, .iso-box-container {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   .d-print-none {

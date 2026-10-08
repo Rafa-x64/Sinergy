@@ -18,5 +18,6 @@ router.get('/matriz-criticidad',        validarJWT, (req, res, next) => dashboar
 router.get('/no-conformidades',         validarJWT, (req, res, next) => dashboardController.noConformidades(req, res, next))
 router.get('/inspecciones-periodo',     validarJWT, (req, res, next) => dashboardController.inspeccionesDelPeriodo(req, res, next))
 router.get('/tarjeta-ronda/:equipoId',  validarJWT, (req, res, next) => dashboardController.tarjetaRonda(req, res, next))
+router.get('/ubicaciones-tecnicas',     validarJWT, (req, res, next) => dashboardController.listarUbicacionesTecnicas(req, res, next))
 
 export default router

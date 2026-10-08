@@ -7,6 +7,8 @@ import {
   EditarLubricanteDTO,
   CrearPuntoLubricacionDTO,
   EditarPuntoLubricacionDTO,
+  RegistrarPlantillaPuntoDTO,
+  EditarPlantillaPuntoDTO,
   RegistrarHorometroDTO,
   FiltroMatrizDTO,
   RegistrarRutinaDTO,
@@ -206,6 +208,140 @@ export const lubricacionController = {
     }
   },
 
+  // ─── PLANTILLAS DE LUBRICACIÓN POR TIPO DE EQUIPO ─────────────────────────
+
+  async listarPlantillas(req: Request, res: Response<ResponseDTO>, next: NextFunction) {
+    try {
+      const tipoEquipoId = req.query.tipoEquipoId ? parsearId(String(req.query.tipoEquipoId)) ?? undefined : undefined
+      const plantillas = await lubricacionService.listarPlantillas(tipoEquipoId)
+      return res.status(200).json({
+        status: 'ok',
+        message: 'Plantillas de lubricación obtenidas exitosamente',
+        data: plantillas
+      })
+    } catch (error) {
+      next(error)
+    }
+  },
+
+  async crearPlantillaPunto(req: Request<{}, {}, RegistrarPlantillaPuntoDTO>, res: Response<ResponseDTO>, next: NextFunction) {
+    try {
+      const { tipoEquipoId, nombreComponente, nombrePunto, lubricanteId, limiteHorasCambio, capacidadRecomendada } = req.body
+
+      if (!tipoEquipoId || typeof tipoEquipoId !== 'number') {
+        return res.status(400).json({ status: 'error', message: 'El ID de tipo de equipo es obligatorio y debe ser numérico' })
+      }
+      if (!nombrePunto || typeof nombrePunto !== 'string' || !nombrePunto.trim()) {
+        return res.status(400).json({ status: 'error', message: 'El nombre de la parte o punto a lubricar es obligatorio' })
+      }
+      if (!lubricanteId || typeof lubricanteId !== 'number') {
+        return res.status(400).json({ status: 'error', message: 'El lubricante asignado es obligatorio' })
+      }
+      if (limiteHorasCambio === undefined || typeof limiteHorasCambio !== 'number' || limiteHorasCambio <= 0) {
+        return res.status(400).json({ status: 'error', message: 'El límite de horas de cambio debe ser mayor a cero' })
+      }
+      if (capacidadRecomendada !== undefined && capacidadRecomendada !== null && (typeof capacidadRecomendada !== 'number' || capacidadRecomendada < 0)) {
+        return res.status(400).json({ status: 'error', message: 'La capacidad recomendada no puede ser negativa' })
+      }
+
+      const nueva = await lubricacionService.crearPlantillaPunto({
+        tipoEquipoId,
+        nombreComponente: nombreComponente ? nombreComponente.trim() : null,
+        nombrePunto: nombrePunto.trim(),
+        lubricanteId,
+        limiteHorasCambio,
+        capacidadRecomendada
+      })
+
+      return res.status(201).json({
+        status: 'ok',
+        message: 'Punto de lubricación agregado a la plantilla y propagado a los equipos',
+        data: nueva
+      })
+    } catch (error) {
+      next(error)
+    }
+  },
+
+  async editarPlantillaPunto(req: Request<{ id: string }, {}, EditarPlantillaPuntoDTO>, res: Response<ResponseDTO>, next: NextFunction) {
+    try {
+      const id = parsearId(req.params.id)
+      if (id === null) {
+        return res.status(400).json({ status: 'error', message: 'ID de plantilla inválido' })
+      }
+
+      const { limiteHorasCambio, capacidadRecomendada } = req.body
+      if (limiteHorasCambio !== undefined && (typeof limiteHorasCambio !== 'number' || limiteHorasCambio <= 0)) {
+        return res.status(400).json({ status: 'error', message: 'El límite de horas de cambio debe ser mayor a cero' })
+      }
+      if (capacidadRecomendada !== undefined && capacidadRecomendada !== null && (typeof capacidadRecomendada !== 'number' || capacidadRecomendada < 0)) {
+        return res.status(400).json({ status: 'error', message: 'La capacidad recomendada no puede ser negativa' })
+      }
+
+      const actualizada = await lubricacionService.editarPlantillaPunto(id, req.body)
+      return res.status(200).json({
+        status: 'ok',
+        message: 'Plantilla de lubricación actualizada correctamente',
+        data: actualizada
+      })
+    } catch (error) {
+      next(error)
+    }
+  },
+
+  async eliminarPlantillaPunto(req: Request<{ id: string }>, res: Response<ResponseDTO>, next: NextFunction) {
+    try {
+      const id = parsearId(req.params.id)
+      if (id === null) {
+        return res.status(400).json({ status: 'error', message: 'ID de plantilla inválido' })
+      }
+
+      await lubricacionService.eliminarPlantillaPunto(id)
+      return res.status(200).json({
+        status: 'ok',
+        message: 'Punto de lubricación eliminado de la plantilla'
+      })
+    } catch (error) {
+      next(error)
+    }
+  },
+
+  async sincronizarEquipo(req: Request<{ equipoId: string }>, res: Response<ResponseDTO>, next: NextFunction) {
+    try {
+      const equipoId = parsearId(req.params.equipoId)
+      if (equipoId === null) {
+        return res.status(400).json({ status: 'error', message: 'ID de equipo inválido' })
+      }
+
+      const resultado = await lubricacionService.sincronizarEquipoLubricacion(equipoId)
+      return res.status(200).json({
+        status: 'ok',
+        message: 'Equipo sincronizado exitosamente con la plantilla de lubricación',
+        data: resultado
+      })
+    } catch (error) {
+      next(error)
+    }
+  },
+
+  async sincronizarTipoEquipo(req: Request<{ tipoEquipoId: string }>, res: Response<ResponseDTO>, next: NextFunction) {
+    try {
+      const tipoEquipoId = parsearId(req.params.tipoEquipoId)
+      if (tipoEquipoId === null) {
+        return res.status(400).json({ status: 'error', message: 'ID de tipo de equipo inválido' })
+      }
+
+      const resultado = await lubricacionService.sincronizarTipoEquipoLubricacion(tipoEquipoId)
+      return res.status(200).json({
+        status: 'ok',
+        message: `Sincronización masiva completada para ${resultado.totalEquiposSincronizados} equipos`,
+        data: resultado
+      })
+    } catch (error) {
+      next(error)
+    }
+  },
+
   // ─── CONTROL DE HORÓMETRO ───────────────────────────────────────────────────
 
   async registrarHorometro(req: Request<{}, {}, RegistrarHorometroDTO>, res: Response<ResponseDTO>, next: NextFunction) {
@@ -312,11 +448,12 @@ export const lubricacionController = {
       if (horometroRegistrado === undefined || typeof horometroRegistrado !== 'number' || horometroRegistrado < 0) {
         return res.status(400).json({ status: 'error', message: 'El horómetro registrado debe ser un número igual o mayor a cero' })
       }
-      if (!detalles || !Array.isArray(detalles) || detalles.length === 0) {
-        return res.status(400).json({ status: 'error', message: 'Debe ingresar al menos un punto de lubricación evaluado en la rutina' })
+      if (detalles !== undefined && detalles !== null && !Array.isArray(detalles)) {
+        return res.status(400).json({ status: 'error', message: 'El campo detalles debe ser una lista' })
       }
+      const listaDetalles = Array.isArray(detalles) ? detalles : []
 
-      for (const det of detalles) {
+      for (const det of listaDetalles) {
         if (!det.puntoLubricacionId || typeof det.puntoLubricacionId !== 'number') {
           return res.status(400).json({ status: 'error', message: 'Cada detalle debe incluir un ID de punto de lubricación válido' })
         }
@@ -340,7 +477,7 @@ export const lubricacionController = {
           esReemplazoReloj,
           justificacionReemplazo,
           observaciones,
-          detalles
+          detalles: listaDetalles
         },
         usuarioId
       )

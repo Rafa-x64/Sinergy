@@ -20,6 +20,7 @@ export class AuthService {
         rolesUsuario: {
           include: { rol: true },
         },
+        plantasUsuario: true,
       },
     })
 
@@ -41,11 +42,17 @@ export class AuthService {
     }
 
     const roles = usuario.rolesUsuario.map((ur) => ur.rol.nombre)
+    const plantasIds = Array.from(new Set([
+      ...usuario.plantasUsuario.map((up) => up.plantaId),
+      ...(usuario.plantaId ? [usuario.plantaId] : []),
+    ]))
+
     const payload: TokenPayload = {
       sub: usuario.id,
       email: usuario.email,
       roles,
       plantaId: usuario.plantaId,
+      plantas: plantasIds,
     }
 
     const [accessToken, refreshToken] = await Promise.all([
@@ -68,6 +75,11 @@ export class AuthService {
         rolesUsuario: {
           include: { rol: true },
         },
+        plantasUsuario: {
+          include: {
+            planta: { select: { id: true, codigo: true, nombre: true } },
+          },
+        },
         planta: { select: { id: true, codigo: true, nombre: true } },
         supervisor: {
           select: { id: true, nombre: true, apellido: true }
@@ -84,6 +96,11 @@ export class AuthService {
       include: {
         rolesUsuario: {
           include: { rol: true },
+        },
+        plantasUsuario: {
+          include: {
+            planta: { select: { id: true, codigo: true, nombre: true } },
+          },
         },
         planta: { select: { id: true, codigo: true, nombre: true } },
         supervisor: {
@@ -132,6 +149,11 @@ export class AuthService {
 
     const supervisorId = await this.resolverSupervisorId(rol, datos.supervisorId)
 
+    const plantasIdsUnicas = Array.from(new Set([
+      ...(datos.plantasIds || []),
+      ...(datos.plantaId ? [datos.plantaId] : []),
+    ]))
+
     return prisma.usuario.create({
       data: {
         nombre: datos.nombre,
@@ -140,16 +162,24 @@ export class AuthService {
         nombreUsuario: datos.nombreUsuario,
         passwordHash,
         activo: datos.activo ?? true,
-        plantaId: datos.plantaId ?? null,
+        plantaId: datos.plantaId ?? (plantasIdsUnicas[0] ?? null),
         supervisorId,
         ultimoAcceso: ahora,
         creadoEn: ahora,
         actualizadoEn: ahora,
         rolesUsuario: { create: { rolId: datos.rolId } },
+        plantasUsuario: {
+          create: plantasIdsUnicas.map((pId) => ({ plantaId: pId })),
+        },
       },
       omit: { passwordHash: true },
       include: {
         rolesUsuario: { include: { rol: true } },
+        plantasUsuario: {
+          include: {
+            planta: { select: { id: true, codigo: true, nombre: true } },
+          },
+        },
         planta: { select: { id: true, codigo: true, nombre: true } },
         supervisor: { select: { id: true, nombre: true, apellido: true } },
       },
@@ -214,11 +244,29 @@ export class AuthService {
         }
       }
 
+      if (datos.plantasIds !== undefined) {
+        const plantasIdsUnicas = Array.from(new Set([
+          ...(datos.plantasIds || []),
+          ...(datos.plantaId ? [datos.plantaId] : []),
+        ]))
+        await tx.usuarioPlanta.deleteMany({ where: { usuarioId: id } })
+        if (plantasIdsUnicas.length > 0) {
+          await tx.usuarioPlanta.createMany({
+            data: plantasIdsUnicas.map((pId) => ({ usuarioId: id, plantaId: pId })),
+          })
+        }
+      }
+
       return tx.usuario.findUnique({
         where: { id },
         omit: { passwordHash: true },
         include: {
           rolesUsuario: { include: { rol: true } },
+          plantasUsuario: {
+            include: {
+              planta: { select: { id: true, codigo: true, nombre: true } },
+            },
+          },
           planta: { select: { id: true, codigo: true, nombre: true } },
           supervisor: { select: { id: true, nombre: true, apellido: true } },
         },

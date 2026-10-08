@@ -11,4 +11,6 @@ export interface TokenPayload {
   roles: string[]
   /** ID de la planta a la que pertenece el usuario. Si es null/undefined (Admin/Global), ve todas las plantas. */
   plantaId?: number | null
+  /** IDs de las plantas asignadas al usuario para soporte multi-planta. */
+  plantas?: number[]
 }

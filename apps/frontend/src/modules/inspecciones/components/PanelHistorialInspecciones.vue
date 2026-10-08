@@ -57,7 +57,11 @@ function formatearTipoInspeccion(tipo?: string) {
     case 'GENERADOR':
       return 'Rutina Generadores'
     case 'MONTACARGAS':
-      return 'Rutina Montacargas'
+      return 'Rutina Montacargas (Legado)'
+    case 'MONTACARGAS_DIARIO':
+      return 'Montacargas — Diaria'
+    case 'MONTACARGAS_SEMANAL':
+      return 'Montacargas — Semanal'
     case 'LUBRICACION':
       return 'Rutina Lubricación'
     case 'VARIABLES_CRITICAS':
@@ -165,12 +169,13 @@ onMounted(async () => {
             :items="[
               { title: 'Todas las Rutinas', value: '' },
               { title: 'Variables Críticas de Planta', value: 'VARIABLES_CRITICAS' },
+              { title: 'Rutina de Lubricación', value: 'LUBRICACION' },
               { title: 'Chillers — Rutina Diaria', value: 'CHILLER_DIARIO' },
               { title: 'Chillers — Rutina Semanal', value: 'CHILLER_SEMANAL' },
-              { title: 'Chillers (Legado)', value: 'CHILLER' },
               { title: 'Rutina de Inspección Compresores', value: 'COMPRESOR' },
               { title: 'Rutina de Inspección Generadores', value: 'GENERADOR' },
-              { title: 'Rutina de Inspección Montacargas', value: 'MONTACARGAS' }
+              { title: 'Montacargas — Rutina Diaria', value: 'MONTACARGAS_DIARIO' },
+              { title: 'Montacargas — Rutina Semanal', value: 'MONTACARGAS_SEMANAL' }
             ]"
             item-title="title"
             item-value="value"
@@ -335,7 +340,7 @@ onMounted(async () => {
     </v-card>
 
     <!-- Modal Detalle de Inspección -->
-    <DetalleInspeccionModal ref="refDetalleModal" />
+    <DetalleInspeccionModal ref="refDetalleModal" @evaluada="cargarHistorial" />
 
     <!-- Modal de Impresión Oficial -->
     <ModalImpresionInspeccion ref="refModalImpresion" />

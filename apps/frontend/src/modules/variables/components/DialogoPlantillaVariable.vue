@@ -28,7 +28,8 @@ const tiposInspeccion: { title: string; value: TipoInspeccion; icon: string }[] 
   { title: 'Chillers — Rutina Semanal', value: 'CHILLER_SEMANAL', icon: 'mdi-snowflake-variant' },
   { title: 'Inspección de Compresor', value: 'COMPRESOR', icon: 'mdi-gauge' },
   { title: 'Inspección de Generador', value: 'GENERADOR', icon: 'mdi-generator-portable' },
-  { title: 'Inspección de Montacargas', value: 'MONTACARGAS', icon: 'mdi-forklift' }
+  { title: 'Montacargas — Rutina Diaria', value: 'MONTACARGAS_DIARIO', icon: 'mdi-forklift' },
+  { title: 'Montacargas — Rutina Semanal', value: 'MONTACARGAS_SEMANAL', icon: 'mdi-forklift' }
 ]
 
 const form = ref({

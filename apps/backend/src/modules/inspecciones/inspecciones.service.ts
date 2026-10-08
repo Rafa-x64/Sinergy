@@ -58,7 +58,11 @@ export class InspeccionesService {
       whereCondition.tipoEquipo = { nombre: { contains: 'compresor', mode: 'insensitive' } }
     } else if (tipoInspeccion === 'GENERADOR') {
       whereCondition.tipoEquipo = { nombre: { contains: 'generador', mode: 'insensitive' } }
-    } else if (tipoInspeccion === 'MONTACARGAS') {
+    } else if (
+      tipoInspeccion === 'MONTACARGAS' ||
+      tipoInspeccion === 'MONTACARGAS_DIARIO' ||
+      tipoInspeccion === 'MONTACARGAS_SEMANAL'
+    ) {
       whereCondition.tipoEquipo = { nombre: { contains: 'montacarg', mode: 'insensitive' } }
     }
 
@@ -464,13 +468,19 @@ export class InspeccionesService {
         ubicacionTecnica: { select: { id: true, codigo: true, nombre: true } },
         tipoEquipo: { select: { id: true, nombre: true } },
         equipo: { select: { id: true, codigo: true, nombre: true } },
-        _count: { select: { detalles: true } }
+        _count: { select: { detalles: true } },
+        rutinaLubricacion: { select: { _count: { select: { detalles: true } } } }
       }
     })
 
     return inspecciones.map((i) => ({
       ...i,
-      id: String(i.id)
+      id: String(i.id),
+      _count: {
+        detalles: i.tipoInspeccion === 'LUBRICACION'
+          ? (i.rutinaLubricacion?._count?.detalles ?? i._count?.detalles ?? 0)
+          : i._count?.detalles
+      }
     }))
   }
 
@@ -479,7 +489,7 @@ export class InspeccionesService {
    */
   async obtenerPorId(idInput: string | number) {
     const id = BigInt(idInput)
-    const inspeccion = await prisma.inspeccion.findUnique({
+    let inspeccion = await prisma.inspeccion.findUnique({
       where: { id },
       include: {
         elaboradoPor: { select: { id: true, nombre: true, apellido: true, email: true } },
@@ -495,6 +505,20 @@ export class InspeccionesService {
             nombre: true,
             ubicacionTecnica: { select: { id: true, codigo: true, nombre: true } },
             montacargasDetalle: { select: { identificacionAbreviada: true } }
+          }
+        },
+        rutinaLubricacion: {
+          include: {
+            detalles: {
+              include: {
+                puntoLubricacion: {
+                  include: {
+                    componente: true,
+                    lubricante: true
+                  }
+                }
+              }
+            }
           }
         },
         detalles: {
@@ -526,41 +550,129 @@ export class InspeccionesService {
       throw new AppError('La inspección solicitada no existe', 404)
     }
 
-    // Transformación de BigInt y evaluación de rangos operativos
-    const detallesFormateados = inspeccion.detalles.map((d) => {
-      const v = d.variable
-      let fueraDeRango = false
+    // Fallback: Si es tipo LUBRICACION y no vino vinculada por FK directa, buscar por equipoId y fecha
+    if (inspeccion.tipoInspeccion === 'LUBRICACION' && !inspeccion.rutinaLubricacion && inspeccion.equipoId) {
+      const rutinaEncontrada = await prisma.rutinaLubricacion.findFirst({
+        where: {
+          equipoId: inspeccion.equipoId,
+          fechaEjecucion: {
+            gte: new Date(new Date(inspeccion.fechaRegistro).getTime() - 86400000),
+            lte: new Date(new Date(inspeccion.fechaRegistro).getTime() + 86400000)
+          }
+        },
+        include: {
+          detalles: {
+            include: {
+              puntoLubricacion: {
+                include: {
+                  componente: true,
+                  lubricante: true
+                }
+              }
+            }
+          }
+        },
+        orderBy: { id: 'desc' }
+      })
 
-      if (
-        v.tipoEvaluacion !== 'SELECCION' &&
-        d.valorNumerico !== null &&
-        d.valorNumerico !== undefined
-      ) {
-        const val = Number(d.valorNumerico)
-        const tieneMin = v.valorMinimo !== null && v.valorMinimo !== undefined
-        const tieneMax = v.valorMaximo !== null && v.valorMaximo !== undefined
-
-        if (tieneMin && tieneMax) {
-          fueraDeRango = val < Number(v.valorMinimo) || val > Number(v.valorMaximo)
-        } else if (tieneMin) {
-          fueraDeRango = val < Number(v.valorMinimo)
-        } else if (tieneMax) {
-          fueraDeRango = val > Number(v.valorMaximo)
+      if (rutinaEncontrada) {
+        inspeccion = {
+          ...inspeccion,
+          rutinaLubricacion: rutinaEncontrada
         }
       }
+    }
 
-      return {
-        ...d,
-        id: String(d.id),
-        inspeccionId: String(d.inspeccionId),
-        valorNumerico: d.valorNumerico !== null ? Number(d.valorNumerico) : null,
-        fueraDeRango
-      }
-    })
+    // Transformación de BigInt y evaluación de rangos operativos
+    let detallesFormateados: any[] = []
+
+    if (inspeccion.tipoInspeccion === 'LUBRICACION' && inspeccion.rutinaLubricacion) {
+      detallesFormateados = inspeccion.rutinaLubricacion.detalles.map((d) => {
+        const p = d.puntoLubricacion
+        const comp = p.componente
+        const descParts: string[] = []
+        if (d.seRealizoReposicion && d.cantidadRepuesta) {
+          descParts.push(`Reposición: ${d.cantidadRepuesta} ${p.lubricante.unidadMedida}`)
+        }
+        if (d.seRealizoCambioTotal) {
+          descParts.push('Cambio total realizado')
+        }
+        if (d.presentaFuga) {
+          descParts.push('Fuga detectada')
+        }
+        if (d.observaciones) {
+          descParts.push(d.observaciones)
+        }
+
+        const fueraDeRango = d.presentaFuga || d.nivelLubricante === 'MINIMO'
+
+        return {
+          id: String(d.id),
+          inspeccionId: String(inspeccion!.id),
+          variableId: p.id,
+          valorNumerico: d.cantidadRepuesta ? Number(d.cantidadRepuesta) : null,
+          valorSeleccion: d.nivelLubricante,
+          observaciones: descParts.join(' | ') || null,
+          estadoComponente: !d.presentaFuga && d.nivelLubricante === 'NORMAL',
+          fueraDeRango,
+          variable: {
+            id: p.id,
+            nombre: `${p.nombrePunto} (${p.lubricante.nombre})`,
+            tipoEvaluacion: 'SELECCION',
+            unidad: p.lubricante.unidadMedida,
+            valorMinimo: null,
+            valorMaximo: p.limiteHorasCambio ? Number(p.limiteHorasCambio) : null,
+            componente: {
+              id: comp?.id ?? 0,
+              nombre: comp?.nombre ?? 'General',
+              equipo: inspeccion!.equipo
+            }
+          }
+        }
+      })
+    } else {
+      detallesFormateados = inspeccion.detalles.map((d) => {
+        const v = d.variable
+        let fueraDeRango = false
+
+        if (
+          v.tipoEvaluacion !== 'SELECCION' &&
+          d.valorNumerico !== null &&
+          d.valorNumerico !== undefined
+        ) {
+          const val = Number(d.valorNumerico)
+          const tieneMin = v.valorMinimo !== null && v.valorMinimo !== undefined
+          const tieneMax = v.valorMaximo !== null && v.valorMaximo !== undefined
+
+          if (tieneMin && tieneMax) {
+            fueraDeRango = val < Number(v.valorMinimo) || val > Number(v.valorMaximo)
+          } else if (tieneMin) {
+            fueraDeRango = val < Number(v.valorMinimo)
+          } else if (tieneMax) {
+            fueraDeRango = val > Number(v.valorMaximo)
+          }
+        }
+
+        return {
+          ...d,
+          id: String(d.id),
+          inspeccionId: String(d.inspeccionId),
+          valorNumerico: d.valorNumerico !== null ? Number(d.valorNumerico) : null,
+          fueraDeRango
+        }
+      })
+    }
+
+    let observacionesGenerales = inspeccion.observacionesGenerales
+    if (observacionesGenerales && (observacionesGenerales.includes('[RUTINA DE LUBRICACIÓN Y HORÓMETROS') || observacionesGenerales.includes('Resumen de Puntos Evaluados'))) {
+      const match = observacionesGenerales.match(/Observaciones del Técnico:\s*([\s\S]*?)(?=\nResumen de Puntos Evaluados|$)/)
+      observacionesGenerales = match && match[1]?.trim() ? match[1].trim() : null
+    }
 
     return {
       ...inspeccion,
       id: String(inspeccion.id),
+      observacionesGenerales,
       detalles: detallesFormateados
     }
   }
@@ -580,8 +692,8 @@ export class InspeccionesService {
       throw new AppError('Inspección no encontrada', 404)
     }
 
-    if (inspeccion.estadoInspeccion !== 'PENDIENTE') {
-      throw new AppError('Solo se pueden evaluar inspecciones en estado PENDIENTE', 400)
+    if (inspeccion.estadoInspeccion !== 'PENDIENTE' && inspeccion.estadoInspeccion !== 'RECHAZADO') {
+      throw new AppError('Solo se pueden evaluar inspecciones en estado PENDIENTE o RECHAZADO', 400)
     }
 
     if (dto.estado === 'RECHAZADO' && (!dto.motivoRechazo || !dto.motivoRechazo.trim())) {
@@ -597,7 +709,7 @@ export class InspeccionesService {
           estadoInspeccion: dto.estado,
           revisadoPorId: supervisorId,
           aprobadoPorId: dto.estado === 'APROBADO' ? supervisorId : null,
-          motivoRechazo: dto.motivoRechazo ?? null,
+          motivoRechazo: dto.estado === 'RECHAZADO' ? dto.motivoRechazo?.trim() : null,
           actualizadoEn: ahora
         }
       })
@@ -628,7 +740,11 @@ export class InspeccionesService {
    */
   async obtenerHistorial(filtros: FiltrosInspeccionDTO) {
     const where: any = {}
-    if (filtros.plantaId) where.plantaId = filtros.plantaId
+    if (filtros.plantaId) {
+      where.plantaId = filtros.plantaId
+    } else if (filtros.plantasIds && filtros.plantasIds.length > 0) {
+      where.plantaId = { in: filtros.plantasIds }
+    }
     if (filtros.estado) where.estadoInspeccion = filtros.estado
     if (filtros.tipoInspeccion) where.tipoInspeccion = filtros.tipoInspeccion
     if (filtros.elaboradoPorId) where.elaboradoPorId = filtros.elaboradoPorId
@@ -648,13 +764,19 @@ export class InspeccionesService {
         revisadoPor: { select: { id: true, nombre: true, apellido: true } },
         planta: { select: { id: true, codigo: true, nombre: true } },
         equipo: { select: { id: true, codigo: true, nombre: true } },
-        _count: { select: { detalles: true } }
+        _count: { select: { detalles: true } },
+        rutinaLubricacion: { select: { _count: { select: { detalles: true } } } }
       }
     })
 
     return inspecciones.map((i) => ({
       ...i,
-      id: String(i.id)
+      id: String(i.id),
+      _count: {
+        detalles: i.tipoInspeccion === 'LUBRICACION'
+          ? (i.rutinaLubricacion?._count?.detalles ?? i._count?.detalles ?? 0)
+          : i._count?.detalles
+      }
     }))
   }
 

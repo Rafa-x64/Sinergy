@@ -7,6 +7,9 @@ import type {
   PuntoLubricacion,
   CrearPuntoLubricacionInput,
   EditarPuntoLubricacionInput,
+  PlantillaPuntoLubricacion,
+  CrearPlantillaPuntoInput,
+  EditarPlantillaPuntoInput,
   FilaMatrizLubricacion,
   RegistrarRutinaPayload,
   ReporteFugaItem,
@@ -208,17 +211,97 @@ export const useLubricacionStore = defineStore('lubricacion', () => {
     }
   }
 
+  const plantillas = ref<PlantillaPuntoLubricacion[]>([])
+  const cargandoPlantillas = ref(false)
+  const ejecutandoSincronizacion = ref(false)
+
+  // Acciones: Plantillas de Lubricación
+  async function cargarPlantillas(tipoEquipoId?: number): Promise<PlantillaPuntoLubricacion[]> {
+    cargandoPlantillas.value = true
+    try {
+      const res = await api.get('/lubricacion/plantillas', { params: { tipoEquipoId } })
+      if (res.data?.status === 'ok' && Array.isArray(res.data.data)) {
+        plantillas.value = res.data.data
+        return plantillas.value
+      }
+      return []
+    } finally {
+      cargandoPlantillas.value = false
+    }
+  }
+
+  async function crearPlantillaPunto(payload: CrearPlantillaPuntoInput): Promise<{ status: string; message: string; data?: PlantillaPuntoLubricacion }> {
+    try {
+      const res = await api.post('/lubricacion/plantillas', payload)
+      if (res.data?.status === 'ok' && res.data.data) {
+        plantillas.value.push(res.data.data)
+        return { status: 'ok', message: res.data.message || 'Punto agregado a la plantilla', data: res.data.data }
+      }
+      return { status: 'error', message: res.data?.message || 'Error al crear punto de plantilla' }
+    } catch (err: unknown) {
+      return { status: 'error', message: err instanceof Error ? err.message : 'Error de comunicación' }
+    }
+  }
+
+  async function editarPlantillaPunto(id: number, payload: EditarPlantillaPuntoInput): Promise<{ status: string; message: string; data?: PlantillaPuntoLubricacion }> {
+    try {
+      const res = await api.put(`/lubricacion/plantillas/${id}`, payload)
+      if (res.data?.status === 'ok' && res.data.data) {
+        const idx = plantillas.value.findIndex(p => p.id === id)
+        if (idx !== -1) {
+          plantillas.value[idx] = res.data.data
+        }
+        return { status: 'ok', message: res.data.message || 'Plantilla actualizada', data: res.data.data }
+      }
+      return { status: 'error', message: res.data?.message || 'Error al editar punto de plantilla' }
+    } catch (err: unknown) {
+      return { status: 'error', message: err instanceof Error ? err.message : 'Error de comunicación' }
+    }
+  }
+
+  async function eliminarPlantillaPunto(id: number): Promise<{ status: string; message: string }> {
+    try {
+      const res = await api.delete(`/lubricacion/plantillas/${id}`)
+      if (res.data?.status === 'ok') {
+        plantillas.value = plantillas.value.filter(p => p.id !== id)
+        return { status: 'ok', message: res.data.message || 'Punto eliminado de la plantilla' }
+      }
+      return { status: 'error', message: res.data?.message || 'Error al eliminar punto de plantilla' }
+    } catch (err: unknown) {
+      return { status: 'error', message: err instanceof Error ? err.message : 'Error de comunicación' }
+    }
+  }
+
+  async function sincronizarTipoEquipo(tipoEquipoId: number): Promise<{ status: string; message: string; data?: any }> {
+    ejecutandoSincronizacion.value = true
+    try {
+      const res = await api.post(`/lubricacion/sincronizar/tipo-equipo/${tipoEquipoId}`)
+      if (res.data?.status === 'ok') {
+        await cargarMatriz()
+        return { status: 'ok', message: res.data.message || 'Sincronización completada exitosamente', data: res.data.data }
+      }
+      return { status: 'error', message: res.data?.message || 'Error al sincronizar equipos' }
+    } catch (err: unknown) {
+      return { status: 'error', message: err instanceof Error ? err.message : 'Error de comunicación' }
+    } finally {
+      ejecutandoSincronizacion.value = false
+    }
+  }
+
   return {
     // Estado
     catalogos,
     matriz,
     puntosPorEquipo,
+    plantillas,
     reporteFugas,
     reporteConsumo,
     historialRutinas,
     cargandoCatalogos,
     cargandoMatriz,
     cargandoPuntos,
+    cargandoPlantillas,
+    ejecutandoSincronizacion,
     guardandoRutina,
     guardandoHorometro,
     cargandoReportes,
@@ -230,6 +313,11 @@ export const useLubricacionStore = defineStore('lubricacion', () => {
     crearPuntoLubricacion,
     editarPuntoLubricacion,
     eliminarPuntoLubricacion,
+    cargarPlantillas,
+    crearPlantillaPunto,
+    editarPlantillaPunto,
+    eliminarPlantillaPunto,
+    sincronizarTipoEquipo,
     cargarMatriz,
     registrarLecturaHorometro,
     registrarRutina,

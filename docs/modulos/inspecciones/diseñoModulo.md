@@ -59,6 +59,12 @@ El **Módulo de Inspecciones** sustituye los formularios impresos y planillas de
   - *Crear dos tipos de equipo distintos en base de datos (`Chiller Diario` y `Chiller Semanal`):* Descartada porque un chiller físico es una única entidad y duplicaría la maquinaria en inventario.
 - **Trade-off:** Requiere que los filtros de backend en elegibilidad de equipos mapeen ambos enums a la misma búsqueda de categoría (`chiller`), y que la UI presente opciones claras de frecuencia en el wizard y en la gestión de plantillas.
 
+### ADR-07: Separación de Rutinas para Montacargas (Diaria y Semanal) y Purgado de Tipos Legados
+- **Decisión:** Dividir el tipo de inspección para montacargas en `MONTACARGAS_DIARIO` y `MONTACARGAS_SEMANAL` a nivel de enum de base de datos (`TipoInspeccion`), replicando la arquitectura de Chillers. Ambos enums mapean al mismo tipo físico de equipo (`montacargas`). Simultáneamente, los valores legados (`CHILLER` y `MONTACARGAS`) se eliminan de todos los selectores de creación, filtros de historial y paneles de plantillas de la interfaz de usuario, preservándolos exclusivamente en la base de datos para la visualización retrocompatible de registros históricos.
+- **Alternativas Descartadas:**
+  - *Eliminar los valores del enum en PostgreSQL (`DROP VALUE`):* Descartada porque PostgreSQL no soporta eliminación directa de valores de enums en uso sin recrear el tipo y arriesgaría registros históricos existentes.
+- **Trade-off:** La UI presenta únicamente las rutinas activas normativas, manteniendo la base de datos 100% compatible con auditorías pasadas.
+
 ---
 
 ## 3. Modelo de Datos (Prisma Schema)

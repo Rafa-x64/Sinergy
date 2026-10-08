@@ -100,6 +100,10 @@ inicializarDatos()
 
 const prepararEdicion = (usuario: Usuario): void => {
     idUsuarioEditar.value = usuario.id
+    const plantasIdsAsignadas = (usuario.plantasUsuario && usuario.plantasUsuario.length > 0)
+        ? usuario.plantasUsuario.map(pu => pu.plantaId)
+        : (usuario.plantaId ? [usuario.plantaId] : [])
+
     datosFormulario.value = {
         nombre: usuario.nombre,
         apellido: usuario.apellido,
@@ -108,6 +112,7 @@ const prepararEdicion = (usuario: Usuario): void => {
         activo: usuario.activo,
         rolId: usuario.rolesUsuario?.[0]?.rolId,
         plantaId: usuario.plantaId,
+        plantasIds: plantasIdsAsignadas,
         supervisorId: usuario.supervisorId
     }
     pestañaActiva.value = 'editar'
@@ -278,7 +283,10 @@ const usuariosFiltrados = computed<Usuario[]>(() => {
             if (!tieneRol) return false
         }
         if (plantaId !== undefined && plantaId !== '') {
-            if (u.plantaId !== Number(plantaId)) return false
+            const idBuscado = Number(plantaId)
+            const coincidePlantaDirecta = u.plantaId === idBuscado
+            const coincideEnMulti = u.plantasUsuario?.some(pu => pu.plantaId === idBuscado)
+            if (!coincidePlantaDirecta && !coincideEnMulti) return false
         }
         return true
     })
@@ -309,7 +317,18 @@ const handleFiltroUsuarios = (payload: ContenidoFiltro): void => {
                     </template>
 
                     <template #item.planta="{ item }">
-                        <v-chip color="info" size="small" variant="tonal" v-if="item.planta">
+                        <div v-if="item.plantasUsuario && item.plantasUsuario.length > 0" class="d-flex flex-wrap ga-1 justify-center">
+                            <v-chip
+                                v-for="pu in item.plantasUsuario"
+                                :key="pu.plantaId"
+                                color="info"
+                                size="small"
+                                variant="tonal"
+                            >
+                                {{ pu.planta?.nombre ?? `Planta ${pu.plantaId}` }}
+                            </v-chip>
+                        </div>
+                        <v-chip color="info" size="small" variant="tonal" v-else-if="item.planta">
                             {{ item.planta.nombre }}
                         </v-chip>
                         <v-chip color="purple" size="small" variant="tonal" v-else>

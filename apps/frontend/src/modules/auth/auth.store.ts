@@ -20,6 +20,8 @@ export interface TokenPayload {
   roles: string[]
   /** ID de la planta del usuario firmado en el JWT. Si es null, ve todas las plantas. */
   plantaId?: number | null
+  /** IDs de las plantas asignadas al usuario para soporte multi-planta. */
+  plantas?: number[]
 }
 
 function parseJwtPayload(token: string): TokenPayload | null {
@@ -55,6 +57,17 @@ export const useAuthStore = defineStore('auth', () => {
 
   const plantaId = computed<number | null>(() => {
     return usuario.value?.plantaId ?? null
+  })
+
+  const plantasIds = computed<number[]>(() => {
+    if (usuario.value?.plantas && usuario.value.plantas.length > 0) {
+      return usuario.value.plantas
+    }
+    return usuario.value?.plantaId ? [usuario.value.plantaId] : []
+  })
+
+  const esMultiPlanta = computed<boolean>(() => {
+    return plantasIds.value.length > 1
   })
 
   const esAdmin = computed<boolean>(() => {
@@ -173,6 +186,8 @@ export const useAuthStore = defineStore('auth', () => {
     usuario,
     roles,
     plantaId,
+    plantasIds,
+    esMultiPlanta,
     esAdmin,
     esSupervisor,
     esTecnico,

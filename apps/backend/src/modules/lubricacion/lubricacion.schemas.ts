@@ -42,6 +42,29 @@ export interface EditarPuntoLubricacionDTO {
   activo?: boolean
 }
 
+// DTO para registrar un punto de lubricación en una plantilla por Tipo de Equipo
+export interface RegistrarPlantillaPuntoDTO {
+  tipoEquipoId: number
+  nombreComponente?: string | null
+  nombrePunto: string
+  lubricanteId: number
+  limiteHorasCambio: number
+  capacidadRecomendada?: number | null
+}
+
+export interface EditarPlantillaPuntoDTO {
+  nombreComponente?: string | null
+  nombrePunto?: string
+  lubricanteId?: number
+  limiteHorasCambio?: number
+  capacidadRecomendada?: number | null
+  activo?: boolean
+}
+
+export interface FiltrosPlantillaLubricacionDTO {
+  tipoEquipoId?: number
+}
+
 // DTO para registrar lectura de horómetro
 export interface RegistrarHorometroDTO {
   equipoId: number

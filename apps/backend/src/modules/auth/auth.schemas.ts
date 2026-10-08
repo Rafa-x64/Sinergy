@@ -17,6 +17,7 @@ export interface CrearUsuarioDTO {
   activo?: boolean
   rolId: number
   plantaId?: number | null
+  plantasIds?: number[]
   supervisorId?: number | null
 }
 
@@ -29,6 +30,7 @@ export interface ActualizarUsuarioDTO {
   activo?: boolean
   rolId?: number
   plantaId?: number | null
+  plantasIds?: number[]
   supervisorId?: number | null
 }
 

@@ -16,11 +16,24 @@ export class DashboardController {
   async disponibilidadEquipos(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const plantaId = this.resolverPlantaId(req, req.query.plantaId as string)
+      const ubicacionTecnicaId = req.query.ubicacionTecnicaId
+        ? parseInt(req.query.ubicacionTecnicaId as string, 10)
+        : undefined
       const [global, porPlanta] = await Promise.all([
-        dashboardService.disponibilidadEquipos(plantaId),
-        dashboardService.disponibilidadPorPlanta(plantaId)
+        dashboardService.disponibilidadEquipos(plantaId, ubicacionTecnicaId),
+        dashboardService.disponibilidadPorPlanta(plantaId, ubicacionTecnicaId)
       ])
       res.json({ status: 'ok', data: { global, porPlanta } })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async listarUbicacionesTecnicas(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const plantaId = req.query.plantaId ? parseInt(req.query.plantaId as string, 10) : undefined
+      const data = await dashboardService.listarUbicacionesTecnicas(plantaId)
+      res.json({ status: 'ok', data })
     } catch (error) {
       next(error)
     }

@@ -6,6 +6,9 @@ import {
   EditarLubricanteDTO,
   CrearPuntoLubricacionDTO,
   EditarPuntoLubricacionDTO,
+  RegistrarPlantillaPuntoDTO,
+  EditarPlantillaPuntoDTO,
+  FiltrosPlantillaLubricacionDTO,
   RegistrarHorometroDTO,
   FiltroMatrizDTO,
   FilaMatrizLubricacionDTO,
@@ -20,15 +23,16 @@ import { Prisma, OrigenLecturaHorometro, NivelLubricante } from '@prisma/client'
 import { notificationService } from '../notificaciones/notification.service'
 
 function normalizarNivelLubricante(nivel?: string): NivelLubricante {
-  if (!nivel) return NivelLubricante.OK
+  if (!nivel) return NivelLubricante.MINIMO
   const upper = String(nivel).trim().toUpperCase()
-  if (upper === 'LLENO') return NivelLubricante.OK
-  if (upper === 'MEDIO') return NivelLubricante.BAJO
-  if (upper === 'VACIO') return NivelLubricante.CRITICO
+  if (upper === 'LLENO' || upper === 'OK' || upper === 'NORMAL') return NivelLubricante.NORMAL
+  if (upper === 'MAXIMO' || upper === 'SOBRELLENADO') return NivelLubricante.MAXIMO
+  if (upper === 'MEDIO' || upper === 'BAJO' || upper === 'CRITICO' || upper === 'VACIO' || upper === 'MINIMO') return NivelLubricante.MINIMO
+  if (upper === 'NO_APLICA' || upper === 'N/A') return NivelLubricante.NO_APLICA
   if (Object.values(NivelLubricante).includes(upper as NivelLubricante)) {
     return upper as NivelLubricante
   }
-  return NivelLubricante.OK
+  return NivelLubricante.MINIMO
 }
 
 export const lubricacionService = {
@@ -220,6 +224,379 @@ export const lubricacionService = {
     return prisma.puntoLubricacion.delete({
       where: { id }
     })
+  },
+
+  // ─── PLANTILLAS DE PUNTOS DE LUBRICACIÓN ──────────────────────────────────
+
+  async listarPlantillas(tipoEquipoId?: number) {
+    const where: Prisma.PlantillaPuntoLubricacionWhereInput = { activo: true }
+    if (tipoEquipoId) {
+      where.tipoEquipoId = tipoEquipoId
+    }
+
+    return prisma.plantillaPuntoLubricacion.findMany({
+      where,
+      include: {
+        tipoEquipo: { select: { id: true, nombre: true } },
+        lubricante: true,
+        _count: {
+          select: { puntosInstancia: { where: { activo: true } } }
+        }
+      },
+      orderBy: [
+        { nombreComponente: 'asc' },
+        { nombrePunto: 'asc' }
+      ]
+    })
+  },
+
+  async crearPlantillaPunto(datos: RegistrarPlantillaPuntoDTO) {
+    if (!datos.tipoEquipoId || datos.tipoEquipoId <= 0) {
+      throw new AppError('El tipo de equipo es obligatorio', 400)
+    }
+    if (!datos.nombrePunto || !datos.nombrePunto.trim()) {
+      throw new AppError('El nombre de la parte o punto a lubricar es obligatorio', 400)
+    }
+    if (!datos.lubricanteId || datos.lubricanteId <= 0) {
+      throw new AppError('El lubricante asignado es obligatorio', 400)
+    }
+    if (!datos.limiteHorasCambio || Number(datos.limiteHorasCambio) <= 0) {
+      throw new AppError('El límite de horas de cambio debe ser mayor a cero', 400)
+    }
+    if (datos.capacidadRecomendada !== undefined && datos.capacidadRecomendada !== null && Number(datos.capacidadRecomendada) < 0) {
+      throw new AppError('La capacidad recomendada no puede ser negativa', 400)
+    }
+
+    return prisma.$transaction(async (tx) => {
+      const plantilla = await tx.plantillaPuntoLubricacion.create({
+        data: {
+          tipoEquipoId: datos.tipoEquipoId,
+          nombreComponente: datos.nombreComponente ? datos.nombreComponente.trim() : null,
+          nombrePunto: datos.nombrePunto.trim(),
+          lubricanteId: datos.lubricanteId,
+          limiteHorasCambio: new Prisma.Decimal(datos.limiteHorasCambio),
+          capacidadRecomendada: datos.capacidadRecomendada !== undefined && datos.capacidadRecomendada !== null
+            ? new Prisma.Decimal(datos.capacidadRecomendada)
+            : null,
+          activo: true
+        },
+        include: {
+          tipoEquipo: { select: { id: true, nombre: true } },
+          lubricante: true,
+          _count: { select: { puntosInstancia: { where: { activo: true } } } }
+        }
+      })
+
+      // Propagar automáticamente a los equipos existentes de este tipo
+      const equipos = await tx.equipo.findMany({
+        where: { tipoEquipoId: datos.tipoEquipoId },
+        include: {
+          componentes: { where: { activo: true }, select: { id: true, nombre: true } },
+          historialHorometros: { orderBy: { id: 'desc' }, take: 1, select: { valorHorometro: true } }
+        }
+      })
+
+      for (const equipo of equipos) {
+        const horometroBase = equipo.historialHorometros[0]?.valorHorometro ?? new Prisma.Decimal(0)
+
+        let targetComponenteId: number | null = null
+        if (plantilla.nombreComponente) {
+          const comp = equipo.componentes.find(
+            c => c.nombre.trim().toUpperCase() === plantilla.nombreComponente!.trim().toUpperCase()
+          )
+          if (comp) {
+            targetComponenteId = comp.id
+          } else {
+            // Si el componente con ese nombre no existe en el equipo, lo creamos automáticamente
+            const nuevoComp = await tx.componente.create({
+              data: {
+                equipoId: equipo.id,
+                nombre: plantilla.nombreComponente.trim(),
+                descripcion: 'Generado desde plantilla de lubricación',
+                activo: true,
+                ordenPosicion: equipo.componentes.length + 1
+              }
+            })
+            targetComponenteId = nuevoComp.id
+          }
+        }
+
+        // Buscar si ya existe un punto con este nombre en este equipo/componente
+        const puntoExistente = await tx.puntoLubricacion.findFirst({
+          where: {
+            equipoId: equipo.id,
+            nombrePunto: { equals: plantilla.nombrePunto, mode: 'insensitive' },
+            componenteId: targetComponenteId
+          }
+        })
+
+        if (puntoExistente) {
+          await tx.puntoLubricacion.update({
+            where: { id: puntoExistente.id },
+            data: {
+              plantillaId: plantilla.id,
+              lubricanteId: plantilla.lubricanteId,
+              limiteHorasCambio: plantilla.limiteHorasCambio,
+              capacidadRecomendada: plantilla.capacidadRecomendada,
+              activo: true
+            }
+          })
+        } else {
+          await tx.puntoLubricacion.create({
+            data: {
+              equipoId: equipo.id,
+              componenteId: targetComponenteId,
+              plantillaId: plantilla.id,
+              nombrePunto: plantilla.nombrePunto,
+              lubricanteId: plantilla.lubricanteId,
+              limiteHorasCambio: plantilla.limiteHorasCambio,
+              horometroUltimoCambio: horometroBase,
+              capacidadRecomendada: plantilla.capacidadRecomendada,
+              activo: true
+            }
+          })
+        }
+      }
+
+      return tx.plantillaPuntoLubricacion.findUniqueOrThrow({
+        where: { id: plantilla.id },
+        include: {
+          tipoEquipo: { select: { id: true, nombre: true } },
+          lubricante: true,
+          _count: { select: { puntosInstancia: { where: { activo: true } } } }
+        }
+      })
+    })
+  },
+
+  async editarPlantillaPunto(id: number, datos: EditarPlantillaPuntoDTO) {
+    if (datos.limiteHorasCambio !== undefined && Number(datos.limiteHorasCambio) <= 0) {
+      throw new AppError('El límite de horas de cambio debe ser mayor a cero', 400)
+    }
+    if (datos.capacidadRecomendada !== undefined && datos.capacidadRecomendada !== null && Number(datos.capacidadRecomendada) < 0) {
+      throw new AppError('La capacidad recomendada no puede ser negativa', 400)
+    }
+
+    return prisma.$transaction(async (tx) => {
+      await tx.plantillaPuntoLubricacion.update({
+        where: { id },
+        data: {
+          ...(datos.nombreComponente !== undefined && { nombreComponente: datos.nombreComponente ? datos.nombreComponente.trim() : null }),
+          ...(datos.nombrePunto !== undefined && { nombrePunto: datos.nombrePunto.trim() }),
+          ...(datos.lubricanteId !== undefined && { lubricanteId: datos.lubricanteId }),
+          ...(datos.limiteHorasCambio !== undefined && { limiteHorasCambio: new Prisma.Decimal(datos.limiteHorasCambio) }),
+          ...(datos.capacidadRecomendada !== undefined && {
+            capacidadRecomendada: datos.capacidadRecomendada !== null ? new Prisma.Decimal(datos.capacidadRecomendada) : null
+          }),
+          ...(datos.activo !== undefined && { activo: datos.activo })
+        }
+      })
+
+      // Propagar cambios a las instancias activas vinculadas
+      await tx.puntoLubricacion.updateMany({
+        where: { plantillaId: id, activo: true },
+        data: {
+          ...(datos.nombrePunto !== undefined && { nombrePunto: datos.nombrePunto.trim() }),
+          ...(datos.lubricanteId !== undefined && { lubricanteId: datos.lubricanteId }),
+          ...(datos.limiteHorasCambio !== undefined && { limiteHorasCambio: new Prisma.Decimal(datos.limiteHorasCambio) }),
+          ...(datos.capacidadRecomendada !== undefined && {
+            capacidadRecomendada: datos.capacidadRecomendada !== null ? new Prisma.Decimal(datos.capacidadRecomendada) : null
+          })
+        }
+      })
+
+      return tx.plantillaPuntoLubricacion.findUniqueOrThrow({
+        where: { id },
+        include: {
+          tipoEquipo: { select: { id: true, nombre: true } },
+          lubricante: true,
+          _count: { select: { puntosInstancia: { where: { activo: true } } } }
+        }
+      })
+    })
+  },
+
+  async eliminarPlantillaPunto(id: number) {
+    return prisma.$transaction(async (tx) => {
+      const plantilla = await tx.plantillaPuntoLubricacion.update({
+        where: { id },
+        data: { activo: false },
+        include: {
+          tipoEquipo: { select: { id: true, nombre: true } },
+          lubricante: true
+        }
+      })
+
+      // Desactivar instancias vinculadas
+      await tx.puntoLubricacion.updateMany({
+        where: { plantillaId: id },
+        data: { activo: false }
+      })
+
+      return plantilla
+    })
+  },
+
+  // ─── MOTOR DE SINCRONIZACIÓN DE LUBRICACIÓN ─────────────────────────────────
+
+  async sincronizarEquipoLubricacion(equipoId: number, plantillasPreCargadas?: any[]) {
+    const equipo = await prisma.equipo.findUnique({
+      where: { id: equipoId },
+      include: {
+        componentes: { where: { activo: true } },
+        puntosLubricacion: true,
+        historialHorometros: { orderBy: { id: 'desc' }, take: 1 }
+      }
+    })
+
+    if (!equipo) {
+      throw new AppError(`El equipo con ID ${equipoId} no existe`, 404)
+    }
+
+    const horometroBase = equipo.historialHorometros[0]?.valorHorometro ?? new Prisma.Decimal(0)
+    const tipoEquipoId = equipo.tipoEquipoId
+
+    const plantillas = plantillasPreCargadas ?? await prisma.plantillaPuntoLubricacion.findMany({
+      where: { tipoEquipoId, activo: true },
+      include: { lubricante: true },
+      orderBy: [{ nombreComponente: 'asc' }, { nombrePunto: 'asc' }]
+    })
+
+    let creados = 0
+    let actualizados = 0
+    let desactivados = 0
+
+    await prisma.$transaction(async (tx) => {
+      const componentesActuales = await tx.componente.findMany({
+        where: { equipoId, activo: true }
+      })
+
+      const puntosActuales = await tx.puntoLubricacion.findMany({
+        where: { equipoId }
+      })
+
+      const idsPuntosProcesados = new Set<number>()
+
+      for (const plantilla of plantillas) {
+        let targetComponenteId: number | null = null
+
+        if (plantilla.nombreComponente) {
+          let comp = componentesActuales.find(
+            c => c.nombre.trim().toUpperCase() === plantilla.nombreComponente!.trim().toUpperCase()
+          )
+          if (!comp) {
+            comp = await tx.componente.create({
+              data: {
+                equipoId,
+                nombre: plantilla.nombreComponente.trim(),
+                descripcion: 'Generado desde sincronización de plantilla de lubricación',
+                activo: true,
+                ordenPosicion: componentesActuales.length + 1
+              }
+            })
+            componentesActuales.push(comp)
+          }
+          targetComponenteId = comp.id
+        }
+
+        // Buscar punto coincidente por plantillaId o por nombrePunto + componente
+        let puntoExistente = puntosActuales.find(
+          p => p.plantillaId === plantilla.id && !idsPuntosProcesados.has(p.id)
+        )
+
+        if (!puntoExistente) {
+          puntoExistente = puntosActuales.find(
+            p =>
+              p.nombrePunto.trim().toUpperCase() === plantilla.nombrePunto.trim().toUpperCase() &&
+              p.componenteId === targetComponenteId &&
+              !idsPuntosProcesados.has(p.id)
+          )
+        }
+
+        if (puntoExistente) {
+          idsPuntosProcesados.add(puntoExistente.id)
+          await tx.puntoLubricacion.update({
+            where: { id: puntoExistente.id },
+            data: {
+              plantillaId: plantilla.id,
+              componenteId: targetComponenteId,
+              nombrePunto: plantilla.nombrePunto,
+              lubricanteId: plantilla.lubricanteId,
+              limiteHorasCambio: plantilla.limiteHorasCambio,
+              capacidadRecomendada: plantilla.capacidadRecomendada,
+              activo: true
+            }
+          })
+          actualizados++
+        } else {
+          const nuevo = await tx.puntoLubricacion.create({
+            data: {
+              equipoId,
+              componenteId: targetComponenteId,
+              plantillaId: plantilla.id,
+              nombrePunto: plantilla.nombrePunto,
+              lubricanteId: plantilla.lubricanteId,
+              limiteHorasCambio: plantilla.limiteHorasCambio,
+              horometroUltimoCambio: horometroBase,
+              capacidadRecomendada: plantilla.capacidadRecomendada,
+              activo: true
+            }
+          })
+          idsPuntosProcesados.add(nuevo.id)
+          creados++
+        }
+      }
+
+      // Desactivar puntos que provienen de plantilla pero ya no existen en la plantilla activa
+      const idsPlantillasActivas = new Set(plantillas.map(p => p.id))
+      for (const p of puntosActuales) {
+        if (p.plantillaId && !idsPlantillasActivas.has(p.plantillaId) && !idsPuntosProcesados.has(p.id) && p.activo) {
+          await tx.puntoLubricacion.update({
+            where: { id: p.id },
+            data: { activo: false }
+          })
+          desactivados++
+        }
+      }
+    })
+
+    return {
+      equipoId,
+      equipoNombre: equipo.nombre,
+      creados,
+      actualizados,
+      desactivados,
+      totalPlantillas: plantillas.length
+    }
+  },
+
+  async sincronizarTipoEquipoLubricacion(tipoEquipoId: number) {
+    const [equipos, plantillas] = await Promise.all([
+      prisma.equipo.findMany({
+        where: { tipoEquipoId },
+        select: { id: true }
+      }),
+      prisma.plantillaPuntoLubricacion.findMany({
+        where: { tipoEquipoId, activo: true },
+        include: { lubricante: true }
+      })
+    ])
+
+    const resultados = []
+    const LOTE_SIZE = 5
+    for (let i = 0; i < equipos.length; i += LOTE_SIZE) {
+      const lote = equipos.slice(i, i + LOTE_SIZE)
+      const resLote = await Promise.all(
+        lote.map(e => this.sincronizarEquipoLubricacion(e.id, plantillas))
+      )
+      resultados.push(...resLote)
+    }
+
+    return {
+      tipoEquipoId,
+      totalEquiposSincronizados: equipos.length,
+      detalles: resultados
+    }
   },
 
   // ─── CONTROL DE HORÓMETROS Y ANTI-RETROCESO ─────────────────────────────────
@@ -432,7 +809,7 @@ export const lubricacionService = {
         marca: 'Shell',
         tipo: 'Grasa Extrema Presión',
         viscosidad: 'NLGI 2',
-        unidadMedida: 'Kg'
+        unidadMedida: 'Gramos'
       },
       {
         codigo: 'MOBILITH-SHC-220',
@@ -440,7 +817,7 @@ export const lubricacionService = {
         marca: 'Mobil',
         tipo: 'Grasa Extrema Presión',
         viscosidad: 'NLGI 2',
-        unidadMedida: 'Kg'
+        unidadMedida: 'Gramos'
       }
     ]
 
@@ -454,17 +831,15 @@ export const lubricacionService = {
   // ─── REGISTRO DE RUTINA DE LUBRICACIÓN Y HORÓMETROS ─────────────────────────
 
   async registrarRutina(dto: RegistrarRutinaDTO, usuarioId: number) {
-    if (!dto.detalles || dto.detalles.length === 0) {
-      throw new AppError('La rutina debe incluir al menos un punto de lubricación evaluado', 400)
-    }
+    const detalles = dto.detalles || []
 
     const nuevoHorometro = Number(dto.horometroRegistrado)
     if (isNaN(nuevoHorometro) || nuevoHorometro < 0) {
       throw new AppError('El horómetro registrado no puede ser negativo ni inválido', 400)
     }
 
-    // Validación anti-negativos para cada punto evaluado
-    for (const det of dto.detalles) {
+    // Validación anti-negativos para cada punto evaluado si existen
+    for (const det of detalles) {
       if (det.cantidadRepuesta !== undefined && det.cantidadRepuesta !== null && Number(det.cantidadRepuesta) < 0) {
         throw new AppError('La cantidad repuesta no puede ser un número negativo', 400)
       }
@@ -536,7 +911,7 @@ export const lubricacionService = {
       })
 
       // 3. Crear detalles y actualizar puntos si hubo cambio total
-      for (const det of dto.detalles) {
+      for (const det of detalles) {
         await tx.rutinaLubricacionDetalle.create({
           data: {
             rutinaId: rutina.id,
@@ -576,7 +951,7 @@ export const lubricacionService = {
       const secuencial = String(conteoHoy + 1).padStart(4, '0')
       const codigoInspeccion = `INSP-LUB-${prefijoPlanta}-${codigoFecha}-${secuencial}`
 
-      const resumenPuntos = dto.detalles.map((d) => {
+      const resumenPuntos = detalles.map((d) => {
         const p = equipo.puntosLubricacion.find((item) => item.id === d.puntoLubricacionId)
         const pNombre = p ? p.nombrePunto : `Punto #${d.puntoLubricacionId}`
         const partes: string[] = [`Nivel: ${d.nivelLubricante || 'OK'}`]
@@ -595,13 +970,7 @@ export const lubricacionService = {
         return `• ${pNombre}: ${partes.join(', ')}`
       }).join('\n')
 
-      const observacionesGenerales = [
-        `[RUTINA DE LUBRICACIÓN Y HORÓMETROS - ${equipo.codigo} - ${equipo.nombre}]`,
-        `Horómetro Registrado: ${nuevoHorometro} hrs${dto.esReemplazoReloj ? ` (REEMPLAZO DE RELOJ JUSTIFICADO: ${dto.justificacionReemplazo})` : ''}`,
-        dto.observaciones ? `Observaciones del Técnico: ${dto.observaciones}` : null,
-        `Resumen de Puntos Evaluados (${dto.detalles.length}):`,
-        resumenPuntos
-      ].filter(Boolean).join('\n')
+      const observacionesGenerales = dto.observaciones?.trim() || null
 
       const nuevaInspeccion = await tx.inspeccion.create({
         data: {
@@ -616,6 +985,12 @@ export const lubricacionService = {
           observacionesGenerales,
           fechaRegistro: fechaHoy
         }
+      })
+
+      // Vincular formalmente la rutina de lubricación con la cabecera de inspección
+      await tx.rutinaLubricacion.update({
+        where: { id: rutina.id },
+        data: { inspeccionId: nuevaInspeccion.id }
       })
 
       // 5. Notificar al supervisor directo (o de la planta) de la nueva inspección pendiente
@@ -643,7 +1018,7 @@ export const lubricacionService = {
     })
 
     // Emisión de eventos en tiempo real fuera de la transacción para no bloquear la BD
-    for (const det of dto.detalles) {
+    for (const det of detalles) {
       const punto = equipo.puntosLubricacion.find((p) => p.id === det.puntoLubricacionId)
       if (!punto) continue
 

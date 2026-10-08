@@ -7,6 +7,7 @@ import { useAuthStore } from '@/modules/auth/auth.store'
 import SemaforoBadge from '../components/SemaforoBadge.vue'
 import ModalReemplazoHorometro from '../components/ModalReemplazoHorometro.vue'
 import ModalParteLubricar from '../components/ModalParteLubricar.vue'
+import PlantillasLubricacionPanel from '../components/PlantillasLubricacionPanel.vue'
 import type {
   FilaMatrizLubricacion,
   PuntoMatriz,
@@ -26,7 +27,7 @@ const puedeRegistrarInspeccion = computed(() => authStore.esAdmin || authStore.e
 const puedeGestionarLubricacion = puedeGestionarPartes
 
 // Pestaña activa inicial: Técnicos ingresan directamente a 'inspeccion'; Supervisores y Admins a 'partes'
-const pestanaActiva = ref<'partes' | 'inspeccion'>(
+const pestanaActiva = ref<'partes' | 'inspeccion' | 'plantillas'>(
   authStore.esTecnico && !authStore.esAdmin ? 'inspeccion' : 'partes'
 )
 
@@ -60,10 +61,9 @@ const detallesInspeccion = ref<FilaDetalleInspeccion[]>([])
 
 // Opciones de nivel de lubricante según enum de base de datos
 const opcionesNivelLubricante: { title: string; value: NivelLubricante }[] = [
-  { title: 'Normal (OK)', value: 'OK' },
-  { title: 'Bajo', value: 'BAJO' },
-  { title: 'Crítico', value: 'CRITICO' },
-  { title: 'Sobrellenado', value: 'SOBRELLENADO' },
+  { title: 'Mínimo', value: 'MINIMO' },
+  { title: 'Normal', value: 'NORMAL' },
+  { title: 'Máximo', value: 'MAXIMO' },
   { title: 'No Aplica', value: 'NO_APLICA' }
 ]
 
@@ -82,8 +82,65 @@ const eliminandoParte = ref(false)
 // Tipo de alcance para la inspección: planta, linea, equipo
 const alcanceInspeccion = ref<'PLANTA' | 'LINEA' | 'EQUIPO'>('EQUIPO')
 const plantaAlcanceId = ref<number | null>(null)
-const lineaAlcance = ref<string | null>(null)  // nombre de ubicación (viene en plantaNombre / ubicacionNombre)
+const lineaAlcance = ref<string | null>(null)  // nombre de ubicación
 const equipoInspeccionId = ref<number | null>(null)
+
+// ─── WIZARD MULTI-EQUIPO PARA ALCANCE LÍNEA ───────────────────────────────
+// Cuando el alcance es LINEA, se cargan todos los equipos de la línea en un wizard
+const modoWizardLinea = computed(() => alcanceInspeccion.value === 'LINEA' && lineaAlcance.value !== null)
+const equipoWizardIndice = ref(0)
+
+// Lista de equipos de la línea seleccionada (solo en modo LINEA)
+const equiposLineaWizard = computed<FilaMatrizLubricacion[]>(() => {
+  if (!modoWizardLinea.value || !lineaAlcance.value) return []
+  let base = lubricacionStore.matriz as FilaMatrizLubricacion[]
+  if (plantaAlcanceId.value) {
+    const plantaObj = plantasStore.plantas.find(p => p.id === plantaAlcanceId.value)
+    if (plantaObj) base = base.filter(f => f.plantaNombre.toLowerCase() === plantaObj.nombre.toLowerCase())
+  }
+  return base.filter(f => f.ubicacionNombre === lineaAlcance.value)
+})
+
+// Equipo activo en el wizard de línea
+const equipoWizardActual = computed<FilaMatrizLubricacion | undefined>(() =>
+  equiposLineaWizard.value[equipoWizardIndice.value]
+)
+
+const esPrimerEquipoWizard = computed(() => equipoWizardIndice.value === 0)
+const esUltimoEquipoWizard = computed(() => equipoWizardIndice.value === equiposLineaWizard.value.length - 1)
+
+// Progreso: cuántos equipos de la línea ya tienen al menos un punto capturado en borrador
+const equiposCompletados = computed(() =>
+  equiposLineaWizard.value.filter(f => !!borradoresPorEquipo.value[f.equipoId]).length
+)
+
+// Avance a siguiente equipo de la línea (guarda borrador del actual)
+function avanzarEquipoWizard() {
+  const fila = equipoWizardActual.value
+  if (fila) guardarBorradorEquipoActual(fila.equipoId)
+  if (equipoWizardIndice.value < equiposLineaWizard.value.length - 1) {
+    equipoWizardIndice.value++
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    // Sincronizar el formulario con el nuevo equipo del wizard
+    sincronizarFormularioConEquipo(equiposLineaWizard.value[equipoWizardIndice.value])
+  }
+}
+
+function retrocederEquipoWizard() {
+  const fila = equipoWizardActual.value
+  if (fila) guardarBorradorEquipoActual(fila.equipoId)
+  if (equipoWizardIndice.value > 0) {
+    equipoWizardIndice.value--
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    sincronizarFormularioConEquipo(equiposLineaWizard.value[equipoWizardIndice.value])
+  }
+}
+
+// Retorna la fila activa según el modo (wizard de línea o selección individual)
+const filaEquipoInspeccionActiva = computed<FilaMatrizLubricacion | undefined>(() => {
+  if (modoWizardLinea.value) return equipoWizardActual.value
+  return filaEquipoInspeccion.value
+})
 
 // Plantas disponibles para selección (catálogo maestro de plantas registradas)
 const plantasDisponibles = computed(() => {
@@ -158,7 +215,7 @@ const equiposFiltrados = computed(() => {
   })
 })
 
-// Fila del equipo actual para el tab INSPECCIÓN (usa equipoInspeccionId)
+// Fila del equipo actual para el tab INSPECCIÓN individual (usa equipoInspeccionId)
 const filaEquipoInspeccion = computed<FilaMatrizLubricacion | undefined>(() => {
   if (!equipoInspeccionId.value) return undefined
   return lubricacionStore.matriz.find((f: FilaMatrizLubricacion) => f.equipoId === equipoInspeccionId.value)
@@ -169,7 +226,7 @@ const filaEquipoActual = computed<FilaMatrizLubricacion | undefined>(() => {
   return lubricacionStore.matriz.find((f: FilaMatrizLubricacion) => f.equipoId === equipoSeleccionadoId.value)
 })
 
-// Almacén temporal de borradores de inspección por equipo (mantiene el horómetro y datos únicos de cada máquina al cambiar de equipo)
+// Almacén temporal de borradores de inspección por equipo
 interface BorradorInspeccionEquipo {
   nuevoHorometro: number
   esReemplazoReloj: boolean
@@ -181,7 +238,6 @@ interface BorradorInspeccionEquipo {
 const borradoresPorEquipo = ref<Record<number, BorradorInspeccionEquipo>>({})
 const equipoAnteriorId = ref<number | null>(null)
 
-// Guardar el estado actual del equipo anterior antes de cambiar
 function guardarBorradorEquipoActual(idEquipo: number | null) {
   if (!idEquipo) return
   borradoresPorEquipo.value[idEquipo] = {
@@ -193,55 +249,67 @@ function guardarBorradorEquipoActual(idEquipo: number | null) {
   }
 }
 
-// Sincronizar formulario de inspección cuando cambia el equipo de inspección
+// Inicializa o restaura el formulario para un equipo dado
+function sincronizarFormularioConEquipo(equipo: FilaMatrizLubricacion) {
+  equipoAnteriorId.value = equipo.equipoId
+  const borrador = borradoresPorEquipo.value[equipo.equipoId]
+  if (borrador) {
+    nuevoHorometro.value = borrador.nuevoHorometro
+    esReemplazoReloj.value = borrador.esReemplazoReloj
+    justificacionReemplazo.value = borrador.justificacionReemplazo
+    observacionesRutina.value = borrador.observacionesRutina
+    detallesInspeccion.value = borrador.detalles
+  } else {
+    nuevoHorometro.value = equipo.horometroActual
+    esReemplazoReloj.value = false
+    justificacionReemplazo.value = ''
+    observacionesRutina.value = ''
+    detallesInspeccion.value = equipo.puntos.map((p: PuntoMatriz) => ({
+      puntoId: p.id,
+      nombrePunto: p.nombrePunto,
+      componenteNombre: p.componenteNombre,
+      lubricante: p.lubricante,
+      limiteHorasCambio: p.limiteHorasCambio,
+      horometroUltimoCambio: p.horometroUltimoCambio,
+      capacidadRecomendada: p.capacidadRecomendada,
+      nivelLubricante: 'MINIMO',
+      seRealizoReposicion: false,
+      cantidadRepuesta: 0,
+      seRealizoCambioTotal: false,
+      presentaFuga: false,
+      observacionesFuga: '',
+      observacionesGenerales: ''
+    }))
+  }
+}
+
+// Sincronizar formulario cuando cambia el equipo individual (alcance EQUIPO/PLANTA)
 watch(
   () => filaEquipoInspeccion.value,
   (equipo, equipoPrevio) => {
-    // Si veníamos de otro equipo, guardamos su borrador
-    if (equipoPrevio) {
-      guardarBorradorEquipoActual(equipoPrevio.equipoId)
-    }
-
+    if (modoWizardLinea.value) return  // el wizard de línea maneja su propia sincronización
+    if (equipoPrevio) guardarBorradorEquipoActual(equipoPrevio.equipoId)
     if (equipo) {
-      equipoAnteriorId.value = equipo.equipoId
-
-      // Si ya teníamos un borrador para esta máquina específica, lo restauramos
-      const borrador = borradoresPorEquipo.value[equipo.equipoId]
-      if (borrador) {
-        nuevoHorometro.value = borrador.nuevoHorometro
-        esReemplazoReloj.value = borrador.esReemplazoReloj
-        justificacionReemplazo.value = borrador.justificacionReemplazo
-        observacionesRutina.value = borrador.observacionesRutina
-        detallesInspeccion.value = borrador.detalles
-      } else {
-        // Inicializar con el horómetro único actual de esta máquina
-        nuevoHorometro.value = equipo.horometroActual
-        esReemplazoReloj.value = false
-        justificacionReemplazo.value = ''
-        observacionesRutina.value = ''
-
-        detallesInspeccion.value = equipo.puntos.map((p: PuntoMatriz) => ({
-          puntoId: p.id,
-          nombrePunto: p.nombrePunto,
-          componenteNombre: p.componenteNombre,
-          lubricante: p.lubricante,
-          limiteHorasCambio: p.limiteHorasCambio,
-          horometroUltimoCambio: p.horometroUltimoCambio,
-          capacidadRecomendada: p.capacidadRecomendada,
-          nivelLubricante: 'OK',
-          seRealizoReposicion: false,
-          cantidadRepuesta: 0,
-          seRealizoCambioTotal: false,
-          presentaFuga: false,
-          observacionesFuga: '',
-          observacionesGenerales: ''
-        }))
-      }
+      sincronizarFormularioConEquipo(equipo)
     } else {
       detallesInspeccion.value = []
     }
   },
   { immediate: true }
+)
+
+// Cuando se activa el modo wizard de línea, sincronizar con el primer equipo
+watch(
+  () => equiposLineaWizard.value,
+  (equipos) => {
+    equipoWizardIndice.value = 0
+    borradoresPorEquipo.value = {}
+    if (equipos.length > 0) {
+      sincronizarFormularioConEquipo(equipos[0])
+    } else {
+      detallesInspeccion.value = []
+    }
+  }
 )
 
 // Limpiar referencia de línea y equipo al cambiar planta de alcance
@@ -250,14 +318,19 @@ watch(
   () => {
     lineaAlcance.value = null
     equipoInspeccionId.value = null
+    borradoresPorEquipo.value = {}
   }
 )
 
-// Limpiar equipo seleccionado al cambiar línea o modo de alcance
+// Limpiar equipo y borradores al cambiar modo de alcance
 watch(
-  [alcanceInspeccion, lineaAlcance],
+  () => alcanceInspeccion.value,
   () => {
     equipoInspeccionId.value = null
+    lineaAlcance.value = null
+    equipoWizardIndice.value = 0
+    borradoresPorEquipo.value = {}
+    detallesInspeccion.value = []
   }
 )
 
@@ -380,41 +453,25 @@ const resumenInspeccion = computed(() => {
   }
 })
 
-async function guardarInspeccion() {
-  if (!filaEquipoInspeccion.value) {
-    toast.error('Debe seleccionar un equipo para inspeccionar')
-    return
+// Construye y valida el payload de un equipo; retorna null si hay error
+function construirPayloadEquipo(fila: FilaMatrizLubricacion, detalles: FilaDetalleInspeccion[], horometro: number, reemplazo: boolean, justificacion: string, obs: string): RegistrarRutinaPayload | null {
+  if (horometro === null || horometro === undefined || Number(horometro) < 0) {
+    toast.error(`Horómetro inválido en equipo "${fila.equipoNombre}"`)
+    return null
   }
-
-  if (nuevoHorometro.value === null || nuevoHorometro.value === undefined || Number(nuevoHorometro.value) < 0) {
-    toast.error('El horómetro de inspección no puede ser un valor negativo.')
-    return
-  }
-
-  if (nuevoHorometro.value < filaEquipoInspeccion.value.horometroActual && !esReemplazoReloj.value) {
-    modalReemplazoVisible.value = true
-    return
-  }
-
-  if (detallesInspeccion.value.length === 0) {
-    toast.warning('El equipo no tiene partes a lubricar configuradas.')
-    return
-  }
-
-  for (const d of detallesInspeccion.value) {
+  for (const d of detalles) {
     if (d.seRealizoReposicion && (!d.cantidadRepuesta || Number(d.cantidadRepuesta) <= 0)) {
-      toast.warning(`Indique una cantidad repuesta válida (mayor a 0) en la parte "${d.nombrePunto}"`)
-      return
+      toast.warning(`Indique una cantidad repuesta válida (mayor a 0) en la parte "${d.nombrePunto}" del equipo "${fila.equipoNombre}"`)
+      return null
     }
   }
-
-  const payload: RegistrarRutinaPayload = {
-    equipoId: filaEquipoInspeccion.value.equipoId,
-    horometroRegistrado: Number(nuevoHorometro.value),
-    esReemplazoReloj: esReemplazoReloj.value,
-    justificacionReemplazo: esReemplazoReloj.value ? justificacionReemplazo.value : undefined,
-    observaciones: observacionesRutina.value.trim() || undefined,
-    detalles: detallesInspeccion.value.map(d => ({
+  return {
+    equipoId: fila.equipoId,
+    horometroRegistrado: Number(horometro),
+    esReemplazoReloj: reemplazo,
+    justificacionReemplazo: reemplazo ? justificacion : undefined,
+    observaciones: obs.trim() || undefined,
+    detalles: detalles.map(d => ({
       puntoLubricacionId: d.puntoId,
       nivelLubricante: d.nivelLubricante,
       seRealizoReposicion: d.seRealizoReposicion,
@@ -426,16 +483,103 @@ async function guardarInspeccion() {
         : (d.observacionesGenerales || undefined)
     }))
   }
+}
+
+// Guardar una inspección individual (alcance EQUIPO o PLANTA)
+async function guardarInspeccionIndividual() {
+  const fila = filaEquipoInspeccion.value
+  if (!fila) {
+    toast.error('Debe seleccionar un equipo para inspeccionar')
+    return
+  }
+  if (nuevoHorometro.value < fila.horometroActual && !esReemplazoReloj.value) {
+    modalReemplazoVisible.value = true
+    return
+  }
+  const payload = construirPayloadEquipo(fila, detallesInspeccion.value, nuevoHorometro.value, esReemplazoReloj.value, justificacionReemplazo.value, observacionesRutina.value)
+  if (!payload) return
 
   try {
-    const idGuardado = filaEquipoInspeccion.value.equipoId
     await lubricacionStore.registrarRutina(payload)
     toast.success('Inspección de lubricación registrada con éxito.')
-    delete borradoresPorEquipo.value[idGuardado]
+    delete borradoresPorEquipo.value[fila.equipoId]
     equipoInspeccionId.value = null
     await lubricacionStore.cargarMatriz()
   } catch (err: unknown) {
     toast.error(err instanceof Error ? err.message : 'Error al registrar la inspección')
+  }
+}
+
+// Finalizar wizard de línea: enviar en secuencia todos los equipos acumulados en borradores
+const enviandoLinea = ref(false)
+async function finalizarWizardLinea() {
+  // Guardar el borrador del equipo actual antes de iterar
+  const filaActual = equipoWizardActual.value
+  if (filaActual) guardarBorradorEquipoActual(filaActual.equipoId)
+
+  // Validar que la línea tenga al menos un equipo
+  if (equiposLineaWizard.value.length === 0) {
+    toast.error('No hay equipos en la línea seleccionada.')
+    return
+  }
+
+  // Validar que se hayan chequeado TODOS los equipos de la ubicación técnica
+  const equiposSinChequear = equiposLineaWizard.value.filter(f => !borradoresPorEquipo.value[f.equipoId])
+  if (equiposSinChequear.length > 0) {
+    const primerPendiente = equiposSinChequear[0]
+    toast.warning(`La inspección no puede terminar hasta que se chequeen todos los equipos de la ubicación técnica. Faltan ${equiposSinChequear.length} equipo(s), incluyendo "${primerPendiente.equipoNombre}".`)
+    const idx = equiposLineaWizard.value.indexOf(primerPendiente)
+    if (idx >= 0) {
+      equipoWizardIndice.value = idx
+      sincronizarFormularioConEquipo(primerPendiente)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+    return
+  }
+
+  // Construir y validar todos los payloads antes de enviar
+  const payloads: RegistrarRutinaPayload[] = []
+  for (const fila of equiposLineaWizard.value) {
+    const borrador = borradoresPorEquipo.value[fila.equipoId]
+    const detalles = borrador ? borrador.detalles : detallesInspeccion.value
+    const horometro = borrador ? borrador.nuevoHorometro : nuevoHorometro.value
+    const reemplazo = borrador ? borrador.esReemplazoReloj : esReemplazoReloj.value
+    const justificacion = borrador ? borrador.justificacionReemplazo : justificacionReemplazo.value
+    const obs = borrador ? borrador.observacionesRutina : observacionesRutina.value
+
+    // Validar horómetro regresivo no justificado
+    if (horometro < fila.horometroActual && !reemplazo) {
+      toast.error(`El horómetro del equipo "${fila.equipoNombre}" es menor al anterior y no está justificado. Corrija antes de enviar.`)
+      // Navegar al equipo problemático
+      const idx = equiposLineaWizard.value.indexOf(fila)
+      if (idx >= 0) {
+        equipoWizardIndice.value = idx
+        sincronizarFormularioConEquipo(fila)
+      }
+      return
+    }
+
+    const payload = construirPayloadEquipo(fila, detalles, horometro, reemplazo, justificacion, obs)
+    if (!payload) return
+    payloads.push(payload)
+  }
+
+  // Enviar todos secuencialmente
+  enviandoLinea.value = true
+  try {
+    for (const payload of payloads) {
+      await lubricacionStore.registrarRutina(payload)
+    }
+    toast.success(`Rutina de lubricación registrada para ${payloads.length} equipo(s) de la línea "${lineaAlcance.value}".`)
+    borradoresPorEquipo.value = {}
+    lineaAlcance.value = null
+    equipoWizardIndice.value = 0
+    detallesInspeccion.value = []
+    await lubricacionStore.cargarMatriz()
+  } catch (err: unknown) {
+    toast.error(err instanceof Error ? err.message : 'Error al registrar la inspección de línea')
+  } finally {
+    enviandoLinea.value = false
   }
 }
 </script>
@@ -479,6 +623,10 @@ async function guardarInspeccion() {
         <v-chip v-if="filaEquipoActual" size="x-small" class="ms-2" color="primary" variant="tonal">
           {{ filaEquipoActual.puntos.length }}
         </v-chip>
+      </v-tab>
+      <v-tab v-if="puedeGestionarPartes" value="plantillas">
+        <v-icon start>mdi-file-tree-outline</v-icon>
+        Plantillas por Tipo de Equipo
       </v-tab>
       <v-tab v-if="puedeRegistrarInspeccion" value="inspeccion">
         <v-icon start>mdi-clipboard-check-outline</v-icon>
@@ -744,7 +892,14 @@ async function guardarInspeccion() {
       </v-window-item>
 
       <!-- ═══════════════════════════════════════════════════════════════════ -->
-      <!-- PESTAÑA 2: (INSPECCIÓN) DE LUBRICACIÓN (TOMA OPERATIVA DIARIA)     -->
+      <!-- PESTAÑA 2: PLANTILLAS DE LUBRICACIÓN POR TIPO DE EQUIPO           -->
+      <!-- ═══════════════════════════════════════════════════════════════════ -->
+      <v-window-item v-if="puedeGestionarPartes" value="plantillas">
+        <PlantillasLubricacionPanel />
+      </v-window-item>
+
+      <!-- ═══════════════════════════════════════════════════════════════════ -->
+      <!-- PESTAÑA 3: (INSPECCIÓN) DE LUBRICACIÓN (TOMA OPERATIVA DIARIA)     -->
       <!-- ═══════════════════════════════════════════════════════════════════ -->
       <v-window-item v-if="puedeRegistrarInspeccion" value="inspeccion">
 
@@ -757,10 +912,10 @@ async function guardarInspeccion() {
               </v-avatar>
               <div>
                 <v-card-title class="text-subtitle-1 font-weight-bold mb-0">
-                  Seleccionar Equipo a Inspeccionar
+                  Seleccionar Alcance de Inspección
                 </v-card-title>
                 <v-card-subtitle class="text-caption">
-                  Filtre por planta, línea o busque el equipo directamente. Cada inspección se registra por máquina individual.
+                  Por Línea: inspección grupal de todos los equipos de la ubicación. Por Maquinaria: inspección individual.
                 </v-card-subtitle>
               </div>
             </div>
@@ -830,8 +985,8 @@ async function guardarInspeccion() {
                 </v-alert>
               </v-col>
 
-              <!-- 4. Selector de Equipo a Inspeccionar (siempre) -->
-              <v-col cols="12">
+              <!-- 4. Selector de Equipo individual (solo cuando NO es modo LINEA) -->
+              <v-col v-if="alcanceInspeccion !== 'LINEA'" cols="12">
                 <v-autocomplete
                   v-model="equipoInspeccionId"
                   :items="equiposAlcanceDisponibles"
@@ -876,9 +1031,60 @@ async function guardarInspeccion() {
               </v-col>
             </v-row>
 
-            <!-- Info del equipo seleccionado para inspeccionar -->
+            <!-- ── Barra de progreso y chips de equipos (modo LINEA) ── -->
+            <div v-if="modoWizardLinea && equiposLineaWizard.length > 0" class="mt-4">
+              <div class="d-flex align-center justify-space-between mb-1">
+                <span class="text-caption text-medium-emphasis">
+                  Línea <strong>{{ lineaAlcance }}</strong> &mdash;
+                  Equipo {{ equipoWizardIndice + 1 }} de {{ equiposLineaWizard.length }}
+                  <span v-if="equiposCompletados > 0" class="ms-1 text-success">
+                    ({{ equiposCompletados }} listo(s))
+                  </span>
+                </span>
+                <v-chip size="x-small" color="primary" variant="tonal" class="font-weight-bold">
+                  {{ equipoWizardIndice + 1 }} / {{ equiposLineaWizard.length }}
+                </v-chip>
+              </div>
+              <v-progress-linear
+                :model-value="((equipoWizardIndice + 1) / equiposLineaWizard.length) * 100"
+                color="primary"
+                height="6"
+                rounded
+                bg-color="primary"
+                bg-opacity="0.15"
+                class="mb-2"
+              />
+              <div class="d-flex flex-wrap gap-1">
+                <v-chip
+                  v-for="(fila, idx) in equiposLineaWizard"
+                  :key="fila.equipoId"
+                  :color="idx === equipoWizardIndice ? 'primary' : (borradoresPorEquipo[fila.equipoId] ? 'success' : 'default')"
+                  :variant="idx === equipoWizardIndice ? 'flat' : 'tonal'"
+                  size="small"
+                  class="cursor-pointer"
+                  @click="() => { guardarBorradorEquipoActual(equipoWizardActual?.equipoId ?? null); equipoWizardIndice = idx; sincronizarFormularioConEquipo(fila) }"
+                >
+                  <v-icon v-if="borradoresPorEquipo[fila.equipoId] && idx !== equipoWizardIndice" start size="12">mdi-check-circle</v-icon>
+                  {{ fila.equipoCodigo }}
+                </v-chip>
+              </div>
+            </div>
+
+            <!-- Sin equipos en la línea -->
             <v-alert
-              v-if="filaEquipoInspeccion && filaEquipoInspeccion.puntos.length === 0"
+              v-if="modoWizardLinea && equiposLineaWizard.length === 0"
+              type="warning"
+              density="compact"
+              variant="tonal"
+              class="mt-3 mb-0"
+              prepend-icon="mdi-alert-outline"
+            >
+              La línea seleccionada no tiene equipos con puntos de lubricación configurados.
+            </v-alert>
+
+            <!-- Equipo individual sin partes (modo no-LINEA) -->
+            <v-alert
+              v-if="!modoWizardLinea && filaEquipoInspeccion && filaEquipoInspeccion.puntos.length === 0"
               type="warning"
               density="compact"
               variant="tonal"
@@ -890,8 +1096,8 @@ async function guardarInspeccion() {
           </v-card-text>
         </v-card>
 
-        <!-- ── Tarjeta de Horómetro Actual para la Inspección ── -->
-        <v-card v-if="filaEquipoInspeccion" class="mb-4 elevation-1 border">
+        <!-- ── Tarjeta de Horómetro del Equipo Activo ── -->
+        <v-card v-if="filaEquipoInspeccionActiva" class="mb-4 elevation-1 border">
           <v-card-text class="py-3">
             <div class="d-flex flex-column flex-md-row justify-space-between align-start align-md-center gap-3">
               <div class="d-flex align-center gap-3">
@@ -900,13 +1106,13 @@ async function guardarInspeccion() {
                 </v-avatar>
                 <div>
                   <div class="text-caption text-medium-emphasis">
-                    Inspección de: <strong>{{ filaEquipoInspeccion.equipoCodigo }} — {{ filaEquipoInspeccion.equipoNombre }}</strong>
+                    Inspección de: <strong>{{ filaEquipoInspeccionActiva.equipoCodigo }} — {{ filaEquipoInspeccionActiva.equipoNombre }}</strong>
                   </div>
                   <div class="text-caption text-medium-emphasis">Último Horómetro Registrado</div>
                   <div class="text-h6 font-weight-bold">
-                    {{ filaEquipoInspeccion.horometroActual.toLocaleString() }} hrs
-                    <span v-if="filaEquipoInspeccion.fechaUltimoHorometro" class="text-caption text-medium-emphasis ms-2">
-                      ({{ new Date(filaEquipoInspeccion.fechaUltimoHorometro).toLocaleDateString() }})
+                    {{ filaEquipoInspeccionActiva.horometroActual.toLocaleString() }} hrs
+                    <span v-if="filaEquipoInspeccionActiva.fechaUltimoHorometro" class="text-caption text-medium-emphasis ms-2">
+                      ({{ new Date(filaEquipoInspeccionActiva.fechaUltimoHorometro).toLocaleDateString() }})
                     </span>
                   </div>
                 </div>
@@ -948,7 +1154,7 @@ async function guardarInspeccion() {
             </div>
 
             <v-alert
-              v-if="nuevoHorometro < filaEquipoInspeccion.horometroActual && !esReemplazoReloj"
+              v-if="nuevoHorometro < filaEquipoInspeccionActiva.horometroActual && !esReemplazoReloj"
               type="warning"
               density="compact"
               variant="tonal"
@@ -992,16 +1198,18 @@ async function guardarInspeccion() {
           </v-card-item>
 
           <v-card-text class="pa-0">
-            <div v-if="!filaEquipoInspeccion" class="text-center py-8 text-medium-emphasis">
+            <div v-if="!filaEquipoInspeccionActiva" class="text-center py-8 text-medium-emphasis">
               <v-icon size="48" color="grey-lighten-1" class="mb-2">mdi-oil-lamp</v-icon>
               <div class="text-subtitle-1">Seleccione un equipo para comenzar la inspección</div>
               <p class="text-caption">Use el selector de alcance de arriba para encontrar y seleccionar la máquina</p>
             </div>
 
-            <div v-else-if="detallesInspeccion.length === 0" class="text-center py-8 text-medium-emphasis">
-              <v-icon size="48" color="grey-lighten-1" class="mb-2">mdi-oil-lamp</v-icon>
-              <div class="text-subtitle-1">No hay partes a lubricar para inspeccionar</div>
-              <p class="text-caption">Vaya a la pestaña "Partes a Lubricar" para configurar los componentes a intervenir</p>
+            <div v-else-if="detallesInspeccion.length === 0" class="pa-8 text-center bg-blue-grey-lighten-5 rounded mx-4 my-4 border">
+              <v-icon size="44" color="info" class="mb-2">mdi-information-outline</v-icon>
+              <div class="text-subtitle-1 font-weight-bold text-high-emphasis">Equipo sin partes de lubricación configuradas</div>
+              <p class="text-caption text-medium-emphasis mb-0">
+                Este equipo no tiene puntos de lubricación asignados. Puede registrar su lectura de horómetro y observaciones para completar la inspección.
+              </p>
             </div>
 
             <div v-else class="tabla-scroll-wrapper">
@@ -1170,9 +1378,10 @@ async function guardarInspeccion() {
             </div>
           </v-card-text>
 
-          <!-- Pie con Guardado Transaccional de la Inspección -->
-          <v-card-actions v-if="detallesInspeccion.length > 0" class="px-3 px-sm-4 py-3">
+          <!-- ── Pie de la Tarjeta: Navegación (modo LINEA) o Guardado Individual ── -->
+          <v-card-actions v-if="filaEquipoInspeccionActiva" class="px-3 px-sm-4 py-3">
             <v-row dense align="center" class="w-100 ma-0">
+              <!-- Observaciones siempre visibles -->
               <v-col cols="12" md="7" class="pa-1">
                 <v-text-field
                   v-model="observacionesRutina"
@@ -1183,7 +1392,50 @@ async function guardarInspeccion() {
                   hide-details
                 />
               </v-col>
-              <v-col cols="12" md="5" class="pa-1 d-flex justify-stretch justify-md-end">
+
+              <!-- MODO LINEA: Anterior / Siguiente / Finalizar y Enviar -->
+              <v-col v-if="modoWizardLinea" cols="12" md="5" class="pa-1">
+                <div class="d-flex align-center justify-end gap-2 flex-wrap">
+                  <v-btn
+                    variant="tonal"
+                    prepend-icon="mdi-arrow-left"
+                    size="small"
+                    :disabled="esPrimerEquipoWizard"
+                    @click="retrocederEquipoWizard"
+                  >
+                    Anterior
+                  </v-btn>
+
+                  <v-btn
+                    v-if="!esUltimoEquipoWizard"
+                    color="primary"
+                    variant="flat"
+                    append-icon="mdi-arrow-right"
+                    size="small"
+                    @click="avanzarEquipoWizard"
+                  >
+                    Siguiente Equipo
+                  </v-btn>
+
+                  <v-btn
+                    v-else
+                    :color="equiposCompletados < equiposLineaWizard.length ? 'warning' : 'success'"
+                    variant="flat"
+                    :prepend-icon="equiposCompletados < equiposLineaWizard.length ? 'mdi-alert-circle' : 'mdi-check-circle'"
+                    size="small"
+                    :loading="enviandoLinea"
+                    class="font-weight-bold"
+                    @click="finalizarWizardLinea"
+                  >
+                    {{ equiposCompletados < equiposLineaWizard.length
+                      ? `Chequear Todos (${equiposCompletados}/${equiposLineaWizard.length} listos)`
+                      : `Enviar Rutina de Línea (${equiposLineaWizard.length} equipos)` }}
+                  </v-btn>
+                </div>
+              </v-col>
+
+              <!-- MODO INDIVIDUAL: Solo botón guardar -->
+              <v-col v-else cols="12" md="5" class="pa-1 d-flex justify-stretch justify-md-end">
                 <v-btn
                   color="primary"
                   variant="flat"
@@ -1192,7 +1444,7 @@ async function guardarInspeccion() {
                   class="w-100 w-md-auto text-wrap py-2 text-none font-weight-bold"
                   style="min-height: 40px; height: auto;"
                   :loading="lubricacionStore.guardandoRutina"
-                  @click="guardarInspeccion"
+                  @click="guardarInspeccionIndividual"
                 >
                   Registrar Inspección de Lubricación
                 </v-btn>
@@ -1217,11 +1469,11 @@ async function guardarInspeccion() {
 
     <!-- Modal Reemplazo Odómetro -->
     <ModalReemplazoHorometro
-      v-if="filaEquipoInspeccion"
+      v-if="filaEquipoInspeccionActiva"
       v-model="modalReemplazoVisible"
-      :horometro-actual="filaEquipoInspeccion.horometroActual"
+      :horometro-actual="filaEquipoInspeccionActiva.horometroActual"
       :nuevo-horometro="nuevoHorometro"
-      :equipo-nombre="filaEquipoInspeccion.equipoNombre"
+      :equipo-nombre="filaEquipoInspeccionActiva.equipoNombre"
       @confirmar="onConfirmarReemplazoReloj"
       @cancelar="onCancelarReemplazoReloj"
     />

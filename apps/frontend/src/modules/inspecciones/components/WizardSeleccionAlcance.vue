@@ -58,10 +58,16 @@ const opcionesTiposInspeccion = [
     desc: 'Rutina interdiaria: parámetros eléctricos, combustible, refrigerante y alternador'
   },
   {
-    title: 'Rutina de Inspección Montacargas',
-    value: 'MONTACARGAS',
+    title: 'Montacargas — Rutina Diaria',
+    value: 'MONTACARGAS_DIARIO',
     icon: 'mdi-forklift',
-    desc: 'Inspección de operatividad, niveles y seguridad de flota móvil'
+    desc: 'Inspección diaria de operatividad, niveles de fluidos y seguridad antes de turno'
+  },
+  {
+    title: 'Montacargas — Rutina Semanal',
+    value: 'MONTACARGAS_SEMANAL',
+    icon: 'mdi-forklift',
+    desc: 'Inspección semanal integral: mástil, cadenas, rodamientos, batería y dirección'
   }
 ]
 
@@ -75,7 +81,9 @@ const nombreCategoria = computed(() => {
     case 'CHILLER_SEMANAL': return 'Chillers'
     case 'COMPRESOR': return 'Compresores'
     case 'GENERADOR': return 'Generadores'
-    case 'MONTACARGAS': return 'Montacargas'
+    case 'MONTACARGAS':
+    case 'MONTACARGAS_DIARIO':
+    case 'MONTACARGAS_SEMANAL': return 'Montacargas'
     default: return 'Maquinarias'
   }
 })
@@ -280,7 +288,11 @@ const equiposRutinaEspecifica = computed(() => {
     filtrados = filtrados.filter((e) => (e.tipoEquipo?.nombre || '').toLowerCase().includes('compresor'))
   } else if (tipoInspeccion.value === 'GENERADOR') {
     filtrados = filtrados.filter((e) => (e.tipoEquipo?.nombre || '').toLowerCase().includes('generador'))
-  } else if (tipoInspeccion.value === 'MONTACARGAS') {
+  } else if (
+    tipoInspeccion.value === 'MONTACARGAS' ||
+    tipoInspeccion.value === 'MONTACARGAS_DIARIO' ||
+    tipoInspeccion.value === 'MONTACARGAS_SEMANAL'
+  ) {
     filtrados = filtrados.filter((e) => (e.tipoEquipo?.nombre || '').toLowerCase().includes('montacarg'))
   }
 

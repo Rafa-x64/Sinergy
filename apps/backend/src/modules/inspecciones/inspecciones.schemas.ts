@@ -28,6 +28,7 @@ export interface EvaluarInspeccionDTO {
 
 export interface FiltrosInspeccionDTO {
   plantaId?: number
+  plantasIds?: number[]
   estado?: EstadoInspeccion
   tipoInspeccion?: TipoInspeccion
   fechaInicio?: string

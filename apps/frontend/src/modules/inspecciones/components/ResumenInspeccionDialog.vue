@@ -63,7 +63,11 @@ defineExpose({ abrir, cerrar })
                 : store.tipoInspeccionSeleccionado === 'GENERADOR'
                 ? 'Rutina de Inspección Generadores'
                 : store.tipoInspeccionSeleccionado === 'MONTACARGAS'
-                ? 'Rutina de Inspección Montacargas'
+                ? 'Rutina de Inspección Montacargas (Legado)'
+                : store.tipoInspeccionSeleccionado === 'MONTACARGAS_DIARIO'
+                ? 'Montacargas — Rutina Diaria'
+                : store.tipoInspeccionSeleccionado === 'MONTACARGAS_SEMANAL'
+                ? 'Montacargas — Rutina Semanal'
                 : 'Variables Críticas de Planta'
             }}
           </v-chip>

@@ -40,7 +40,7 @@ const tipoInspeccionAsociado = computed<TipoInspeccion | null>(() => {
   if (t.includes('chiller')) return 'CHILLER_DIARIO'
   if (t.includes('compresor')) return 'COMPRESOR'
   if (t.includes('generador')) return 'GENERADOR'
-  if (t.includes('montacarg')) return 'MONTACARGAS'
+  if (t.includes('montacarg')) return 'MONTACARGAS_DIARIO'
   return null
 })
 

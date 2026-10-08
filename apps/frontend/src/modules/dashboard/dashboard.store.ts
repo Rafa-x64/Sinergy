@@ -9,10 +9,21 @@ export interface DisponibilidadItem {
 }
 
 export interface DisponibilidadPorPlanta {
+  codigo: string
   nombre: string
   OPERATIVO: number
   INOPERATIVO: number
   EN_MANTENIMIENTO: number
+}
+
+export interface UbicacionTecnicaItem {
+  id: number
+  codigo: string
+  nombre: string
+  plantaId: number
+  plantaCodigo: string
+  plantaNombre: string
+  esSAUX: boolean
 }
 
 export interface TopFallaItem {
@@ -181,6 +192,10 @@ export const useDashboardStore = defineStore('dashboard', () => {
   const cargaTecnico = ref<CargaTecnicoItem[]>([])
   const cargandoCargaTecnico = ref(false)
 
+  // Catálogo de ubicaciones técnicas para filtrado del dashboard
+  const listaUbicaciones = ref<UbicacionTecnicaItem[]>([])
+  const cargandoUbicaciones = ref(false)
+
   // R1: Estado de Flota
   const reporteFlota = ref<ReporteFlotaResult | null>(null)
   const cargandoFlota = ref(false)
@@ -203,10 +218,13 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
   // ─── ACCIONES ───────────────────────────────────────────────────────────────
 
-  async function cargarDisponibilidad(plantaId?: number) {
+  async function cargarDisponibilidad(plantaId?: number, ubicacionTecnicaId?: number) {
     cargandoDisponibilidad.value = true
     try {
-      const res = await api.get('/dashboard/disponibilidad', { params: plantaId ? { plantaId } : {} })
+      const params: Record<string, number> = {}
+      if (plantaId) params.plantaId = plantaId
+      if (ubicacionTecnicaId) params.ubicacionTecnicaId = ubicacionTecnicaId
+      const res = await api.get('/dashboard/disponibilidad', { params })
       if (res.data?.status === 'ok') {
         disponibilidadGlobal.value = res.data.data.global
         disponibilidadPorPlanta.value = res.data.data.porPlanta
@@ -249,13 +267,23 @@ export const useDashboardStore = defineStore('dashboard', () => {
   async function cargarCargaTecnico(plantaId?: number, mes?: string) {
     cargandoCargaTecnico.value = true
     try {
-      const params: any = {}
+      const params: Record<string, unknown> = {}
       if (plantaId) params.plantaId = plantaId
       if (mes) params.mes = mes
       const res = await api.get('/dashboard/carga-tecnico', { params })
       if (res.data?.status === 'ok') cargaTecnico.value = res.data.data
     } finally {
       cargandoCargaTecnico.value = false
+    }
+  }
+
+  async function cargarUbicacionesTecnicas(plantaId?: number) {
+    cargandoUbicaciones.value = true
+    try {
+      const res = await api.get('/dashboard/ubicaciones-tecnicas', { params: plantaId ? { plantaId } : {} })
+      if (res.data?.status === 'ok') listaUbicaciones.value = res.data.data
+    } finally {
+      cargandoUbicaciones.value = false
     }
   }
 
@@ -325,9 +353,9 @@ export const useDashboardStore = defineStore('dashboard', () => {
     }
   }
 
-  async function cargarTodosLosKpis(plantaId?: number) {
+  async function cargarTodosLosKpis(plantaId?: number, ubicacionTecnicaId?: number) {
     await Promise.all([
-      cargarDisponibilidad(plantaId),
+      cargarDisponibilidad(plantaId, ubicacionTecnicaId),
       cargarTopFallas(plantaId),
       cargarTopRiesgo(plantaId),
       cargarEvolucion(plantaId),
@@ -347,6 +375,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
     cargandoEvolucion,
     cargaTecnico,
     cargandoCargaTecnico,
+    listaUbicaciones,
+    cargandoUbicaciones,
     reporteFlota,
     cargandoFlota,
     reporteEjecutivo,
@@ -362,6 +392,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
     cargarTopRiesgo,
     cargarEvolucion,
     cargarCargaTecnico,
+    cargarUbicacionesTecnicas,
     cargarReporteFlota,
     cargarReporteEjecutivo,
     cargarMatrizCriticidad,

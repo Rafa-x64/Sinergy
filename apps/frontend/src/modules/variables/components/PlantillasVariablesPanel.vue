@@ -23,7 +23,8 @@ const opcionesFiltroInspeccion: { label: string; value: TipoInspeccion | 'TODOS'
   { label: 'Chillers (Semanal)', value: 'CHILLER_SEMANAL', icon: 'mdi-snowflake-variant', color: 'cyan-darken-3' },
   { label: 'Compresores', value: 'COMPRESOR', icon: 'mdi-gauge', color: 'deep-orange-darken-1' },
   { label: 'Generadores', value: 'GENERADOR', icon: 'mdi-generator-portable', color: 'amber-darken-2' },
-  { label: 'Montacargas', value: 'MONTACARGAS', icon: 'mdi-forklift', color: 'purple-darken-1' }
+  { label: 'Montacargas (Diaria)', value: 'MONTACARGAS_DIARIO', icon: 'mdi-forklift', color: 'purple-darken-1' },
+  { label: 'Montacargas (Semanal)', value: 'MONTACARGAS_SEMANAL', icon: 'mdi-forklift', color: 'purple-darken-3' }
 ]
 
 // ─── CONTROL DE DIÁLOGOS DE CONFIRMACIÓN ──────────────────────────────────────
@@ -161,7 +162,10 @@ const obtenerColorInspeccion = (tipo?: TipoInspeccion | null): string => {
     case 'GENERADOR':
       return 'amber-darken-2'
     case 'MONTACARGAS':
+    case 'MONTACARGAS_DIARIO':
       return 'purple-darken-1'
+    case 'MONTACARGAS_SEMANAL':
+      return 'purple-darken-3'
     case 'VARIABLES_CRITICAS':
     default:
       return 'teal-darken-1'
@@ -181,7 +185,11 @@ const formatearInspeccion = (tipo?: TipoInspeccion | null): string => {
     case 'GENERADOR':
       return 'Generador'
     case 'MONTACARGAS':
-      return 'Montacargas'
+      return 'Montacargas (Legado)'
+    case 'MONTACARGAS_DIARIO':
+      return 'Montacargas (Diaria)'
+    case 'MONTACARGAS_SEMANAL':
+      return 'Montacargas (Semanal)'
     case 'VARIABLES_CRITICAS':
     default:
       return 'Variables Críticas'

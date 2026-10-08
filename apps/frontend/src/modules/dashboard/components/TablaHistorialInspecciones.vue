@@ -14,10 +14,10 @@ const opcionesTiposInspeccion = [
   { title: "Variables Críticas de Planta", value: "VARIABLES_CRITICAS" },
   { title: "Chillers — Rutina Diaria", value: "CHILLER_DIARIO" },
   { title: "Chillers — Rutina Semanal", value: "CHILLER_SEMANAL" },
-  { title: "Chillers (Legado)", value: "CHILLER" },
   { title: "Rutina Compresores", value: "COMPRESOR" },
   { title: "Rutina Generadores", value: "GENERADOR" },
-  { title: "Rutina Montacargas", value: "MONTACARGAS" }
+  { title: "Montacargas — Rutina Diaria", value: "MONTACARGAS_DIARIO" },
+  { title: "Montacargas — Rutina Semanal", value: "MONTACARGAS_SEMANAL" }
 ]
 
 const headers = [
@@ -47,7 +47,9 @@ function etiquetaRutina(tipo?: string) {
     case 'CHILLER_SEMANAL': return 'Chillers Semanal'
     case 'COMPRESOR': return 'Compresores'
     case 'GENERADOR': return 'Generadores'
-    case 'MONTACARGAS': return 'Montacargas'
+    case 'MONTACARGAS': return 'Montacargas (Legado)'
+    case 'MONTACARGAS_DIARIO': return 'Montacargas Diaria'
+    case 'MONTACARGAS_SEMANAL': return 'Montacargas Semanal'
     case 'VARIABLES_CRITICAS': return 'Var. Críticas'
     default: return tipo || 'General'
   }
@@ -60,7 +62,9 @@ function colorRutina(tipo?: string) {
     case 'CHILLER_SEMANAL': return 'cyan'
     case 'COMPRESOR': return 'indigo'
     case 'GENERADOR': return 'amber'
-    case 'MONTACARGAS': return 'deep-orange'
+    case 'MONTACARGAS':
+    case 'MONTACARGAS_DIARIO':
+    case 'MONTACARGAS_SEMANAL': return 'deep-orange'
     case 'VARIABLES_CRITICAS': return 'teal'
     default: return 'secondary'
   }
@@ -244,7 +248,7 @@ onMounted(() => {
           </td>
           <td>
             <v-chip size="x-small" color="secondary" variant="flat">
-              {{ item._count?.detalles || 0 }} vars
+              {{ item._count?.detalles ?? 0 }} vars
             </v-chip>
           </td>
         </tr>

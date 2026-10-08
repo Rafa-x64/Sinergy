@@ -1,16 +1,30 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useToast } from 'vue-toastification'
 import { useInspeccionesStore } from '../inspecciones.store'
+import { useAuthStore } from '@/modules/auth/auth.store'
 import ModalImpresionInspeccion from './ModalImpresionInspeccion.vue'
 
 const toast = useToast()
 const store = useInspeccionesStore()
+const authStore = useAuthStore()
 
 const mostrarModal = ref(false)
 const mostrarFormRechazo = ref(false)
 const motivoRechazoText = ref('')
 const refModalImpresion = ref<InstanceType<typeof ModalImpresionInspeccion> | null>(null)
+
+const observacionesGeneralesLimpias = computed(() => {
+  const texto = store.inspeccionActiva?.observacionesGenerales
+  if (!texto || !texto.trim()) return null
+  if (texto.includes('[RUTINA DE LUBRICACIÓN Y HORÓMETROS') || texto.includes('Resumen de Puntos Evaluados')) {
+    const match = texto.match(/Observaciones del Técnico:\s*([\s\S]*?)(?=\nResumen de Puntos Evaluados|$)/)
+    return match && match[1]?.trim() ? match[1].trim() : null
+  }
+  return texto
+})
+
+const puedeEvaluar = computed(() => authStore.puedeEvaluarInspecciones)
 
 const abrir = () => {
   mostrarModal.value = true
@@ -28,11 +42,16 @@ const imprimirInspeccion = () => {
   }
 }
 
+const emit = defineEmits<{
+  (e: 'evaluada'): void
+}>()
+
 const aprobarInspeccion = async () => {
   if (!store.inspeccionActiva) return
   const res = await store.evaluarInspeccion(store.inspeccionActiva.id, 'APROBADO')
   if (res.status === 'ok') {
     toast.success(res.message ?? 'Inspección APROBADA exitosamente')
+    emit('evaluada')
     cerrar()
   } else {
     toast.error(res.message ?? 'Error al aprobar inspección')
@@ -48,6 +67,7 @@ const rechazarInspeccion = async () => {
   const res = await store.evaluarInspeccion(store.inspeccionActiva.id, 'RECHAZADO', motivoRechazoText.value)
   if (res.status === 'ok') {
     toast.success(res.message ?? 'Inspección RECHAZADA')
+    emit('evaluada')
     cerrar()
   } else {
     toast.error(res.message ?? 'Error al rechazar inspección')
@@ -153,13 +173,31 @@ defineExpose({ abrir, cerrar })
           </v-col>
         </v-row>
 
+        <!-- Alerta de Inspección Rechazada -->
+        <v-alert
+          v-if="store.inspeccionActiva.estadoInspeccion === 'RECHAZADO'"
+          type="error"
+          variant="tonal"
+          density="comfortable"
+          class="mb-4 rounded-lg"
+          prepend-icon="mdi-alert-octagon-outline"
+        >
+          <div class="text-subtitle-2 font-weight-bold">Esta inspección se encuentra Rechazada</div>
+          <div class="text-caption">
+            <strong>Motivo del Rechazo:</strong> {{ store.inspeccionActiva.motivoRechazo || 'Sin motivo detallado' }}
+          </div>
+          <div v-if="puedeEvaluar" class="text-caption text-medium-emphasis mt-1">
+            Como supervisor o administrador, puedes reevaluar y aprobar esta inspección utilizando el botón inferior.
+          </div>
+        </v-alert>
+
         <!-- Observaciones Generales del Técnico -->
-        <div v-if="store.inspeccionActiva.observacionesGenerales" class="mb-4 pa-3 bg-blue-grey-lighten-5 border rounded">
+        <div v-if="observacionesGeneralesLimpias" class="mb-4 pa-3 bg-blue-grey-lighten-5 border rounded">
           <div class="text-caption font-weight-bold mb-1" style="color: #5cb85c;">
             <v-icon size="14" color="#5cb85c" class="mr-1">mdi-text-box-outline</v-icon>
-            Observaciones Generales y Resumen de la Inspección:
+            Observaciones Generales de la Inspección:
           </div>
-          <div class="text-body-2 mb-0 text-high-emphasis font-weight-regular" style="white-space: pre-wrap; line-height: 1.5;">{{ store.inspeccionActiva.observacionesGenerales }}</div>
+          <div class="text-body-2 mb-0 text-high-emphasis font-weight-regular" style="white-space: pre-wrap; line-height: 1.5;">{{ observacionesGeneralesLimpias }}</div>
         </div>
 
         <!-- Caso A: Tabla de Variables Evaluadas (Inspecciones con variables específicas) -->
@@ -176,7 +214,6 @@ defineExpose({ abrir, cerrar })
                   <th class="text-center font-weight-bold">Rango Normativo</th>
                   <th class="text-center font-weight-bold">Valor Medido</th>
                   <th class="text-center font-weight-bold">Evaluación</th>
-                  <th class="text-left font-weight-bold">Observación Específica</th>
                 </tr>
               </thead>
               <tbody>
@@ -240,11 +277,6 @@ defineExpose({ abrir, cerrar })
                       Conforme
                     </v-chip>
                   </td>
-
-                  <!-- Observación Específica -->
-                  <td class="text-caption text-medium-emphasis">
-                    {{ d.observaciones ? d.observaciones : '—' }}
-                  </td>
                 </tr>
               </tbody>
             </v-table>
@@ -304,8 +336,12 @@ defineExpose({ abrir, cerrar })
 
       <!-- Botones de Acción -->
       <v-card-actions class="pa-4 pt-3 justify-space-between gap-2 border-t">
+        <v-btn variant="text" size="small" @click="cerrar">
+          Cerrar
+        </v-btn>
 
-        <div class="d-flex align-center gap-2" v-if="store.inspeccionActiva.estadoInspeccion === 'PENDIENTE'">
+        <!-- Inspección PENDIENTE: Rechazar o Aprobar -->
+        <div class="d-flex align-center gap-2" v-if="store.inspeccionActiva.estadoInspeccion === 'PENDIENTE' && puedeEvaluar">
           <v-btn
             v-if="!mostrarFormRechazo"
             color="error"
@@ -326,6 +362,19 @@ defineExpose({ abrir, cerrar })
             @click="aprobarInspeccion"
           >
             Aprobar Inspección
+          </v-btn>
+        </div>
+
+        <!-- Inspección RECHAZADA: Permitir Reevaluar y Aprobar -->
+        <div class="d-flex align-center gap-2" v-else-if="store.inspeccionActiva.estadoInspeccion === 'RECHAZADO' && puedeEvaluar">
+          <v-btn
+            color="#5cb85c"
+            variant="flat"
+            prepend-icon="mdi-check-decagram"
+            :loading="store.cargandoAccion"
+            @click="aprobarInspeccion"
+          >
+            Reevaluar y Aprobar Inspección
           </v-btn>
         </div>
       </v-card-actions>

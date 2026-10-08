@@ -2,9 +2,12 @@ import prisma from '../../core/prisma'
 import { RegistrarPlantaDTO, EditarPlantaDTO } from './planta.schemas'
 
 class PlantaService {
-    async obtener(plantaId?: number){
+    async obtener(plantaId?: number, plantasIds?: number[]){
         if (plantaId !== undefined) {
             return prisma.planta.findMany({ where: { id: plantaId } })
+        }
+        if (plantasIds && plantasIds.length > 0) {
+            return prisma.planta.findMany({ where: { id: { in: plantasIds } } })
         }
         return prisma.planta.findMany()
     }

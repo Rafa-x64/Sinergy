@@ -82,8 +82,20 @@ const doughnutOptions = {
   }
 }
 
+function siglaPlanta(p: DisponibilidadPorPlanta): string {
+  const cod = p.codigo?.toUpperCase() || ''
+  const nom = p.nombre?.toUpperCase() || ''
+  if (cod.includes('EXT') || nom.includes('EXTRUSION')) return 'EXT'
+  if (cod.includes('INY') || nom.includes('INYECCION')) return 'INY'
+  if (cod.includes('PLM') || nom.includes('MEZCLA')) return 'PLM'
+  if (cod.includes('DES') || nom.includes('DESPACHO')) return 'DES'
+  const partes = cod.split('-')
+  if (partes.length > 1 && partes[1]) return partes[1]
+  return p.codigo || p.nombre
+}
+
 const barData = computed(() => ({
-  labels: props.porPlanta.map(p => p.nombre),
+  labels: props.porPlanta.map(p => siglaPlanta(p)),
   datasets: [
     {
       label: "Operativo",
@@ -143,7 +155,17 @@ const barOptions = {
       borderColor: "rgba(255, 255, 255, 0.1)",
       borderWidth: 1,
       padding: 10,
-      cornerRadius: 8
+      cornerRadius: 8,
+      callbacks: {
+        title: (items: any) => {
+          const idx = items[0]?.dataIndex
+          if (idx !== undefined && props.porPlanta[idx]) {
+            const p = props.porPlanta[idx]
+            return `${siglaPlanta(p)} — ${p.nombre}`
+          }
+          return items[0]?.label || ''
+        }
+      }
     }
   }
 }

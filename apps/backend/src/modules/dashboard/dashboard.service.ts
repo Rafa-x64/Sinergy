@@ -5,11 +5,12 @@ export class DashboardService {
   /**
    * KPI A — Disponibilidad de equipos agrupada por estadoOperativo.
    */
-  async disponibilidadEquipos(plantaId?: number) {
+  async disponibilidadEquipos(plantaId?: number, ubicacionTecnicaId?: number) {
     const rows = await prisma.equipo.groupBy({
       by: ['estadoOperativo'],
       where: {
-        ...(plantaId && {
+        ...(ubicacionTecnicaId && { ubicacionTecnicaId }),
+        ...(!ubicacionTecnicaId && plantaId && {
           ubicacionTecnica: { plantaId }
         })
       },
@@ -26,12 +27,43 @@ export class DashboardService {
   }
 
   /**
+   * Lista ubicaciones técnicas con su planta para poblar filtros del dashboard.
+   * Si se pasa plantaId, filtra por planta; de lo contrario retorna todas.
+   */
+  async listarUbicacionesTecnicas(plantaId?: number) {
+    const ubicaciones = await prisma.ubicacionTecnica.findMany({
+      where: {
+        activa: true,
+        ...(plantaId && { plantaId })
+      },
+      select: {
+        id: true,
+        codigo: true,
+        nombre: true,
+        planta: { select: { id: true, codigo: true, nombre: true } }
+      },
+      orderBy: [{ planta: { nombre: 'asc' } }, { nombre: 'asc' }]
+    })
+
+    return ubicaciones.map(u => ({
+      id: u.id,
+      codigo: u.codigo,
+      nombre: u.nombre,
+      plantaId: u.planta.id,
+      plantaCodigo: u.planta.codigo,
+      plantaNombre: u.planta.nombre,
+      esSAUX: u.codigo.toUpperCase().includes('SAUX')
+    }))
+  }
+
+  /**
    * KPI A — Disponibilidad desglosada por planta.
    */
-  async disponibilidadPorPlanta(plantaId?: number) {
+  async disponibilidadPorPlanta(plantaId?: number, ubicacionTecnicaId?: number) {
     const equipos = await prisma.equipo.findMany({
       where: {
-        ...(plantaId && {
+        ...(ubicacionTecnicaId && { ubicacionTecnicaId }),
+        ...(!ubicacionTecnicaId && plantaId && {
           ubicacionTecnica: { plantaId }
         })
       },
@@ -45,14 +77,14 @@ export class DashboardService {
       }
     })
 
-    const mapaPlanta: Record<string, { nombre: string; OPERATIVO: number; INOPERATIVO: number; EN_MANTENIMIENTO: number }> = {}
+    const mapaPlanta: Record<string, { codigo: string; nombre: string; OPERATIVO: number; INOPERATIVO: number; EN_MANTENIMIENTO: number }> = {}
 
     for (const e of equipos) {
       const planta = e.ubicacionTecnica?.planta
       if (!planta) continue
       const key = String(planta.id)
       if (!mapaPlanta[key]) {
-        mapaPlanta[key] = { nombre: planta.nombre, OPERATIVO: 0, INOPERATIVO: 0, EN_MANTENIMIENTO: 0 }
+        mapaPlanta[key] = { codigo: planta.codigo, nombre: planta.nombre, OPERATIVO: 0, INOPERATIVO: 0, EN_MANTENIMIENTO: 0 }
       }
       mapaPlanta[key][e.estadoOperativo]++
     }
@@ -595,7 +627,8 @@ export class DashboardService {
           planta: { select: { id: true, codigo: true, nombre: true } },
           equipo: { select: { id: true, codigo: true, nombre: true } },
           tipoEquipo: { select: { id: true, nombre: true } },
-          _count: { select: { detalles: true } }
+          _count: { select: { detalles: true } },
+          rutinaLubricacion: { select: { _count: { select: { detalles: true } } } }
         }
       }),
       prisma.inspeccion.count({ where }),
@@ -608,7 +641,15 @@ export class DashboardService {
       aprobadas,
       rechazadas,
       tasaAprobacion: total > 0 ? Math.round((aprobadas / total) * 100) : 0,
-      inspecciones: inspecciones.map(i => ({ ...i, id: String(i.id) }))
+      inspecciones: inspecciones.map(i => ({
+        ...i,
+        id: String(i.id),
+        _count: {
+          detalles: i.tipoInspeccion === 'LUBRICACION'
+            ? (i.rutinaLubricacion?._count?.detalles ?? i._count?.detalles ?? 0)
+            : (i._count?.detalles ?? 0)
+        }
+      }))
     }
   }
 

@@ -57,7 +57,7 @@ export const authController = {
 
   async registrar(req: Request, res: Response, next: NextFunction) {
     try {
-      const { nombre, apellido, email, nombreUsuario, password, activo, rolId, plantaId, supervisorId } = req.body
+      const { nombre, apellido, email, nombreUsuario, password, activo, rolId, plantaId, plantasIds, supervisorId } = req.body
 
       if (!nombre || typeof nombre !== 'string' || !nombre.trim()) {
         return res.status(400).json({ status: 'error', message: 'El nombre es requerido' })
@@ -97,6 +97,12 @@ export const authController = {
         }
       }
 
+      if (plantasIds !== undefined && plantasIds !== null) {
+        if (!Array.isArray(plantasIds) || plantasIds.some(p => typeof p !== 'number' || !Number.isInteger(p) || p <= 0)) {
+          return res.status(400).json({ status: 'error', message: 'El campo plantasIds debe ser un array de números enteros positivos' })
+        }
+      }
+
       const nombreUsuarioExistente = await authService.buscarPorNombreUsuario(nombreUsuarioLimpio)
       if (nombreUsuarioExistente !== null) {
         return res.status(409).json({ status: 'error', message: `Ya existe un usuario registrado con el nombre ${nombreUsuarioLimpio}` })
@@ -120,6 +126,7 @@ export const authController = {
         activo: typeof activo === 'boolean' ? activo : true,
         rolId,
         plantaId: plantaId ?? null,
+        plantasIds: plantasIds ?? (plantaId ? [plantaId] : []),
         supervisorId: supervisorId ?? null,
       })
 
@@ -139,7 +146,7 @@ export const authController = {
         return res.status(400).json({ status: 'error', message: 'El ID proporcionado no es válido' })
       }
 
-      const { nombre, apellido, email, nombreUsuario, password, activo, rolId, plantaId, supervisorId } = req.body
+      const { nombre, apellido, email, nombreUsuario, password, activo, rolId, plantaId, plantasIds, supervisorId } = req.body
 
       if (Object.keys(req.body).length === 0) {
         return res.status(400).json({ status: 'error', message: 'Debe proporcionar al menos un campo para actualizar' })
@@ -208,6 +215,13 @@ export const authController = {
           return res.status(400).json({ status: 'error', message: 'El campo plantaId debe ser un número entero positivo o null' })
         }
         datosActualizados.plantaId = plantaId
+      }
+
+      if (plantasIds !== undefined) {
+        if (plantasIds !== null && (!Array.isArray(plantasIds) || plantasIds.some(p => typeof p !== 'number' || !Number.isInteger(p) || p <= 0))) {
+          return res.status(400).json({ status: 'error', message: 'El campo plantasIds debe ser un array de números enteros positivos' })
+        }
+        datosActualizados.plantasIds = plantasIds ?? []
       }
 
       if (supervisorId !== undefined) {

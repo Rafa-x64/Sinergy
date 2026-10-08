@@ -52,10 +52,10 @@ const opcionesTiposInspeccionR2 = [
   { title: "Variables Críticas de Planta", value: "VARIABLES_CRITICAS" },
   { title: "Chillers — Rutina Diaria", value: "CHILLER_DIARIO" },
   { title: "Chillers — Rutina Semanal", value: "CHILLER_SEMANAL" },
-  { title: "Rutina Chillers (Legado)", value: "CHILLER" },
   { title: "Rutina Compresores", value: "COMPRESOR" },
   { title: "Rutina Generadores", value: "GENERADOR" },
-  { title: "Rutina Montacargas", value: "MONTACARGAS" }
+  { title: "Montacargas — Rutina Diaria", value: "MONTACARGAS_DIARIO" },
+  { title: "Montacargas — Rutina Semanal", value: "MONTACARGAS_SEMANAL" }
 ]
 
 function etiquetaRutina(tipo?: string) {
@@ -65,7 +65,9 @@ function etiquetaRutina(tipo?: string) {
     case 'CHILLER_SEMANAL': return 'Chillers Semanal'
     case 'COMPRESOR': return 'Compresores'
     case 'GENERADOR': return 'Generadores'
-    case 'MONTACARGAS': return 'Montacargas'
+    case 'MONTACARGAS': return 'Montacargas (Legado)'
+    case 'MONTACARGAS_DIARIO': return 'Montacargas Diaria'
+    case 'MONTACARGAS_SEMANAL': return 'Montacargas Semanal'
     case 'VARIABLES_CRITICAS': return 'Var. Críticas'
     default: return tipo || 'General'
   }
@@ -78,7 +80,9 @@ function colorRutina(tipo?: string) {
     case 'CHILLER_SEMANAL': return 'cyan'
     case 'COMPRESOR': return 'indigo'
     case 'GENERADOR': return 'amber'
-    case 'MONTACARGAS': return 'deep-orange'
+    case 'MONTACARGAS':
+    case 'MONTACARGAS_DIARIO':
+    case 'MONTACARGAS_SEMANAL': return 'deep-orange'
     case 'VARIABLES_CRITICAS': return 'teal'
     default: return 'secondary'
   }
@@ -108,6 +112,18 @@ const r6Cargando = ref(false)
 const listaPlantas = ref<Array<{ id: number; nombre: string }>>([])
 const listaTiposEquipo = ref<Array<{ id: number; nombre: string }>>([])
 
+function siglaPlanta(str?: string): string {
+  if (!str) return ''
+  const upper = str.toUpperCase()
+  if (upper.includes('EXT') || upper.includes('EXTRUSION')) return 'EXT'
+  if (upper.includes('INY') || upper.includes('INYECCION')) return 'INY'
+  if (upper.includes('PLM') || upper.includes('MEZCLA')) return 'PLM'
+  if (upper.includes('DES') || upper.includes('DESPACHO')) return 'DES'
+  const partes = upper.split('-')
+  if (partes.length > 1 && partes[1]) return partes[1]
+  return upper.slice(0, 3)
+}
+
 async function cargarCatalogos() {
   try {
     const [resP, resT, resE] = await Promise.allSettled([
@@ -117,7 +133,11 @@ async function cargarCatalogos() {
     ])
 
     if (resP.status === "fulfilled" && resP.value.data) {
-      listaPlantas.value = resP.value.data.data || resP.value.data || []
+      const rawPlantas = resP.value.data.data || resP.value.data || []
+      listaPlantas.value = rawPlantas.map((p: any) => ({
+        id: p.id,
+        nombre: `[${siglaPlanta(p.codigo || p.nombre)}] ${p.nombre}`
+      }))
     }
     if (resT.status === "fulfilled" && resT.value.data) {
       listaTiposEquipo.value = resT.value.data.data || resT.value.data || []
@@ -382,12 +402,16 @@ function exportarR4Pdf() {
         { label: "Horas Inoperativas Est.", valor: `${kpis.horasInoperatividad} hrs` }
       ],
       columnas: [
-        { title: "Planta Industrial", key: "nombre", width: 70 },
+        { title: "Sigla", key: "sigla", width: 22 },
+        { title: "Planta Industrial", key: "nombre", width: 55 },
         { title: "Equipos Operativos", key: "OPERATIVO", width: 60 },
         { title: "En Mantenimiento", key: "EN_MANTENIMIENTO", width: 65 },
         { title: "Inoperativos", key: "INOPERATIVO", width: 65 }
       ],
-      filas: store.reporteEjecutivo.plantas
+      filas: store.reporteEjecutivo.plantas.map((p) => ({
+        ...p,
+        sigla: siglaPlanta(p.codigo || p.nombre)
+      }))
     })
   } finally {
     r4DescargandoPdf.value = false
@@ -1129,7 +1153,12 @@ onMounted(() => {
                   </thead>
                   <tbody>
                     <tr v-for="pl in store.reporteEjecutivo.plantas" :key="pl.nombre">
-                      <td class="font-weight-medium">{{ pl.nombre }}</td>
+                      <td class="font-weight-medium">
+                        <v-chip size="x-small" color="primary" variant="flat" class="mr-2 font-weight-bold">
+                          {{ siglaPlanta(pl.codigo || pl.nombre) }}
+                        </v-chip>
+                        {{ pl.nombre }}
+                      </td>
                       <td class="text-center font-weight-bold text-success">{{ pl.OPERATIVO }}</td>
                       <td class="text-center font-weight-bold text-warning">{{ pl.EN_MANTENIMIENTO }}</td>
                       <td class="text-center font-weight-bold text-error">{{ pl.INOPERATIVO }}</td>
@@ -1577,7 +1606,7 @@ onMounted(() => {
                             <td class="text-center">
                               <span
                                 class="badge"
-                                :class="d.nivelLubricante === 'OK' ? 'bg-success text-white' : d.nivelLubricante === 'BAJO' ? 'bg-warning text-dark' : d.nivelLubricante === 'CRITICO' ? 'bg-danger text-white' : 'bg-secondary text-white'"
+                                :class="d.nivelLubricante === 'NORMAL' ? 'bg-success text-white' : d.nivelLubricante === 'MINIMO' ? 'bg-danger text-white' : d.nivelLubricante === 'MAXIMO' ? 'bg-warning text-dark' : 'bg-secondary text-white'"
                               >
                                 {{ d.nivelLubricante }}
                               </span>

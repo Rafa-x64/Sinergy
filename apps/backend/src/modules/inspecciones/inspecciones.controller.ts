@@ -156,12 +156,36 @@ export const inspeccionesController = {
     next: NextFunction
   ) {
     try {
-      // PBAC: los usuarios normales solo ven su planta, sin importar qué envíen como query param.
-      // Los admins (plantaId=undefined) pueden filtrar por cualquier planta.
+      const esAdmin = req.usuario?.roles?.some((r) =>
+        r.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().includes('ADMINISTRADOR')
+      ) ?? false
+
+      const queryPlantaId = req.query.plantaId ? Number(req.query.plantaId) : undefined
       const usuarioPlantaId: number | undefined = req.usuario?.plantaId ? Number(req.usuario.plantaId) : undefined
+      const usuarioPlantas: number[] = Array.isArray(req.usuario?.plantas) ? req.usuario.plantas : []
+
+      let filtroPlantaId: number | undefined = undefined
+      let filtroPlantasIds: number[] | undefined = undefined
+
+      if (esAdmin) {
+        filtroPlantaId = queryPlantaId
+      } else if (queryPlantaId) {
+        if (usuarioPlantas.includes(queryPlantaId) || usuarioPlantaId === queryPlantaId) {
+          filtroPlantaId = queryPlantaId
+        } else {
+          filtroPlantasIds = usuarioPlantas.length > 0 ? usuarioPlantas : (usuarioPlantaId ? [usuarioPlantaId] : undefined)
+        }
+      } else {
+        if (usuarioPlantas.length > 0) {
+          filtroPlantasIds = usuarioPlantas
+        } else if (usuarioPlantaId) {
+          filtroPlantaId = usuarioPlantaId
+        }
+      }
 
       const filtros = {
-        plantaId: usuarioPlantaId ?? (req.query.plantaId ? Number(req.query.plantaId) : undefined),
+        plantaId: filtroPlantaId,
+        plantasIds: filtroPlantasIds,
         estado: req.query.estado as any,
         tipoInspeccion: req.query.tipoInspeccion as any,
         fechaInicio: req.query.fechaInicio as string,

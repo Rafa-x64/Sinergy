@@ -16,6 +16,64 @@ El formato sigue el estándar [Keep a Changelog](https://keepachangelog.com/es/1
 
 ## [Unreleased]
 
+- **Filtro de Gráficas por Ubicación Técnica, Módulo SAUX y Estandarización de Lubricantes (`feat: dashboard-saux-filtro-ubicacion-lubricante-niveles-unidades`)**:
+  - **Filtro Dinámico en Dashboard Principal (`DashboardView.vue`, `dashboard.store.ts`, `dashboard.service.ts`, `dashboard.controller.ts`)**:
+    - Incorporado selector inteligente de ubicación técnica con autocompletado en el panel de estadísticas. Filtra instantáneamente la disponibilidad global (gráfico Doughnut) y la distribución por planta (gráfico de barras).
+    - Agregado chip visual indicador de filtro activo con botón de restablecimiento rápido.
+  - **Panel Dedicado de Servicios Auxiliares (`#tab-saux`)**:
+    - Nueva pestaña con catálogo interactivo para todas las ubicaciones técnicas marcadas con nomenclatura `SAUX`.
+    - Selector segmented por categoría de planta: *Planta de Mezcla (`SAUX-P` / PLM)*, *Extrusión (`SAUX-E` / EXT)*, *Inyección (`SAUX-I` / INY)* y *Todos*, más buscador en tiempo real.
+    - Tarjetas interactivas con botón *"Ver Gráficos"* que enlaza de inmediato la ubicación seleccionada con el panel analítico.
+  - **Estandarización de Niveles de Lubricante a Cuatro Estados**:
+    - **Base de Datos y Prisma (`schema.prisma` y PostgreSQL)**: Enum `NivelLubricante` migrado con transacción segura a `MINIMO | NORMAL | MAXIMO | NO_APLICA`. Valor por defecto configurado a `MINIMO`. Mapeados registros históricos de `OK -> NORMAL`, `BAJO/CRITICO -> MINIMO`, `SOBRELLENADO -> MAXIMO`.
+    - **Backend & Frontend (`lubricacion.service.ts`, `inspecciones.service.ts`, `lubricacion.types.ts`, `MatrizLubricacionView.vue`, `PanelReportes.vue`)**: Selectores, badges y validaciones adaptados a la nueva escala con valor por defecto en `MINIMO`.
+  - **Conversión de Unidades de Medida en Lubricantes (`Kg` -> `Gramos`)**:
+    - Migración ejecutada en base de datos (`UPDATE catalogo_lubricantes SET unidad_medida = 'Gramos' WHERE unidad_medida = 'Kg'`). Catálogos seed de grasas y lubricantes estandarizados en gramos.
+  - **Etiquetas y Siglas Normativas de Plantas en Gráficas y Reportes (`GraficoDisponibilidad.vue`, `PanelReportes.vue`)**:
+    - La gráfica de barras del dashboard ahora utiliza las siglas estandarizadas de planta (`INY`, `EXT`, `PLM`, `DES`), mostrando en el tooltip el nombre completo detallado.
+    - Catálogo de plantas en selectores de reportes y tabla de distribución de flota en el Reporte Ejecutivo (R4) actualizados con insignias y columnas de siglas normativas.
+  - **Base de Datos (`schema.prisma` y migración `20261008130000_feat_montacargas_diario_semanal`)**: Incorporados los valores `MONTACARGAS_DIARIO` y `MONTACARGAS_SEMANAL` al enum `TipoInspeccion`, preservando `MONTACARGAS` como valor legado para trazabilidad de inspecciones históricas.
+  - **Purgado de Valores Legados en UI**: Se eliminaron por completo `CHILLER` y `MONTACARGAS` de los selectores de filtros de historiales, selector de rutinas en plantillas de variables, creación de inspecciones y reportes analíticos del dashboard.
+  - **Doble Rutina de Montacargas en Frontend**: Incorporadas tarjetas independientes en el wizard de inicio (`WizardSeleccionAlcance.vue`) y pestañas en el catálogo de plantillas (`PlantillasVariablesPanel.vue` y `DialogoPlantillaVariable.vue`) para *Montacargas — Rutina Diaria* y *Montacargas — Rutina Semanal*.
+  - **Formato ISO y Bandejas de Supervisión**: Adaptados títulos dinámicos en el reporte de impresión oficial (`ModalImpresionInspeccion.vue`) a `RUTINA DE INSPECCIÓN MONTACARGAS — DIARIA` y `RUTINA DE INSPECCIÓN MONTACARGAS — SEMANAL`, así como etiquetas y chips en bandejas de supervisión e historiales.
+
+- **Soporte Multi-Planta para Usuarios (`feat: multi-planta-usuarios`)**:
+  - **Base de Datos (`schema.prisma` & migración `usuarios_plantas`)**: Creada entidad asociativa `UsuarioPlanta` (`usuarios_plantas`) que implementa relación muchos a muchos entre `Usuario` y `Planta`, preservando `plantaId` en `Usuario` por retrocompatibilidad.
+  - **Asignación Automática**: Vinculado usuario `elizabeth.ramirez` con acceso concurrente a Planta Extrusión (ID: 1) y Planta Mezcla (ID: 3).
+  - **Backend (`auth.service.ts`, `auth.controller.ts`, `planta.controller.ts`, `inspecciones.controller.ts`)**: Generación de JWT con lista de IDs de plantas en claim `plantas`. Controladores adaptados para permitir consultas cruzadas a usuarios multi-planta o administradores sin confinarlos a una sola planta.
+  - **Frontend (`auth.store.ts`, `usuarios.store.ts`, `FormularioUsuario.vue`, `UsuariosView.vue`)**: Selector múltiple con chips para asociar varias plantas por usuario, visualización de etiquetas por planta en la tabla y sincronización reactiva en formularios de edición.
+
+- **Validación Estricta de Cobertura Total en Rutinas de Lubricación por Línea (`feat: validacion-inspeccion-lubricacion-completa`)**:
+  - **Frontend (`MatrizLubricacionView.vue`)**: La rutina de inspección de una ubicación técnica ya no puede finalizarse si existen equipos pendientes de chequeo. Al pulsar *Enviar Rutina*, el wizard valida que todos los equipos posean estado registrado; de faltar alguno, notifica al técnico y lo posiciona automáticamente en el primer equipo incompleto. Botón de envío indica dinámicamente el progreso (`Chequear Todos (X/Y listos)` vs `Enviar Rutina`).
+
+- **Inspección Permitida en Equipos sin Partes a Lubricar (`feat: inspeccion-equipos-sin-partes-lubricacion`)**:
+  - **Backend (`lubricacion.service.ts` y `lubricacion.controller.ts`)**: Se eliminó la validación restrictiva que bloqueaba rutinas con 0 partes. Ahora se registra formalmente la rutina, la lectura del odómetro/horómetro y la inspección en estado pendiente sin requerir obligatoriamente partes asociadas.
+  - **Frontend (`MatrizLubricacionView.vue`)**: En lugar de bloquear la pantalla y ocultar las acciones, se presenta un aviso informativo amigable y se mantienen habilitados los controles para registrar horómetro, observaciones y avanzar o completar la inspección tanto individual como en el wizard de línea.
+
+- **Reevaluación y Aprobación de Inspecciones Rechazadas (`feat: reaprobacion-inspecciones-rechazadas`)**:
+  - **Backend (`inspecciones.service.ts`)**: Eliminada la restricción que impedía evaluar inspecciones no pendientes. Ahora se permite transicionar de `RECHAZADO` a `APROBADO`, limpiando el motivo de rechazo y actualizando los metadatos de auditoría del aprobador.
+  - **Frontend (`DetalleInspeccionModal.vue`)**: Banner visual informativo en inspecciones rechazadas mostrando el motivo previo y habilitación del botón *"Reevaluar y Aprobar Inspección"* para supervisores y administradores. Emisión de evento reactivo `@evaluada` para actualizar instantáneamente historiales y bandejas.
+
+- **Optimización de Reportes Impresos y Descarga de PDF Multipágina (`fix: impresion-pdf-multipagina-limpieza`)**:
+  - **Eliminación de Columna de Observaciones Específicas**: Removida la columna de observaciones individuales por fila en la tabla técnica de `ModalImpresionInspeccion.vue` y `DetalleInspeccionModal.vue`, dejando un bloque unificado, limpio y prominente para *Observaciones Generales*.
+  - **Algoritmo Multipágina Continuo en `jsPDF`**: Resuelto el truncamiento del documento en inspecciones extensas. El renderizado ahora calcula la altura proporcional y distribuye el canvas en múltiples páginas A4 mediante `pdf.addPage()`, garantizando la inclusión completa de firmas y datos.
+  - **Aislamiento en `@media print`**: Estilos de impresión corregidos para anular desbordamientos de Vuetify (`overflow: visible`, `position: static`), asegurando saltos de página naturales al imprimir en físico o guardar como PDF desde el navegador.
+
+- **Corrección de Visibilidad en Historial de Inspecciones Rechazadas (`fix: visibilidad-inspecciones-rechazadas-historial`)**:
+  - **Backend (`inspecciones.controller.ts`)**: Corregido PBAC que forzaba el `plantaId` fijo del usuario en consultas de historial. Ahora los usuarios con permisos administrativos o asignaciones multi-planta pueden consultar todas las plantas o filtrar por la planta donde se ejecutó la inspección (ej. Planta 2), permitiendo listar de inmediato las inspecciones rechazadas de lubricación y otras rutinas.
+
+- **Plantillas de Lubricación por Tipo de Equipo y Sincronización Masiva (`feat: plantillas-lubricacion-tipo-equipo`)**:
+  - **Modelo y Base de Datos (`PlantillaPuntoLubricacion`)**: Creado nuevo modelo relacional vinculado a `TipoEquipo` y `CatalogoLubricante`, con migración Prisma `20261007170000_feat_plantilla_lubricacion`. Permite definir puntos normativos de lubricación por tipo de máquina (componente, punto, tipo de lubricante, método, frecuencia por días/horas, cantidad y tolerancias).
+  - **Sincronización Inteligente y Un Clic (`lubricacion.service.ts`)**: Endpoint `/api/lubricacion/plantillas/sincronizar-tipo` que crea componentes faltantes e instancia puntos de lubricación con horómetro base para todos los equipos existentes del tipo seleccionado sin duplicar registros.
+  - **Panel de Plantillas de Lubricación (`PlantillasLubricacionPanel.vue` y `DialogoPlantillaLubricacion.vue`)**: Pestaña dedicada dentro de la Matriz de Lubricación para gestionar plantillas con presets de frecuencia rápida y botón de sincronización masiva de flota.
+- **Unificación de Formato de Impresión Oficial y Soporte de Rutinas de Lubricación (`feat: formato-impresion-unificado-inspecciones`)**:
+- **Depuración de Observaciones Generales en Rutinas de Lubricación (`fix: observaciones-generales-lubricacion`)**:
+  - **Backend (`lubricacion.service.ts`)**: Se eliminó la concatenación de texto autogenerado con código de equipo, horómetro y resumen de puntos evaluados dentro del campo `observacionesGenerales` de la inspección. Ahora almacena exclusivamente las observaciones técnicas redactadas por el usuario.
+  - **Backend (`inspecciones.service.ts`)**: Se implementó sanitización retroactiva en `obtenerPorId` para remover bloques autogenerados heredados de registros previos.
+  - **Frontend (`ModalImpresionInspeccion.vue` y `DetalleInspeccionModal.vue`)**: Se añadieron selectores computados reactivos para garantizar que la sección de *Observaciones Generales* muestre únicamente el texto redactado por el técnico o el mensaje por defecto *'Sin observaciones registradas durante la ronda.'*, manteniendo la vista limpia e imprimible conforme al estándar ISO.
+  - **Base de Datos**: Se ejecutó migración de depuración en los registros existentes para extraer únicamente el texto del técnico y anular las cadenas concatenadas redundantes.
+
+
 - **Detección Dinámica de Puerto del Backend en Vite (`fix: vite-proxy-dynamic-backend-port`)**:
   - **`vite.config.ts`**: Auto-detección del puerto configurado en `apps/backend/.env` (ej. `PORT=3080`) o variables de entorno para el proxy de `/api` y `/socket.io`. Resuelve de forma definitiva el error de conexión cuando el backend corre en puertos diferentes a 3000 (como el 3080 en el servidor).
 - **Deshabilitación de Restricciones CORS (`fix: disable-cors-restrictions`)**:

@@ -37,6 +37,7 @@ const emit = defineEmits<{
 
 const formRef = ref<VuetifyForm | null>(null)
 const formulario = ref<Partial<RegistrarUsuarioDTO>>({ ...props.datosIniciales })
+const plantasSeleccionadas = ref<number[]>([])
 
 const rolSeleccionado = computed<Rol | undefined>(() =>
     props.roles.find((r) => r.id === formulario.value.rolId)
@@ -52,8 +53,15 @@ watch(
     () => props.datosIniciales,
     (nuevosDatos) => {
         formulario.value = { ...nuevosDatos }
+        if (nuevosDatos.plantasIds && nuevosDatos.plantasIds.length > 0) {
+            plantasSeleccionadas.value = [...nuevosDatos.plantasIds]
+        } else if (nuevosDatos.plantaId) {
+            plantasSeleccionadas.value = [nuevosDatos.plantaId]
+        } else {
+            plantasSeleccionadas.value = []
+        }
     },
-    { deep: true }
+    { deep: true, immediate: true }
 )
 
 watch(
@@ -70,7 +78,12 @@ const manejarEnvio = async (): Promise<void> => {
     const { valid } = await formRef.value.validate()
 
     if (valid) {
-        emit('submit', formulario.value as RegistrarUsuarioDTO)
+        const payload: RegistrarUsuarioDTO = {
+            ...(formulario.value as RegistrarUsuarioDTO),
+            plantasIds: plantasSeleccionadas.value,
+            plantaId: plantasSeleccionadas.value[0] ?? null
+        }
+        emit('submit', payload)
     }
 }
 </script>
@@ -112,10 +125,21 @@ const manejarEnvio = async (): Promise<void> => {
             </v-col>
 
             <v-col cols="12" md="6">
-                <v-select v-model="formulario.plantaId" :items="plantas" item-title="nombre" item-value="id"
-                    label="Planta Asignada" variant="outlined" :rules="usuarioRules.plantaId(esRolAdmin)" :disabled="cargando"
-                    clearable :hint="esRolAdmin ? 'Dejar vacío para acceso global a todas las plantas' : ''"
-                    persistent-hint></v-select>
+                <v-select
+                    v-model="plantasSeleccionadas"
+                    :items="plantas"
+                    item-title="nombre"
+                    item-value="id"
+                    label="Plantas Asignadas (Multi-planta)"
+                    variant="outlined"
+                    multiple
+                    chips
+                    closable-chips
+                    clearable
+                    :disabled="cargando"
+                    :hint="esRolAdmin ? 'Dejar vacío para acceso global a todas las plantas' : 'Selecciona una o más plantas a las que tendrá acceso el usuario'"
+                    persistent-hint
+                ></v-select>
             </v-col>
 
             <v-col v-if="requiereSupervisor" cols="12" md="6">

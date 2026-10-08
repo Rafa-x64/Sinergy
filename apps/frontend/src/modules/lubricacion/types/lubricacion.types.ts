@@ -1,5 +1,5 @@
 
-export type NivelLubricante = 'OK' | 'BAJO' | 'CRITICO' | 'SOBRELLENADO' | 'NO_APLICA'
+export type NivelLubricante = 'MINIMO' | 'NORMAL' | 'MAXIMO' | 'NO_APLICA'
 
 
 export type OrigenLecturaHorometro = 'RUTINA_LUBRICACION' | 'INSPECCION_OPERATIVA' | 'LECTURA_MANUAL' | 'CAMBIO_ACEITE'
@@ -63,6 +63,45 @@ export interface EditarPuntoLubricacionInput {
   limiteHorasCambio?: number
   horometroUltimoCambio?: number
   fechaUltimoCambio?: string
+  capacidadRecomendada?: number | null
+  activo?: boolean
+}
+
+export interface PlantillaPuntoLubricacion {
+  id: number
+  tipoEquipoId: number
+  nombreComponente?: string | null
+  nombrePunto: string
+  lubricanteId: number
+  limiteHorasCambio: number
+  capacidadRecomendada?: number | null
+  activo: boolean
+  creadoEn?: string
+  actualizadoEn?: string
+  tipoEquipo?: {
+    id: number
+    nombre: string
+  }
+  lubricante?: CatalogoLubricante
+  _count?: {
+    puntosInstancia: number
+  }
+}
+
+export interface CrearPlantillaPuntoInput {
+  tipoEquipoId: number
+  nombreComponente?: string | null
+  nombrePunto: string
+  lubricanteId: number
+  limiteHorasCambio: number
+  capacidadRecomendada?: number | null
+}
+
+export interface EditarPlantillaPuntoInput {
+  nombreComponente?: string | null
+  nombrePunto?: string
+  lubricanteId?: number
+  limiteHorasCambio?: number
   capacidadRecomendada?: number | null
   activo?: boolean
 }

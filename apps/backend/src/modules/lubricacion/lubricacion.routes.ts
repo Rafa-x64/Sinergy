@@ -22,6 +22,16 @@ router.post(['/puntos', '/puntos/'], requerirRol(ROL_ADMIN_NOMBRE, ROL_SUPERVISO
 router.put(['/puntos/:id', '/puntos/:id/'], requerirRol(ROL_ADMIN_NOMBRE, ROL_SUPERVISOR_NOMBRE), lubricacionController.editarPuntoLubricacion)
 router.delete(['/puntos/:id', '/puntos/:id/'], requerirRol(ROL_ADMIN_NOMBRE, ROL_SUPERVISOR_NOMBRE), lubricacionController.eliminarPuntoLubricacion)
 
+// ─── PLANTILLAS DE LUBRICACIÓN POR TIPO DE EQUIPO ─────────────────────────────
+router.get(['/plantillas', '/plantillas/'], lubricacionController.listarPlantillas)
+router.post(['/plantillas', '/plantillas/'], requerirRol(ROL_ADMIN_NOMBRE, ROL_SUPERVISOR_NOMBRE), lubricacionController.crearPlantillaPunto)
+router.put(['/plantillas/:id', '/plantillas/:id/'], requerirRol(ROL_ADMIN_NOMBRE, ROL_SUPERVISOR_NOMBRE), lubricacionController.editarPlantillaPunto)
+router.delete(['/plantillas/:id', '/plantillas/:id/'], requerirRol(ROL_ADMIN_NOMBRE, ROL_SUPERVISOR_NOMBRE), lubricacionController.eliminarPlantillaPunto)
+
+// ─── MOTOR DE SINCRONIZACIÓN DE LUBRICACIÓN ─────────────────────────────────
+router.post(['/sincronizar/equipo/:equipoId', '/sincronizar/equipo/:equipoId/'], requerirRol(ROL_ADMIN_NOMBRE, ROL_SUPERVISOR_NOMBRE), lubricacionController.sincronizarEquipo)
+router.post(['/sincronizar/tipo-equipo/:tipoEquipoId', '/sincronizar/tipo-equipo/:tipoEquipoId/'], requerirRol(ROL_ADMIN_NOMBRE, ROL_SUPERVISOR_NOMBRE), lubricacionController.sincronizarTipoEquipo)
+
 // ─── CONTROL DE HORÓMETRO ───────────────────────────────────────────────────
 router.post(['/horometro', '/horometro/'], requerirRol(ROL_ADMIN_NOMBRE, ROL_TECNICO_NOMBRE), lubricacionController.registrarHorometro)
 router.get(['/horometro/:equipoId', '/horometro/:equipoId/'], lubricacionController.obtenerUltimoHorometro)
