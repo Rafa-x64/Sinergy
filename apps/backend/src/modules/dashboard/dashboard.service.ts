@@ -625,7 +625,15 @@ export class DashboardService {
           elaboradoPor: { select: { id: true, nombre: true, apellido: true } },
           revisadoPor: { select: { id: true, nombre: true, apellido: true } },
           planta: { select: { id: true, codigo: true, nombre: true } },
-          equipo: { select: { id: true, codigo: true, nombre: true } },
+          ubicacionTecnica: { select: { id: true, codigo: true, nombre: true } },
+          equipo: {
+            select: {
+              id: true,
+              codigo: true,
+              nombre: true,
+              ubicacionTecnica: { select: { id: true, codigo: true, nombre: true } }
+            }
+          },
           tipoEquipo: { select: { id: true, nombre: true } },
           _count: { select: { detalles: true } },
           rutinaLubricacion: { select: { _count: { select: { detalles: true } } } }

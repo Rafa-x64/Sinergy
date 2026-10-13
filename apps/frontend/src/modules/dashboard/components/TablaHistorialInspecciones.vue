@@ -25,11 +25,26 @@ const headers = [
   { title: "Fecha", key: "fechaRegistro", sortable: false },
   { title: "Rutina", key: "tipoInspeccion", sortable: false },
   { title: "Planta", key: "planta", sortable: false },
+  { title: "Ubicación Técnica", key: "ubicacionTecnica", sortable: false },
   { title: "Equipo", key: "equipo", sortable: false },
   { title: "Técnico", key: "elaboradoPor", sortable: false },
   { title: "Estado", key: "estadoInspeccion", sortable: false },
   { title: "Variables", key: "detalles", sortable: false }
 ]
+
+function obtenerUbicacionTecnica(item: any): string {
+  if (item.ubicacionTecnica?.codigo || item.ubicacionTecnica?.nombre) {
+    return item.ubicacionTecnica.codigo
+      ? `${item.ubicacionTecnica.codigo} - ${item.ubicacionTecnica.nombre}`
+      : item.ubicacionTecnica.nombre
+  }
+  if (item.equipo?.ubicacionTecnica?.codigo || item.equipo?.ubicacionTecnica?.nombre) {
+    return item.equipo.ubicacionTecnica.codigo
+      ? `${item.equipo.ubicacionTecnica.codigo} - ${item.equipo.ubicacionTecnica.nombre}`
+      : item.equipo.ubicacionTecnica.nombre
+  }
+  return "—"
+}
 
 async function cargar() {
   await store.cargarInspeccionesDelPeriodo({
@@ -138,7 +153,7 @@ onMounted(() => {
           :items="[
             { title: 'Todos los estados', value: '' },
             { title: 'Aprobadas', value: 'APROBADO' },
-            { title: 'Pendientes', value: 'PENDIENTE' },
+            { title: 'Pendientes por aprobación', value: 'PENDIENTE' },
             { title: 'Rechazadas', value: 'RECHAZADO' }
           ]"
           item-title="title"
@@ -203,13 +218,13 @@ onMounted(() => {
       </thead>
       <tbody>
         <tr v-if="store.cargandoInspecciones">
-          <td colspan="8" class="text-center py-6">
+          <td colspan="9" class="text-center py-6">
             <v-progress-circular indeterminate color="success" size="28" />
             <div class="text-caption mt-2">Cargando historial de inspecciones...</div>
           </td>
         </tr>
         <tr v-else-if="!store.inspeccionesDelPeriodo?.inspecciones || store.inspeccionesDelPeriodo.inspecciones.length === 0">
-          <td colspan="8" class="text-center py-8 text-medium-emphasis">
+          <td colspan="9" class="text-center py-8 text-medium-emphasis">
             No se encontraron inspecciones en el rango seleccionado.
           </td>
         </tr>
@@ -229,6 +244,18 @@ onMounted(() => {
             </v-chip>
           </td>
           <td>
+            <v-chip
+              v-if="obtenerUbicacionTecnica(item) !== '—'"
+              size="x-small"
+              variant="outlined"
+              color="blue-grey"
+              class="font-weight-medium"
+            >
+              {{ obtenerUbicacionTecnica(item) }}
+            </v-chip>
+            <span v-else class="text-caption text-medium-emphasis">—</span>
+          </td>
+          <td>
             <div v-if="item.equipo">
               <span class="text-body-2 font-weight-medium">{{ item.equipo.codigo }}</span>
               <div class="text-caption text-medium-emphasis">{{ item.equipo.nombre }}</div>
@@ -243,7 +270,7 @@ onMounted(() => {
           </td>
           <td>
             <v-chip size="x-small" :color="colorEstado(item.estadoInspeccion)" variant="tonal" class="font-weight-bold">
-              {{ item.estadoInspeccion }}
+              {{ item.estadoInspeccion === 'PENDIENTE' ? 'PENDIENTE POR APROBACIÓN' : item.estadoInspeccion }}
             </v-chip>
           </td>
           <td>

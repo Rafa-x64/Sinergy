@@ -126,13 +126,13 @@ defineExpose({ abrir, cerrar })
         </div>
 
         <v-alert type="info" color="#5cb85c" variant="tonal" class="text-caption mb-0">
-          Al confirmar, la inspección quedará registrada en estado <strong>PENDIENTE</strong> y se notificará automáticamente a los supervisores de planta para su revisión y aprobación.
+          Al confirmar, la inspección quedará registrada en estado <strong>PENDIENTE POR APROBACIÓN</strong> y se notificará automáticamente a los supervisores de planta para su revisión y aprobación.
         </v-alert>
       </v-card-text>
 
       <v-card-actions class="pa-4 pt-0 justify-end gap-2">
         <v-btn variant="text" :disabled="store.cargandoAccion" @click="cerrar">
-          Volver al Wizard
+          Volver al formulario
         </v-btn>
         <v-btn
           color="#5cb85c"

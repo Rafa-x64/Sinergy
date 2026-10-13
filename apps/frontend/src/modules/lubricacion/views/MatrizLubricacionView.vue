@@ -1219,12 +1219,12 @@ async function finalizarWizardLinea() {
                     <th style="min-width: 190px;">Componente / Parte</th>
                     <th style="min-width: 160px;">Lubricante</th>
                     <th style="min-width: 150px;">Horas Uso</th>
-                    <th style="min-width: 170px;">Vida Útil (Horómetro)</th>
                     <th style="min-width: 170px;">Nivel Observado</th>
                     <th style="min-width: 200px;">Reposición</th>
                     <th style="min-width: 200px;">Fuga Detectada</th>
                     <th style="min-width: 150px;">Cambio Total</th>
                     <th style="min-width: 200px;">Observaciones</th>
+                    <th style="min-width: 170px;">Vida Útil (Horómetro)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1259,23 +1259,6 @@ async function finalizarWizardLinea() {
                       </div>
                       <div class="text-caption text-medium-emphasis">
                         Base: {{ detalle.horometroUltimoCambio }} hrs
-                      </div>
-                    </td>
-
-                    <!-- Semáforo y Barra de Vida -->
-                    <td>
-                      <div class="d-flex flex-column gap-1">
-                        <SemaforoBadge
-                          :estado="calcularSemaforo(detalle)"
-                          :porcentaje="calcularPorcentajeVida(detalle)"
-                          mostrar-porcentaje
-                        />
-                        <v-progress-linear
-                          :model-value="calcularPorcentajeVida(detalle)"
-                          :color="calcularSemaforo(detalle) === 'CRITICO' ? 'error' : (calcularSemaforo(detalle) === 'PREVENTIVO' ? 'warning' : 'success')"
-                          height="6"
-                          rounded
-                        />
                       </div>
                     </td>
 
@@ -1320,7 +1303,7 @@ async function finalizarWizardLinea() {
                           hide-details
                           style="min-width: 95px; max-width: 115px;"
                           :suffix="detalle.lubricante.unidadMedida.slice(0, 3).toLowerCase()"
-                          @keydown="(e: KeyboardEvent) => { if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') e.preventDefault() }"
+                          @keydown="(e: KeyboardEvent) => { if (e.key === '-' || e.key === 'e' || e.key === '+') e.preventDefault() }"
                           @update:model-value="(val) => { if (val !== null && val !== undefined && Number(val) < 0) detalle.cantidadRepuesta = Math.abs(Number(val)) }"
                         />
                       </div>
@@ -1371,6 +1354,23 @@ async function finalizarWizardLinea() {
                         hide-details
                         style="min-width: 160px;"
                       />
+                    </td>
+
+                    <!-- Semáforo y Barra de Vida (al final de la fila) -->
+                    <td>
+                      <div class="d-flex flex-column gap-1">
+                        <SemaforoBadge
+                          :estado="calcularSemaforo(detalle)"
+                          :porcentaje="calcularPorcentajeVida(detalle)"
+                          mostrar-porcentaje
+                        />
+                        <v-progress-linear
+                          :model-value="calcularPorcentajeVida(detalle)"
+                          :color="calcularSemaforo(detalle) === 'CRITICO' ? 'error' : (calcularSemaforo(detalle) === 'PREVENTIVO' ? 'warning' : 'success')"
+                          height="6"
+                          rounded
+                        />
+                      </div>
                     </td>
                   </tr>
                 </tbody>

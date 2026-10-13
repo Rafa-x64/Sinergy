@@ -230,6 +230,20 @@ function exportarR1Pdf() {
 // ═══════════════════════════════════════════════════════════════
 // R2: INSPECCIONES DEL PERÍODO
 // ═══════════════════════════════════════════════════════════════
+function obtenerUbicacionTecnica(i: any): string {
+  if (i.ubicacionTecnica?.codigo || i.ubicacionTecnica?.nombre) {
+    return i.ubicacionTecnica.codigo
+      ? `${i.ubicacionTecnica.codigo} - ${i.ubicacionTecnica.nombre}`
+      : i.ubicacionTecnica.nombre
+  }
+  if (i.equipo?.ubicacionTecnica?.codigo || i.equipo?.ubicacionTecnica?.nombre) {
+    return i.equipo.ubicacionTecnica.codigo
+      ? `${i.equipo.ubicacionTecnica.codigo} - ${i.equipo.ubicacionTecnica.nombre}`
+      : i.equipo.ubicacionTecnica.nombre
+  }
+  return "—"
+}
+
 async function cargarR2() {
   await store.cargarInspeccionesDelPeriodo({
     tipoInspeccion: r2TipoInspeccion.value || undefined,
@@ -249,11 +263,12 @@ function exportarR2Excel() {
       "Fecha": new Date(i.fechaRegistro).toLocaleString("es-ES"),
       "Rutina / Tipo": etiquetaRutina(i.tipoInspeccion),
       "Planta": i.planta?.nombre || "N/A",
+      "Ubicación Técnica": obtenerUbicacionTecnica(i),
       "Código Equipo": i.equipo?.codigo || "N/A",
       "Nombre Equipo": i.equipo?.nombre || "N/A",
       "Tipo Maquinaria": i.tipoEquipo?.nombre || "N/A",
       "Técnico": i.elaboradoPor ? `${i.elaboradoPor.nombre} ${i.elaboradoPor.apellido}` : "N/A",
-      "Estado": i.estadoInspeccion,
+      "Estado": i.estadoInspeccion === 'PENDIENTE' ? 'PENDIENTE POR APROBACIÓN' : i.estadoInspeccion,
       "Variables Evaluadas": i._count?.detalles || 0
     }))
 
@@ -281,23 +296,25 @@ function exportarR2Pdf() {
         { label: "Tasa Aprobación", valor: `${store.inspeccionesDelPeriodo.tasaAprobacion}%` }
       ],
       columnas: [
-        { title: "Código", key: "codigoInspeccion", width: 35 },
-        { title: "Fecha", key: "fechaStr", width: 25 },
-        { title: "Rutina", key: "rutinaStr", width: 30 },
-        { title: "Planta", key: "plantaNombre", width: 30 },
-        { title: "Equipo", key: "equipoStr", width: 45 },
-        { title: "Técnico", key: "tecnicoNombre", width: 35 },
+        { title: "Código", key: "codigoInspeccion", width: 30 },
+        { title: "Fecha", key: "fechaStr", width: 22 },
+        { title: "Rutina", key: "rutinaStr", width: 25 },
+        { title: "Planta", key: "plantaNombre", width: 25 },
+        { title: "Ubicación Técnica", key: "ubicacionTecnicaStr", width: 35 },
+        { title: "Equipo", key: "equipoStr", width: 40 },
+        { title: "Técnico", key: "tecnicoNombre", width: 30 },
         { title: "Estado", key: "estadoInspeccion", width: 25 },
-        { title: "Vars", key: "totalVars", width: 18 }
+        { title: "Vars", key: "totalVars", width: 16 }
       ],
       filas: store.inspeccionesDelPeriodo.inspecciones.map(i => ({
         codigoInspeccion: i.codigoInspeccion,
         fechaStr: new Date(i.fechaRegistro).toLocaleDateString("es-ES"),
         rutinaStr: etiquetaRutina(i.tipoInspeccion),
         plantaNombre: i.planta?.nombre || "General",
+        ubicacionTecnicaStr: obtenerUbicacionTecnica(i),
         equipoStr: i.equipo ? `${i.equipo.codigo} - ${i.equipo.nombre}` : "General",
         tecnicoNombre: i.elaboradoPor ? `${i.elaboradoPor.nombre} ${i.elaboradoPor.apellido}` : "-",
-        estadoInspeccion: i.estadoInspeccion,
+        estadoInspeccion: i.estadoInspeccion === 'PENDIENTE' ? 'PENDIENTE POR APROBACIÓN' : i.estadoInspeccion,
         totalVars: i._count?.detalles || 0
       }))
     })
@@ -836,7 +853,7 @@ onMounted(() => {
             :items="[
               { title: 'Todos los estados', value: '' },
               { title: 'Aprobadas', value: 'APROBADO' },
-              { title: 'Pendientes', value: 'PENDIENTE' },
+              { title: 'Pendientes por aprobación', value: 'PENDIENTE' },
               { title: 'Rechazadas', value: 'RECHAZADO' }
             ]"
             item-title="title"
@@ -889,6 +906,7 @@ onMounted(() => {
               <th class="text-left font-weight-bold">Fecha</th>
               <th class="text-left font-weight-bold">Rutina</th>
               <th class="text-left font-weight-bold">Planta</th>
+              <th class="text-left font-weight-bold">Ubicación Técnica</th>
               <th class="text-left font-weight-bold">Equipo</th>
               <th class="text-left font-weight-bold">Técnico</th>
               <th class="text-left font-weight-bold">Estado</th>
@@ -897,12 +915,12 @@ onMounted(() => {
           </thead>
           <tbody>
             <tr v-if="store.cargandoInspecciones">
-              <td colspan="8" class="text-center py-6">
+              <td colspan="9" class="text-center py-6">
                 <v-progress-circular indeterminate color="primary" size="24" />
               </td>
             </tr>
             <tr v-else-if="!store.inspeccionesDelPeriodo?.inspecciones.length">
-              <td colspan="8" class="text-center py-6 text-medium-emphasis">
+              <td colspan="9" class="text-center py-6 text-medium-emphasis">
                 No hay inspecciones registradas para el período.
               </td>
             </tr>
@@ -915,6 +933,7 @@ onMounted(() => {
                 </v-chip>
               </td>
               <td>{{ i.planta?.nombre || "General" }}</td>
+              <td>{{ obtenerUbicacionTecnica(i) }}</td>
               <td>{{ i.equipo ? `${i.equipo.codigo} - ${i.equipo.nombre}` : "General" }}</td>
               <td>{{ i.elaboradoPor ? `${i.elaboradoPor.nombre} ${i.elaboradoPor.apellido}` : "-" }}</td>
               <td>
@@ -924,7 +943,7 @@ onMounted(() => {
                   variant="tonal"
                   class="font-weight-bold"
                 >
-                  {{ i.estadoInspeccion }}
+                  {{ i.estadoInspeccion === 'PENDIENTE' ? 'PENDIENTE POR APROBACIÓN' : i.estadoInspeccion }}
                 </v-chip>
               </td>
               <td>

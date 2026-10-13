@@ -87,6 +87,20 @@ function colorTipoInspeccion(tipo?: string) {
       return 'primary'
   }
 }
+
+function obtenerUbicacionTecnica(item: any): string {
+  if (item.ubicacionTecnica?.codigo || item.ubicacionTecnica?.nombre) {
+    return item.ubicacionTecnica.codigo
+      ? `${item.ubicacionTecnica.codigo} - ${item.ubicacionTecnica.nombre}`
+      : item.ubicacionTecnica.nombre
+  }
+  if (item.equipo?.ubicacionTecnica?.codigo || item.equipo?.ubicacionTecnica?.nombre) {
+    return item.equipo.ubicacionTecnica.codigo
+      ? `${item.equipo.ubicacionTecnica.codigo} - ${item.equipo.ubicacionTecnica.nombre}`
+      : item.equipo.ubicacionTecnica.nombre
+  }
+  return '—'
+}
 </script>
 
 <template>
@@ -150,6 +164,7 @@ function colorTipoInspeccion(tipo?: string) {
               <th class="text-left font-weight-bold">Rutina</th>
               <th class="text-left font-weight-bold">Técnico Elaborador</th>
               <th class="text-center font-weight-bold">Planta / Cobertura</th>
+              <th class="text-center font-weight-bold">Ubicación Técnica</th>
               <th class="text-center font-weight-bold">Fecha Registro</th>
               <th class="text-center font-weight-bold">Variables Evaluadas</th>
               <th class="text-center font-weight-bold">Estado</th>
@@ -178,6 +193,19 @@ function colorTipoInspeccion(tipo?: string) {
                 </v-chip>
               </td>
 
+              <td class="text-center">
+                <v-chip
+                  v-if="obtenerUbicacionTecnica(item) !== '—'"
+                  size="x-small"
+                  variant="outlined"
+                  color="blue-grey"
+                  class="font-weight-medium"
+                >
+                  {{ obtenerUbicacionTecnica(item) }}
+                </v-chip>
+                <span v-else class="text-caption text-medium-emphasis">—</span>
+              </td>
+
               <td class="text-center text-body-2 text-medium-emphasis">
                 {{ formatearFecha(item.fechaRegistro) }}
               </td>
@@ -200,7 +228,7 @@ function colorTipoInspeccion(tipo?: string) {
 
               <td class="text-center">
                 <v-chip size="x-small" color="warning" variant="tonal" class="font-weight-bold">
-                  PENDIENTE
+                  PENDIENTE POR APROBACIÓN
                 </v-chip>
               </td>
 

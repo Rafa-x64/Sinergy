@@ -16,7 +16,18 @@ El formato sigue el estándar [Keep a Changelog](https://keepachangelog.com/es/1
 
 ## [Unreleased]
 
-- **Filtro de Gráficas por Ubicación Técnica, Módulo SAUX y Estandarización de Lubricantes (`feat: dashboard-saux-filtro-ubicacion-lubricante-niveles-unidades`)**:
+- **Ajustes de UI en Formularios de Inspección, Bandeja de Aprobaciones y Vida Útil en Lubricación (`feat: ui-inspecciones-linea-aprobaciones-vida-util`)**:
+  - **Formulario de Inspecciones en Fila Única (`FormWizardInspeccion.vue`)**:
+    - Reestructurada la visualización de cada variable operativa a una sola fila horizontal limpia (`nombre`, `campo` numérico/selección y `observación`), reduciendo drásticamente la altura vertical del formulario.
+  - **Estandarización de Estados a "Pendiente por aprobación"**:
+    - Actualizados textos, chips, selectores y avisos en `BandejaSupervisionPanel.vue`, `PanelHistorialInspecciones.vue`, `TablaHistorialInspecciones.vue`, `PanelReportes.vue`, `ResumenInspeccionDialog.vue`, `DetalleInspeccionModal.vue` y `NotificacionesGlobalesView.vue`.
+  - **Ubicación Técnica en Bandejas y Reportes de Historial**:
+    - Incorporada la columna y badge de *Ubicación Técnica* en la *Bandeja de Aprobaciones*, *Historial de Inspecciones* y *Reporte R2 de Inspecciones del Período* (incluyendo exportaciones a Excel y PDF).
+    - Actualizadas consultas Prisma en `inspecciones.service.ts` y `dashboard.service.ts` para incluir las relaciones de `ubicacionTecnica` tanto a nivel de inspección como anidadas en `equipo`.
+  - **Conteo de Vida Útil en Lubricación (`MatrizLubricacionView.vue`)**:
+    - Reubicada la columna y badge de semáforo de *Vida Útil (Horómetro)* al final de cada fila en la tabla del formulario de registro de lubricación.
+  - **Claridad de Navegación (`ResumenInspeccionDialog.vue`)**:
+    - Cambiada la etiqueta del botón *"Volver al Wizard"* por *"Volver al formulario"*.
   - **Filtro Dinámico en Dashboard Principal (`DashboardView.vue`, `dashboard.store.ts`, `dashboard.service.ts`, `dashboard.controller.ts`)**:
     - Incorporado selector inteligente de ubicación técnica con autocompletado en el panel de estadísticas. Filtra instantáneamente la disponibilidad global (gráfico Doughnut) y la distribución por planta (gráfico de barras).
     - Agregado chip visual indicador de filtro activo con botón de restablecimiento rápido.

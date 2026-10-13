@@ -108,6 +108,25 @@ function colorEstado(estado: string) {
   return 'secondary'
 }
 
+function etiquetaEstado(estado: string) {
+  if (estado === 'PENDIENTE') return 'PENDIENTE POR APROBACIÓN'
+  return estado
+}
+
+function obtenerUbicacionTecnica(item: any): string {
+  if (item.ubicacionTecnica?.codigo || item.ubicacionTecnica?.nombre) {
+    return item.ubicacionTecnica.codigo
+      ? `${item.ubicacionTecnica.codigo} - ${item.ubicacionTecnica.nombre}`
+      : item.ubicacionTecnica.nombre
+  }
+  if (item.equipo?.ubicacionTecnica?.codigo || item.equipo?.ubicacionTecnica?.nombre) {
+    return item.equipo.ubicacionTecnica.codigo
+      ? `${item.equipo.ubicacionTecnica.codigo} - ${item.equipo.ubicacionTecnica.nombre}`
+      : item.equipo.ubicacionTecnica.nombre
+  }
+  return '—'
+}
+
 onMounted(async () => {
   if (plantasStore.plantas.length === 0) {
     await plantasStore.listarPlantas()
@@ -193,7 +212,7 @@ onMounted(async () => {
             :items="[
               { title: 'Todos los estados', value: '' },
               { title: 'Aprobadas', value: 'APROBADO' },
-              { title: 'Pendientes', value: 'PENDIENTE' },
+              { title: 'Pendientes por aprobación', value: 'PENDIENTE' },
               { title: 'Rechazadas', value: 'RECHAZADO' }
             ]"
             item-title="title"
@@ -264,6 +283,7 @@ onMounted(async () => {
               <th class="text-left font-weight-bold">Rutina</th>
               <th class="text-left font-weight-bold">Fecha de Registro</th>
               <th class="text-left font-weight-bold">Planta</th>
+              <th class="text-left font-weight-bold">Ubicación Técnica</th>
               <th class="text-left font-weight-bold">Equipo / Línea</th>
               <th class="text-left font-weight-bold">Técnico</th>
               <th class="text-center font-weight-bold">Variables</th>
@@ -288,6 +308,18 @@ onMounted(async () => {
                 </v-chip>
               </td>
               <td>
+                <v-chip
+                  v-if="obtenerUbicacionTecnica(item) !== '—'"
+                  size="x-small"
+                  variant="outlined"
+                  color="blue-grey"
+                  class="font-weight-medium"
+                >
+                  {{ obtenerUbicacionTecnica(item) }}
+                </v-chip>
+                <span v-else class="text-caption text-medium-emphasis">—</span>
+              </td>
+              <td>
                 <div v-if="item.equipo">
                   <span class="font-weight-medium text-body-2">{{ item.equipo.codigo }}</span>
                   <div class="text-caption text-medium-emphasis">{{ item.equipo.nombre }}</div>
@@ -307,7 +339,7 @@ onMounted(async () => {
               </td>
               <td class="text-center">
                 <v-chip size="x-small" :color="colorEstado(item.estadoInspeccion)" variant="flat" class="font-weight-bold">
-                  {{ item.estadoInspeccion }}
+                  {{ etiquetaEstado(item.estadoInspeccion) }}
                 </v-chip>
               </td>
               <td class="text-center">

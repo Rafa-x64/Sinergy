@@ -95,7 +95,7 @@ async function recargar(): Promise<void> {
                     <v-col cols="12" md="8" class="d-flex justify-md-end flex-wrap ga-2">
                         <v-chip-group v-model="filtroCategoria" mandatory color="primary">
                             <v-chip value="TODAS" filter variant="tonal">Todas</v-chip>
-                            <v-chip value="INSPECCION_PENDIENTE" filter variant="tonal" color="warning">Pendientes</v-chip>
+                            <v-chip value="INSPECCION_PENDIENTE" filter variant="tonal" color="warning">Pendientes por aprobación</v-chip>
                             <v-chip value="INSPECCION_APROBADA" filter variant="tonal" color="success">Aprobadas</v-chip>
                             <v-chip value="INSPECCION_RECHAZADA" filter variant="tonal" color="error">Rechazadas</v-chip>
                             <v-chip value="AUDITORIA_SISTEMA" filter variant="tonal" color="info">Auditoría Sistema</v-chip>

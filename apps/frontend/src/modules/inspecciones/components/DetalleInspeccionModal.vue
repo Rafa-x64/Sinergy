@@ -168,7 +168,7 @@ defineExpose({ abrir, cerrar })
               variant="flat"
               class="font-weight-bold mt-1"
             >
-              {{ store.inspeccionActiva.estadoInspeccion }}
+              {{ store.inspeccionActiva.estadoInspeccion === 'PENDIENTE' ? 'PENDIENTE POR APROBACIÓN' : store.inspeccionActiva.estadoInspeccion }}
             </v-chip>
           </v-col>
         </v-row>

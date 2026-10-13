@@ -381,31 +381,33 @@ const infoAceiteEfectiva = computed(() => {
             :key="v.id"
             class="variable-row py-2 border-b-dashed"
           >
-            <!-- Nombre de la Variable y Rango Normativo -->
-            <div class="variable-label mb-1">
-              <span class="font-weight-medium text-high-emphasis text-body-2">{{ v.nombre }}</span>
-              <v-tooltip
-                :text="v.origenNormativo === 'PLANTILLA' ? 'Definición normativa de plantilla' : 'Variable propia del equipo'"
-                location="top"
-              >
-                <template #activator="{ props: tooltipProps }">
-                  <v-icon
-                    v-bind="tooltipProps"
-                    :color="v.origenNormativo === 'PLANTILLA' ? 'deep-purple' : 'blue-grey'"
-                    size="13"
-                    class="ml-1"
-                  >
-                    {{ v.origenNormativo === 'PLANTILLA' ? 'mdi-clipboard-check' : 'mdi-tune' }}
-                  </v-icon>
-                </template>
-              </v-tooltip>
-              <span class="text-caption text-medium-emphasis ml-2">{{ formatearRangoNormativo(v) }}</span>
+            <!-- 1. Nombre de la Variable y Rango Normativo -->
+            <div class="variable-col-nombre">
+              <div class="d-flex align-center flex-wrap">
+                <span class="font-weight-medium text-high-emphasis text-body-2">{{ v.nombre }}</span>
+                <v-tooltip
+                  :text="v.origenNormativo === 'PLANTILLA' ? 'Definición normativa de plantilla' : 'Variable propia del equipo'"
+                  location="top"
+                >
+                  <template #activator="{ props: tooltipProps }">
+                    <v-icon
+                      v-bind="tooltipProps"
+                      :color="v.origenNormativo === 'PLANTILLA' ? 'deep-purple' : 'blue-grey'"
+                      size="13"
+                      class="ml-1"
+                    >
+                      {{ v.origenNormativo === 'PLANTILLA' ? 'mdi-clipboard-check' : 'mdi-tune' }}
+                    </v-icon>
+                  </template>
+                </v-tooltip>
+              </div>
+              <span class="text-caption text-medium-emphasis">{{ formatearRangoNormativo(v) }}</span>
             </div>
 
-            <!-- Inputs: valor + observación en una fila adaptable -->
-            <div class="variable-inputs">
+            <!-- 2. Campo (Numérico o Opciones de Selección) -->
+            <div class="variable-col-campo">
               <!-- Variables Numéricas -->
-              <div v-if="v.tipoEvaluacion !== 'SELECCION'" class="input-group">
+              <div v-if="v.tipoEvaluacion !== 'SELECCION'" class="d-flex align-center gap-1">
                 <v-text-field
                   :model-value="store.respuestasWizard[v.id]?.valorNumerico ?? null"
                   type="number"
@@ -431,7 +433,7 @@ const infoAceiteEfectiva = computed(() => {
                   class="font-weight-bold flex-shrink-0"
                 >
                   <v-icon start size="11">mdi-alert</v-icon>
-                  Fuera de Rango
+                  Fuera
                 </v-chip>
                 <v-chip
                   v-if="esVariableHorasUso(v) && store.respuestasWizard[v.id]?.valorNumerico !== null && store.respuestasWizard[v.id]?.valorNumerico !== undefined"
@@ -441,17 +443,18 @@ const infoAceiteEfectiva = computed(() => {
                   class="flex-shrink-0"
                 >
                   <v-icon start size="11">mdi-calculator</v-icon>
-                  Calculado
+                  Calc
                 </v-chip>
               </div>
 
               <!-- Variables de Selección -->
-              <div v-else class="d-flex flex-wrap gap-1 mb-2">
+              <div v-else class="campo-seleccion-wrapper">
                 <v-btn-toggle
                   :model-value="store.respuestasWizard[v.id]?.valorSeleccion ?? null"
                   color="#5cb85c"
                   density="compact"
                   mandatory
+                  class="toggle-seleccion"
                   @update:model-value="
                     store.guardarRespuestaVariable(v.id, { valorSeleccion: $event })
                   "
@@ -462,13 +465,16 @@ const infoAceiteEfectiva = computed(() => {
                     :value="opc.clave"
                     size="small"
                     variant="outlined"
+                    class="px-2"
                   >
                     {{ opc.etiqueta }}
                   </v-btn>
                 </v-btn-toggle>
               </div>
+            </div>
 
-              <!-- Observaciones -->
+            <!-- 3. Campo de Observación -->
+            <div class="variable-col-observacion">
               <v-text-field
                 :model-value="store.respuestasWizard[v.id]?.observaciones ?? ''"
                 placeholder="Observación (opcional)"
@@ -547,44 +553,51 @@ const infoAceiteEfectiva = computed(() => {
   white-space: nowrap;
 }
 
-/* ─── Variable Row: diseño flexbox adaptable ─── */
+/* ─── Variable Row: distribución horizontal de una sola línea (Nombre, Campo, Observación) ─── */
 .variable-row {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
 }
 
-.variable-label {
+.variable-col-nombre {
+  flex: 0 0 260px;
+  max-width: 300px;
+  min-width: 180px;
+}
+
+.variable-col-campo {
+  flex: 0 0 auto;
+  min-width: 170px;
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-}
-
-/* En desktop: inputs en una sola fila */
-.variable-inputs {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.input-group {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 1;
-  min-width: 0;
 }
 
 .input-valor {
-  flex: 1;
-  min-width: 120px;
-  max-width: 220px;
+  width: 130px;
+  min-width: 105px;
+  max-width: 155px;
+}
+
+.campo-seleccion-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+.toggle-seleccion {
+  height: 36px !important;
+}
+
+.variable-col-observacion {
+  flex: 1 1 auto;
+  min-width: 160px;
 }
 
 .input-observacion {
-  flex: 1;
-  min-width: 140px;
+  width: 100%;
 }
 
 /* ─── Botones de navegación ─── */
@@ -596,22 +609,30 @@ const infoAceiteEfectiva = computed(() => {
   gap: 8px;
 }
 
-/* ─── Mobile: stack full width ─── */
-@media (max-width: 599px) {
+/* ─── Mobile: stack adaptativo si la pantalla es muy pequeña ─── */
+@media (max-width: 768px) {
+  .variable-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .variable-col-nombre,
+  .variable-col-campo,
+  .variable-col-observacion {
+    flex: 1 1 100%;
+    max-width: 100%;
+    width: 100%;
+  }
+
   .input-valor {
+    width: 100%;
     max-width: 100%;
   }
 
-  .variable-inputs {
-    flex-direction: column;
-  }
-
-  .input-group {
+  .campo-seleccion-wrapper {
     width: 100%;
-  }
-
-  .input-observacion {
-    width: 100%;
+    overflow-x: auto;
   }
 
   .equipo-titulo {
