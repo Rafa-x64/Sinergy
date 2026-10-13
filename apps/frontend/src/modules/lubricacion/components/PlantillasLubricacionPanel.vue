@@ -283,8 +283,16 @@ async function ejecutarSincronizar() {
               <!-- Frecuencia Límite -->
               <td class="text-center">
                 <v-chip size="x-small" variant="tonal" color="primary" class="font-weight-bold">
-                  {{ item.limiteHorasCambio }} hrs
+                  <span v-if="Number(item.limiteHorasCambio) >= 168 && Number(item.limiteHorasCambio) % 168 === 0">
+                    {{ Number(item.limiteHorasCambio) / 168 }} sem
+                  </span>
+                  <span v-else>
+                    {{ item.limiteHorasCambio }} hrs
+                  </span>
                 </v-chip>
+                <div v-if="Number(item.limiteHorasCambio) >= 168 && Number(item.limiteHorasCambio) % 168 === 0" class="text-caption text-medium-emphasis">
+                  {{ item.limiteHorasCambio }} hrs
+                </div>
               </td>
 
               <!-- Capacidad Recomendada -->

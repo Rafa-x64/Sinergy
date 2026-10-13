@@ -29,14 +29,17 @@ const nuevoComponenteNombre = ref('')
 const creandoComponente = ref(false)
 const nombrePunto = ref('')
 const lubricanteId = ref<number | null>(null)
+const tipoFrecuencia = ref<'HORAS' | 'SEMANAS'>('HORAS')
 const limiteHorasCambio = ref<number>(250)
+const limiteSemanasCambio = ref<number>(4)
 const capacidadRecomendada = ref<number | null>(null)
 const guardando = ref(false)
 const errorMensaje = ref('')
 const cargandoComponentes = ref(false)
 
-// Presets comunes de frecuencia para operadores de planta
-const frecuenciasRapidas = [100, 250, 500, 1000, 2000, 4000]
+// Presets de frecuencia por horas y por semanas
+const frecuenciasRapidasHoras = [100, 250, 500, 1000, 2000, 4000]
+const frecuenciasRapidasSemanas = [1, 2, 4, 8, 12, 24]
 
 // Lista de equipos de la matriz
 const listaEquipos = computed(() => {
@@ -102,10 +105,6 @@ async function alCambiarEquipo(nuevoId: number | null) {
   }
 }
 
-function aplicarPresetFrecuencia(horas: number) {
-  limiteHorasCambio.value = horas
-}
-
 // Sincronizar formulario al abrir el modal
 watch(
   () => props.modelValue,
@@ -123,7 +122,16 @@ watch(
       if (props.modo === 'editar' && props.parteEditar) {
         nombrePunto.value = props.parteEditar.nombrePunto
         lubricanteId.value = props.parteEditar.lubricante.id
-        limiteHorasCambio.value = props.parteEditar.limiteHorasCambio
+        const hrs = Number(props.parteEditar.limiteHorasCambio)
+        if (hrs >= 168 && hrs % 168 === 0) {
+          tipoFrecuencia.value = 'SEMANAS'
+          limiteSemanasCambio.value = hrs / 168
+          limiteHorasCambio.value = hrs
+        } else {
+          tipoFrecuencia.value = 'HORAS'
+          limiteHorasCambio.value = hrs
+          limiteSemanasCambio.value = Math.max(1, Math.round(hrs / 168))
+        }
         capacidadRecomendada.value = props.parteEditar.capacidadRecomendada ?? null
 
         if (props.parteEditar.componenteId) {
@@ -138,7 +146,9 @@ watch(
         // Modo Crear: valores limpios por defecto
         nombrePunto.value = ''
         componenteIdLocal.value = null
+        tipoFrecuencia.value = 'HORAS'
         limiteHorasCambio.value = 250
+        limiteSemanasCambio.value = 4
         capacidadRecomendada.value = null
         lubricanteId.value = lubricacionStore.catalogos.length > 0 ? lubricacionStore.catalogos[0].id : null
       }
@@ -229,12 +239,16 @@ async function guardar() {
       }
     }
 
+    const horasFinal = tipoFrecuencia.value === 'SEMANAS'
+      ? Number(limiteSemanasCambio.value) * 168
+      : Number(limiteHorasCambio.value)
+
     if (props.modo === 'editar' && props.parteEditar) {
       await lubricacionStore.editarPuntoLubricacion(props.parteEditar.id, {
         componenteId: componenteIdFinal,
         lubricanteId: lubricanteId.value,
         nombrePunto: nombrePunto.value.trim(),
-        limiteHorasCambio: Number(limiteHorasCambio.value),
+        limiteHorasCambio: horasFinal,
         capacidadRecomendada: capacidadRecomendada.value ? Number(capacidadRecomendada.value) : null
       })
     } else {
@@ -243,7 +257,7 @@ async function guardar() {
         componenteId: componenteIdFinal,
         nombrePunto: nombrePunto.value.trim(),
         lubricanteId: lubricanteId.value,
-        limiteHorasCambio: Number(limiteHorasCambio.value),
+        limiteHorasCambio: horasFinal,
         capacidadRecomendada: capacidadRecomendada.value ? Number(capacidadRecomendada.value) : undefined,
         horometroUltimoCambio: horometroBaseActual.value
       })
@@ -459,37 +473,94 @@ function cerrar() {
             </v-card>
           </v-col>
 
-          <!-- 5. Frecuencia Límite en Horas -->
+          <!-- 5. Frecuencia Límite: Horas vs Semanas -->
           <v-col cols="12" sm="6" class="mt-1">
-            <v-text-field
-              v-model.number="limiteHorasCambio"
-              type="number"
-              min="1"
-              label="Frecuencia Límite (Horas) *"
-              variant="outlined"
-              density="compact"
-              prepend-inner-icon="mdi-clock-outline"
-              suffix="hrs"
-              hint="Horas de trabajo permitidas para el ciclo."
-              persistent-hint
-              @keydown="(e: KeyboardEvent) => { if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') e.preventDefault() }"
-              @update:model-value="(val) => { if (val !== null && val !== undefined && Number(val) < 1) limiteHorasCambio = 1 }"
-            />
-
-            <!-- Chips de acceso rápido -->
-            <div class="d-flex align-center gap-1 flex-wrap mt-2">
-              <span class="text-caption text-medium-emphasis me-1">Atajos:</span>
-              <v-chip
-                v-for="freq in frecuenciasRapidas"
-                :key="freq"
-                size="x-small"
-                :variant="limiteHorasCambio === freq ? 'flat' : 'outlined'"
-                :color="limiteHorasCambio === freq ? 'primary' : undefined"
-                class="cursor-pointer"
-                @click="aplicarPresetFrecuencia(freq)"
+            <div class="d-flex align-center gap-2 mb-2">
+              <span class="text-caption font-weight-bold">Control de Ciclo:</span>
+              <v-btn-toggle
+                v-model="tipoFrecuencia"
+                mandatory
+                density="compact"
+                color="primary"
+                variant="outlined"
               >
-                {{ freq }}h
-              </v-chip>
+                <v-btn value="HORAS" size="x-small" class="text-none font-weight-medium">
+                  <v-icon start size="14">mdi-clock-outline</v-icon>
+                  Horómetro (hrs)
+                </v-btn>
+                <v-btn value="SEMANAS" size="x-small" class="text-none font-weight-medium">
+                  <v-icon start size="14">mdi-calendar-week</v-icon>
+                  Semanal (sem)
+                </v-btn>
+              </v-btn-toggle>
+            </div>
+
+            <!-- Entrada en Horas -->
+            <div v-if="tipoFrecuencia === 'HORAS'">
+              <v-text-field
+                v-model.number="limiteHorasCambio"
+                type="number"
+                min="1"
+                label="Frecuencia Límite (Horas) *"
+                variant="outlined"
+                density="compact"
+                prepend-inner-icon="mdi-clock-outline"
+                suffix="hrs"
+                :hint="`Equivale a aprox. ${(limiteHorasCambio / 168).toFixed(1)} semanas a 24h/día.`"
+                persistent-hint
+                @keydown="(e: KeyboardEvent) => { if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') e.preventDefault() }"
+                @update:model-value="(val) => { if (val !== null && val !== undefined && Number(val) < 1) limiteHorasCambio = 1 }"
+              />
+
+              <!-- Chips de acceso rápido Horas -->
+              <div class="d-flex align-center gap-1 flex-wrap mt-2">
+                <span class="text-caption text-medium-emphasis me-1">Atajos:</span>
+                <v-chip
+                  v-for="freq in frecuenciasRapidasHoras"
+                  :key="freq"
+                  size="x-small"
+                  :variant="limiteHorasCambio === freq ? 'flat' : 'outlined'"
+                  :color="limiteHorasCambio === freq ? 'primary' : undefined"
+                  class="cursor-pointer"
+                  @click="limiteHorasCambio = freq"
+                >
+                  {{ freq }}h
+                </v-chip>
+              </div>
+            </div>
+
+            <!-- Entrada en Semanas -->
+            <div v-else>
+              <v-text-field
+                v-model.number="limiteSemanasCambio"
+                type="number"
+                min="1"
+                label="Frecuencia Límite (Semanas) *"
+                variant="outlined"
+                density="compact"
+                prepend-inner-icon="mdi-calendar-week"
+                suffix="sem"
+                :hint="`${limiteSemanasCambio || 0} semanas = ${(limiteSemanasCambio || 0) * 168} hrs de operación continua.`"
+                persistent-hint
+                @keydown="(e: KeyboardEvent) => { if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') e.preventDefault() }"
+                @update:model-value="(val) => { if (val !== null && val !== undefined && Number(val) < 1) limiteSemanasCambio = 1 }"
+              />
+
+              <!-- Chips de acceso rápido Semanas -->
+              <div class="d-flex align-center gap-1 flex-wrap mt-2">
+                <span class="text-caption text-medium-emphasis me-1">Atajos:</span>
+                <v-chip
+                  v-for="sem in frecuenciasRapidasSemanas"
+                  :key="sem"
+                  size="x-small"
+                  :variant="limiteSemanasCambio === sem ? 'flat' : 'outlined'"
+                  :color="limiteSemanasCambio === sem ? 'primary' : undefined"
+                  class="cursor-pointer"
+                  @click="limiteSemanasCambio = sem"
+                >
+                  {{ sem }} sem
+                </v-chip>
+              </div>
             </div>
           </v-col>
 

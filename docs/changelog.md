@@ -16,11 +16,21 @@ El formato sigue el estándar [Keep a Changelog](https://keepachangelog.com/es/1
 
 ## [Unreleased]
 
-- **Modalidad Dual de Toma de Horómetro y Seguimiento por Semanas (`feat: horometro-modalidad-calendario`)**:
+- **Modalidad Dual de Toma de Horómetro y Conteo Semanal (`feat: horometro-modalidad-calendario-y-semanas`)**:
   - **`MatrizLubricacionView.vue`**: Se implementó un selector de modo de captura (`modoIngresoHorometro`):
     1. *Por Horas (Horómetro)*: Permite el ingreso manual directo de las horas del reloj horométrico del equipo.
     2. *Por Fecha de Calendario*: Permite registrar inspecciones en equipos que operan sin reloj horométrico físico o con régimen continuo de calendario. Incluye selector de fecha, factor de régimen diario editable (por defecto 24 hrs/día), cálculo reactivo de horas proyectadas y resumen de **días y semanas transcurridas** desde la última lectura registrada.
-  - **Visualización de Semanas en Puntos de Lubricación**: En la columna de horas acumuladas de la tabla de inspección, para puntos con frecuencias mayores a 1 semana (ej. bisagras, uniones, chasis exterior a 4 semanas = 672 hrs), se muestra el avance equivalente en semanas `(X.X / Y.Y sem)`. Para puntos sin límite estricto (`limiteHorasCambio = 0`), se etiqueta como "Bajo Demanda" previniendo divisiones por cero o falsos estados críticos.
+  - **Creación y Edición de Variables por Semanas (`ModalParteLubricar.vue` y `DialogoPlantillaLubricacion.vue`)**:
+    - Se incorporó un selector de ciclo dual con `v-btn-toggle`: **Horas (hrs)** o **Semanas (sem)**.
+    - Se agregaron botones de preajuste rápido adaptados a cada modalidad:
+      - Modo Horas: `100h`, `250h`, `500h`, `1.000h`, `2.000h`, `5.000h`.
+      - Modo Semanas: `1 sem`, `2 sem`, `4 sem` (mensual), `8 sem` (bimestral), `12 sem` (trimestral), `24 sem` (semestral).
+    - Conversión reactiva transparente a nivel de modelo ($1\text{ semana} = 168\text{ horas}$) manteniendo total integridad y compatibilidad hacia atrás en la base de datos sin alterar esquemas ni APIs.
+    - Detección automática de la unidad al abrir un punto o plantilla existente (si el límite es múltiplo exacto de 168 hrs y $\ge 168$, se conmuta a Semanas automáticamente).
+  - **Visualización de Semanas en Puntos y Plantillas (`PlantillasLubricacionPanel.vue` y `MatrizLubricacionView.vue`)**:
+    - En la matriz de lubricación, se muestra el avance equivalente en semanas `(X.X / Y.Y sem)` para puntos de lubricación con límites $\ge 168\text{ hrs}$.
+    - En la tabla de plantillas normativas y en el catálogo de partes se indica la frecuencia en semanas con su desglose en horas (ej. `4 sem (672 hrs)`).
+    - Para puntos sin límite estricto (`limiteHorasCambio = 0`), se etiqueta como "Bajo Demanda" previniendo divisiones por cero o falsos estados críticos.
   - **`ModalReemplazoHorometro.vue`**: Se normalizó la nomenclatura sustituyendo el término "odómetro" por "horómetro".
 
 - **Saneamiento de Componentes en Planta de Mezcla (PLM) (`fix: saneamiento-componentes-plm`)**:

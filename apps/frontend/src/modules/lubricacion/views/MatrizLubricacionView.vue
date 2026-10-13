@@ -881,9 +881,17 @@ async function finalizarWizardLinea() {
                       </div>
                     </td>
 
-                    <!-- Frecuencia Horas -->
+                    <!-- Frecuencia Horas / Semanas -->
                     <td class="text-center font-weight-bold text-body-2">
-                      {{ parte.limiteHorasCambio }} hrs
+                      <div v-if="Number(parte.limiteHorasCambio) >= 168 && Number(parte.limiteHorasCambio) % 168 === 0">
+                        {{ Number(parte.limiteHorasCambio) / 168 }} sem
+                        <div class="text-caption font-weight-regular text-medium-emphasis">
+                          {{ parte.limiteHorasCambio }} hrs
+                        </div>
+                      </div>
+                      <div v-else>
+                        {{ parte.limiteHorasCambio }} hrs
+                      </div>
                     </td>
 
                     <!-- Capacidad -->
