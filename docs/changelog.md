@@ -16,12 +16,12 @@ El formato sigue el estándar [Keep a Changelog](https://keepachangelog.com/es/1
 
 ## [Unreleased]
 
-- **Modalidad Dual de Toma de Horómetro: Odómetro en Horas vs Fecha de Calendario (`feat: horometro-modalidad-calendario`)**:
-  - **`MatrizLubricacionView.vue`**: Se implementó un selector desplegable de modo de captura (`modoIngresoHorometro`) con dos opciones:
-    1. *Por Horas (Odómetro)*: Permite el ingreso manual directo de las horas del odómetro en el tacómetro del equipo (comportamiento estándar).
-    2. *Por Fecha de Calendario*: Permite registrar inspecciones en equipos que operan sin horómetro físico o con régimen de ciclo calendario continuo. Incluye selector de fecha (`fechaLecturaCalendario`), factor de régimen diario editable (`horasPorDiaCalendario`, por defecto 24 hrs/día) y cálculo reactivo inmediato de horas proyectadas a partir de la última fecha y lectura registradas.
-    - Se integra con el sistema de borradores por equipo (`borradoresPorEquipo`), persistiendo el modo seleccionado y sus valores al avanzar o retroceder en el wizard de línea o al cambiar de equipo.
-    - No altera el esquema de la base de datos ni los endpoints existentes, garantizando total compatibilidad hacia atrás y preservando la integridad del historial de horómetros.
+- **Modalidad Dual de Toma de Horómetro y Seguimiento por Semanas (`feat: horometro-modalidad-calendario`)**:
+  - **`MatrizLubricacionView.vue`**: Se implementó un selector de modo de captura (`modoIngresoHorometro`):
+    1. *Por Horas (Horómetro)*: Permite el ingreso manual directo de las horas del reloj horométrico del equipo.
+    2. *Por Fecha de Calendario*: Permite registrar inspecciones en equipos que operan sin reloj horométrico físico o con régimen continuo de calendario. Incluye selector de fecha, factor de régimen diario editable (por defecto 24 hrs/día), cálculo reactivo de horas proyectadas y resumen de **días y semanas transcurridas** desde la última lectura registrada.
+  - **Visualización de Semanas en Puntos de Lubricación**: En la columna de horas acumuladas de la tabla de inspección, para puntos con frecuencias mayores a 1 semana (ej. bisagras, uniones, chasis exterior a 4 semanas = 672 hrs), se muestra el avance equivalente en semanas `(X.X / Y.Y sem)`. Para puntos sin límite estricto (`limiteHorasCambio = 0`), se etiqueta como "Bajo Demanda" previniendo divisiones por cero o falsos estados críticos.
+  - **`ModalReemplazoHorometro.vue`**: Se normalizó la nomenclatura sustituyendo el término "odómetro" por "horómetro".
 
 - **Saneamiento de Componentes en Planta de Mezcla (PLM) (`fix: saneamiento-componentes-plm`)**:
   - **Saneamiento en Base de Datos**: Se procesaron 42 componentes de gravimétricos en la planta `1000-PLM` cuyos nombres contenían estructuras JSON serializadas de importaciones de Excel (`{"richText":[...]}`). Los nombres fueron normalizados a texto legible estándar (`Reductor Agitador`).
