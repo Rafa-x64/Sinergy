@@ -51,6 +51,8 @@ interface FilaDetalleInspeccion {
   presentaFuga: boolean
   observacionesFuga: string
   observacionesGenerales: string
+  evaluado?: boolean
+  nivelLubricanteModificado?: boolean
 }
 
 const nuevoHorometro = ref<number>(0)
@@ -114,14 +116,36 @@ const equiposCompletados = computed(() =>
   equiposLineaWizard.value.filter(f => !!borradoresPorEquipo.value[f.equipoId]).length
 )
 
-// Avance a siguiente equipo de la línea (guarda borrador del actual)
+// Determina si el equipo activo en el wizard tiene al menos una variable evaluada.
+// Un equipo se considera evaluado cuando el técnico registró el nivel de lubricante
+// en al menos un punto, o marcó reposición, cambio total o fuga.
+const equipoActualEvaluado = computed(() => {
+  if (!modoWizardLinea.value) return true
+  const equipoId = equipoWizardActual.value?.equipoId
+  if (!equipoId) return false
+  // Si ya existe un borrador guardado para este equipo, ya fue evaluado
+  if (borradoresPorEquipo.value[equipoId]) return true
+  // Verificar si el formulario activo tiene al menos una acción registrada
+  return detallesInspeccion.value.some(d =>
+    d.seRealizoReposicion ||
+    d.seRealizoCambioTotal ||
+    d.presentaFuga ||
+    d.nivelLubricante !== 'NORMAL'
+  )
+})
+
+// Avance a siguiente equipo de la línea (guarda borrador del actual).
+// Requiere que el equipo haya sido evaluado antes de avanzar.
 function avanzarEquipoWizard() {
+  if (!equipoActualEvaluado.value) {
+    toast.warning('Debe evaluar al menos una variable de lubricación antes de avanzar al siguiente equipo.')
+    return
+  }
   const fila = equipoWizardActual.value
   if (fila) guardarBorradorEquipoActual(fila.equipoId)
   if (equipoWizardIndice.value < equiposLineaWizard.value.length - 1) {
     equipoWizardIndice.value++
     window.scrollTo({ top: 0, behavior: 'smooth' })
-    // Sincronizar el formulario con el nuevo equipo del wizard
     sincronizarFormularioConEquipo(equiposLineaWizard.value[equipoWizardIndice.value])
   }
 }
@@ -1061,10 +1085,20 @@ async function finalizarWizardLinea() {
                   :color="idx === equipoWizardIndice ? 'primary' : (borradoresPorEquipo[fila.equipoId] ? 'success' : 'default')"
                   :variant="idx === equipoWizardIndice ? 'flat' : 'tonal'"
                   size="small"
-                  class="cursor-pointer"
-                  @click="() => { guardarBorradorEquipoActual(equipoWizardActual?.equipoId ?? null); equipoWizardIndice = idx; sincronizarFormularioConEquipo(fila) }"
+                  :class="(idx !== equipoWizardIndice && !borradoresPorEquipo[fila.equipoId] && !equipoActualEvaluado) ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'"
+                  :disabled="idx !== equipoWizardIndice && !borradoresPorEquipo[fila.equipoId] && !equipoActualEvaluado"
+                  @click="() => {
+                    if (idx !== equipoWizardIndice && !equipoActualEvaluado) {
+                      toast.warning('Debe evaluar al menos una variable de lubricación antes de cambiar de equipo.')
+                      return
+                    }
+                    guardarBorradorEquipoActual(equipoWizardActual?.equipoId ?? null)
+                    equipoWizardIndice = idx
+                    sincronizarFormularioConEquipo(fila)
+                  }"
                 >
                   <v-icon v-if="borradoresPorEquipo[fila.equipoId] && idx !== equipoWizardIndice" start size="12">mdi-check-circle</v-icon>
+                  <v-icon v-else-if="idx !== equipoWizardIndice && !borradoresPorEquipo[fila.equipoId]" start size="12">mdi-lock-outline</v-icon>
                   {{ fila.equipoCodigo }}
                 </v-chip>
               </div>
@@ -1406,16 +1440,23 @@ async function finalizarWizardLinea() {
                     Anterior
                   </v-btn>
 
-                  <v-btn
-                    v-if="!esUltimoEquipoWizard"
-                    color="primary"
-                    variant="flat"
-                    append-icon="mdi-arrow-right"
-                    size="small"
-                    @click="avanzarEquipoWizard"
-                  >
-                    Siguiente Equipo
-                  </v-btn>
+                  <v-tooltip :text="!equipoActualEvaluado ? 'Evalúe al menos una variable de lubricación para continuar' : ''" location="top">
+                    <template #activator="{ props: tooltipProps }">
+                      <span v-bind="tooltipProps">
+                        <v-btn
+                          v-if="!esUltimoEquipoWizard"
+                          color="primary"
+                          variant="flat"
+                          append-icon="mdi-arrow-right"
+                          size="small"
+                          :disabled="!equipoActualEvaluado"
+                          @click="avanzarEquipoWizard"
+                        >
+                          Siguiente Equipo
+                        </v-btn>
+                      </span>
+                    </template>
+                  </v-tooltip>
 
                   <v-btn
                     v-else
