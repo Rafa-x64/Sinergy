@@ -1440,23 +1440,18 @@ async function finalizarWizardLinea() {
                     Anterior
                   </v-btn>
 
-                  <v-tooltip :text="!equipoActualEvaluado ? 'Evalúe al menos una variable de lubricación para continuar' : ''" location="top">
-                    <template #activator="{ props: tooltipProps }">
-                      <span v-bind="tooltipProps">
-                        <v-btn
-                          v-if="!esUltimoEquipoWizard"
-                          color="primary"
-                          variant="flat"
-                          append-icon="mdi-arrow-right"
-                          size="small"
-                          :disabled="!equipoActualEvaluado"
-                          @click="avanzarEquipoWizard"
-                        >
-                          Siguiente Equipo
-                        </v-btn>
-                      </span>
-                    </template>
-                  </v-tooltip>
+                  <v-btn
+                    v-if="!esUltimoEquipoWizard"
+                    color="primary"
+                    variant="flat"
+                    append-icon="mdi-arrow-right"
+                    size="small"
+                    :disabled="!equipoActualEvaluado"
+                    :title="!equipoActualEvaluado ? 'Evalúe al menos una variable de lubricación para continuar' : ''"
+                    @click="avanzarEquipoWizard"
+                  >
+                    Siguiente Equipo
+                  </v-btn>
 
                   <v-btn
                     v-else
