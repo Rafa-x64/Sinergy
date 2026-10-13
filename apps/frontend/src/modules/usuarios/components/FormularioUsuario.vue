@@ -43,11 +43,27 @@ const rolSeleccionado = computed<Rol | undefined>(() =>
     props.roles.find((r) => r.id === formulario.value.rolId)
 )
 
-const requiereSupervisor = computed<boolean>(() => rolSeleccionado.value?.requiereSupervisor ?? false)
+const esRolAdmin = computed<boolean>(() => {
+    const nombre = (rolSeleccionado.value?.nombre || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toUpperCase()
+    return nombre.includes('ADMINISTRADOR')
+})
 
-const esRolAdmin = computed<boolean>(() =>
-    (rolSeleccionado.value?.nombre || '').trim().toUpperCase() === 'ADMINISTRADOR'
-)
+const esSupervisorObligatorio = computed<boolean>(() => {
+    if (!rolSeleccionado.value) return false
+    const nombre = (rolSeleccionado.value.nombre || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toUpperCase()
+    return (
+        (rolSeleccionado.value.requiereSupervisor &&
+            !nombre.includes('SUPERVISOR') &&
+            !nombre.includes('ADMINISTRADOR')) ||
+        nombre.includes('TECNICO')
+    )
+})
 
 watch(
     () => props.datosIniciales,
@@ -62,15 +78,6 @@ watch(
         }
     },
     { deep: true, immediate: true }
-)
-
-watch(
-    () => formulario.value.rolId,
-    () => {
-        if (!requiereSupervisor.value) {
-            formulario.value.supervisorId = null
-        }
-    }
 )
 
 const manejarEnvio = async (): Promise<void> => {
@@ -142,11 +149,20 @@ const manejarEnvio = async (): Promise<void> => {
                 ></v-select>
             </v-col>
 
-            <v-col v-if="requiereSupervisor" cols="12" md="6">
-                <v-select v-model="formulario.supervisorId" :items="supervisores"
-                    :item-title="(item: SupervisorOption) => `${item.nombre} ${item.apellido}`" item-value="id"
-                    label="Supervisor Asignado" variant="outlined" clearable :disabled="cargando"
-                    :rules="[(v: number | null | undefined) => (v !== null && v !== undefined) || 'Debe asignar un supervisor']"></v-select>
+            <v-col cols="12" md="6">
+                <v-select
+                    v-model="formulario.supervisorId"
+                    :items="supervisores"
+                    :item-title="(item: SupervisorOption) => `${item.nombre} ${item.apellido}`"
+                    item-value="id"
+                    label="Supervisor Asignado"
+                    variant="outlined"
+                    clearable
+                    :disabled="cargando"
+                    :rules="esSupervisorObligatorio ? [(v: number | null | undefined) => (v !== null && v !== undefined) || 'Debe asignar un supervisor'] : []"
+                    :hint="esSupervisorObligatorio ? 'Obligatorio para técnicos' : 'Opcional (puede ser supervisado por otro supervisor o administrador)'"
+                    persistent-hint
+                ></v-select>
             </v-col>
 
             <v-col cols="12" md="6">

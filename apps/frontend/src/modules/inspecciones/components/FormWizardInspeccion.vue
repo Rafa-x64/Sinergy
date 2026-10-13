@@ -18,6 +18,9 @@ const store = useInspeccionesStore()
 const equipoIndice = ref(0)
 const contenedorRef = ref<HTMLElement | null>(null)
 
+// IDs de componentes que están expandidos. Se inicializan con todos los componentes del equipo actual
+const componentesExpandidos = ref<number[]>([])
+
 const equipoActual = computed<EquipoElegible | null>(() => {
   if (store.equiposElegibles.length === 0) return null
   return store.equiposElegibles[equipoIndice.value] || null
@@ -33,11 +36,14 @@ watch(
   (equipo) => {
     if (!equipo) {
       store.actualizarIdsEquipoActual([])
+      componentesExpandidos.value = []
       return
     }
     const ids: number[] = []
     equipo.componentes.forEach((c) => c.variables.forEach((v) => ids.push(v.id)))
     store.actualizarIdsEquipoActual(ids)
+    // Iniciar los paneles contraídos por defecto
+    componentesExpandidos.value = []
   },
   { immediate: true }
 )
@@ -348,152 +354,178 @@ const infoAceiteEfectiva = computed(() => {
         </div>
       </v-alert>
 
-      <!-- Lista de Componentes y Variables del Equipo Actual -->
+      <!-- Lista de Componentes y Variables del Equipo Actual en Dropdowns -->
 
-      <v-card
-        v-for="componente in equipoActual.componentes"
-        :key="componente.id"
-        class="elevation-1 rounded-lg pa-3 mb-3 bg-surface border"
+      <v-expansion-panels
+        v-model="componentesExpandidos"
+        multiple
+        variant="accordion"
+        class="mb-3"
       >
-        <!-- Encabezado del Componente -->
-        <div class="d-flex align-center mb-3 border-b pb-2">
-          <v-avatar size="28" color="#5cb85c" variant="tonal" class="mr-2 flex-shrink-0">
-            <v-icon size="16" color="#5cb85c">mdi-puzzle</v-icon>
-          </v-avatar>
-          <div>
-            <h3 class="text-subtitle-2 font-weight-bold text-high-emphasis mb-0">
-              {{ componente.nombre }}
-            </h3>
-            <span v-if="componente.descripcion" class="text-caption text-medium-emphasis">
-              {{ componente.descripcion }}
-            </span>
-          </div>
-        </div>
-
-        <!-- Formulario de Variables del Componente -->
-        <div v-if="componente.variables.length === 0" class="text-caption text-medium-emphasis py-2 font-italic">
-          Sin variables críticas configuradas para este componente.
-        </div>
-
-        <div v-else class="variables-list">
-          <div
-            v-for="v in componente.variables"
-            :key="v.id"
-            class="variable-row py-2 border-b-dashed"
-          >
-            <!-- 1. Nombre de la Variable y Rango Normativo -->
-            <div class="variable-col-nombre">
-              <div class="d-flex align-center flex-wrap">
-                <span class="font-weight-medium text-high-emphasis text-body-2">{{ v.nombre }}</span>
-                <v-tooltip
-                  :text="v.origenNormativo === 'PLANTILLA' ? 'Definición normativa de plantilla' : 'Variable propia del equipo'"
-                  location="top"
+        <v-expansion-panel
+          v-for="componente in equipoActual.componentes"
+          :key="componente.id"
+          :value="componente.id"
+          class="border rounded-lg mb-2 elevation-1"
+          bg-color="surface"
+        >
+          <!-- Header del panel: nombre + chip de avance -->
+          <v-expansion-panel-title class="py-2">
+            <div class="d-flex align-center gap-2 flex-grow-1">
+              <v-avatar size="26" color="#5cb85c" variant="tonal" class="flex-shrink-0">
+                <v-icon size="14" color="#5cb85c">mdi-puzzle</v-icon>
+              </v-avatar>
+              <div class="flex-grow-1 min-width-0">
+                <span class="text-subtitle-2 font-weight-bold text-high-emphasis">
+                  {{ componente.nombre }}
+                </span>
+                <span
+                  v-if="componente.descripcion"
+                  class="text-caption text-medium-emphasis ms-2"
                 >
-                  <template #activator="{ props: tooltipProps }">
-                    <v-icon
-                      v-bind="tooltipProps"
-                      :color="v.origenNormativo === 'PLANTILLA' ? 'deep-purple' : 'blue-grey'"
-                      size="13"
-                      class="ml-1"
+                  — {{ componente.descripcion }}
+                </span>
+              </div>
+              <v-chip
+                size="x-small"
+                :color="componente.variables.filter(v => store.respuestasWizard[v.id]?.valorNumerico !== null && store.respuestasWizard[v.id]?.valorNumerico !== undefined || store.respuestasWizard[v.id]?.valorSeleccion).length === componente.variables.length ? 'success' : '#5cb85c'"
+                variant="tonal"
+                class="flex-shrink-0 font-weight-bold"
+              >
+                {{ componente.variables.filter(v => store.respuestasWizard[v.id]?.valorNumerico !== null && store.respuestasWizard[v.id]?.valorNumerico !== undefined || store.respuestasWizard[v.id]?.valorSeleccion).length }}
+                /
+                {{ componente.variables.length }} vars
+              </v-chip>
+            </div>
+          </v-expansion-panel-title>
+
+          <!-- Contenido del panel: variables -->
+          <v-expansion-panel-text class="pa-0">
+            <div v-if="componente.variables.length === 0" class="text-caption text-medium-emphasis py-3 px-4 font-italic">
+              Sin variables críticas configuradas para este componente.
+            </div>
+
+            <div v-else class="variables-list px-1 pb-2">
+              <div
+                v-for="v in componente.variables"
+                :key="v.id"
+                class="variable-row py-2 border-b-dashed"
+              >
+                <!-- 1. Nombre de la Variable y Rango Normativo -->
+                <div class="variable-col-nombre">
+                  <div class="d-flex align-center flex-wrap">
+                    <span class="font-weight-medium text-high-emphasis text-body-2">{{ v.nombre }}</span>
+                    <v-tooltip
+                      :text="v.origenNormativo === 'PLANTILLA' ? 'Definición normativa de plantilla' : 'Variable propia del equipo'"
+                      location="top"
                     >
-                      {{ v.origenNormativo === 'PLANTILLA' ? 'mdi-clipboard-check' : 'mdi-tune' }}
-                    </v-icon>
-                  </template>
-                </v-tooltip>
-              </div>
-              <span class="text-caption text-medium-emphasis">{{ formatearRangoNormativo(v) }}</span>
-            </div>
+                      <template #activator="{ props: tooltipProps }">
+                        <v-icon
+                          v-bind="tooltipProps"
+                          :color="v.origenNormativo === 'PLANTILLA' ? 'deep-purple' : 'blue-grey'"
+                          size="13"
+                          class="ml-1"
+                        >
+                          {{ v.origenNormativo === 'PLANTILLA' ? 'mdi-clipboard-check' : 'mdi-tune' }}
+                        </v-icon>
+                      </template>
+                    </v-tooltip>
+                  </div>
+                  <span class="text-caption text-medium-emphasis">{{ formatearRangoNormativo(v) }}</span>
+                </div>
 
-            <!-- 2. Campo (Numérico o Opciones de Selección) -->
-            <div class="variable-col-campo">
-              <!-- Variables Numéricas -->
-              <div v-if="v.tipoEvaluacion !== 'SELECCION'" class="d-flex align-center gap-1">
-                <v-text-field
-                  :model-value="store.respuestasWizard[v.id]?.valorNumerico ?? null"
-                  type="number"
-                  step="any"
-                  density="compact"
-                  variant="outlined"
-                  hide-details
-                  :placeholder="v.unidad ? `Valor (${v.unidad})` : 'Ingrese valor'"
-                  :readonly="esVariableHorasUso(v)"
-                  :bg-color="esVariableHorasUso(v) ? 'grey-lighten-4' : undefined"
-                  class="input-valor"
-                  @update:model-value="
-                    guardarYRecalcular(v, {
-                      valorNumerico: $event !== '' && $event !== null ? Number($event) : null
-                    })
-                  "
-                />
-                <v-chip
-                  v-if="estaFueraDeRango(v, store.respuestasWizard[v.id]?.valorNumerico)"
-                  size="x-small"
-                  color="error"
-                  variant="flat"
-                  class="font-weight-bold flex-shrink-0"
-                >
-                  <v-icon start size="11">mdi-alert</v-icon>
-                  Fuera
-                </v-chip>
-                <v-chip
-                  v-if="esVariableHorasUso(v) && store.respuestasWizard[v.id]?.valorNumerico !== null && store.respuestasWizard[v.id]?.valorNumerico !== undefined"
-                  size="x-small"
-                  color="blue-grey"
-                  variant="tonal"
-                  class="flex-shrink-0"
-                >
-                  <v-icon start size="11">mdi-calculator</v-icon>
-                  Calc
-                </v-chip>
-              </div>
+                <!-- 2. Campo (Numérico o Opciones de Selección) -->
+                <div class="variable-col-campo">
+                  <!-- Variables Numéricas -->
+                  <div v-if="v.tipoEvaluacion !== 'SELECCION'" class="d-flex align-center gap-1">
+                    <v-text-field
+                      :model-value="store.respuestasWizard[v.id]?.valorNumerico ?? null"
+                      type="number"
+                      step="any"
+                      density="compact"
+                      variant="outlined"
+                      hide-details
+                      :placeholder="v.unidad ? `Valor (${v.unidad})` : 'Ingrese valor'"
+                      :readonly="esVariableHorasUso(v)"
+                      :bg-color="esVariableHorasUso(v) ? 'grey-lighten-4' : undefined"
+                      class="input-valor"
+                      @update:model-value="
+                        guardarYRecalcular(v, {
+                          valorNumerico: $event !== '' && $event !== null ? Number($event) : null
+                        })
+                      "
+                    />
+                    <v-chip
+                      v-if="estaFueraDeRango(v, store.respuestasWizard[v.id]?.valorNumerico)"
+                      size="x-small"
+                      color="error"
+                      variant="flat"
+                      class="font-weight-bold flex-shrink-0"
+                    >
+                      <v-icon start size="11">mdi-alert</v-icon>
+                      Fuera
+                    </v-chip>
+                    <v-chip
+                      v-if="esVariableHorasUso(v) && store.respuestasWizard[v.id]?.valorNumerico !== null && store.respuestasWizard[v.id]?.valorNumerico !== undefined"
+                      size="x-small"
+                      color="blue-grey"
+                      variant="tonal"
+                      class="flex-shrink-0"
+                    >
+                      <v-icon start size="11">mdi-calculator</v-icon>
+                      Calc
+                    </v-chip>
+                  </div>
 
-              <!-- Variables de Selección -->
-              <div v-else class="campo-seleccion-wrapper">
-                <v-btn-toggle
-                  :model-value="store.respuestasWizard[v.id]?.valorSeleccion ?? null"
-                  color="#5cb85c"
-                  density="compact"
-                  mandatory
-                  class="toggle-seleccion"
-                  @update:model-value="
-                    store.guardarRespuestaVariable(v.id, { valorSeleccion: $event })
-                  "
-                >
-                  <v-btn
-                    v-for="opc in v.opcionesSeleccion"
-                    :key="opc.id"
-                    :value="opc.clave"
-                    size="small"
+                  <!-- Variables de Selección -->
+                  <div v-else class="campo-seleccion-wrapper">
+                    <v-btn-toggle
+                      :model-value="store.respuestasWizard[v.id]?.valorSeleccion ?? null"
+                      color="#5cb85c"
+                      density="compact"
+                      mandatory
+                      class="toggle-seleccion"
+                      @update:model-value="
+                        store.guardarRespuestaVariable(v.id, { valorSeleccion: $event })
+                      "
+                    >
+                      <v-btn
+                        v-for="opc in v.opcionesSeleccion"
+                        :key="opc.id"
+                        :value="opc.clave"
+                        size="small"
+                        variant="outlined"
+                        class="px-2"
+                      >
+                        {{ opc.etiqueta }}
+                      </v-btn>
+                    </v-btn-toggle>
+                  </div>
+                </div>
+
+                <!-- 3. Campo de Observación -->
+                <div class="variable-col-observacion">
+                  <v-text-field
+                    :model-value="store.respuestasWizard[v.id]?.observaciones ?? ''"
+                    placeholder="Observación (opcional)"
+                    density="compact"
                     variant="outlined"
-                    class="px-2"
-                  >
-                    {{ opc.etiqueta }}
-                  </v-btn>
-                </v-btn-toggle>
+                    hide-details
+                    class="input-observacion"
+                    @update:model-value="
+                      store.guardarRespuestaVariable(v.id, {
+                        valorNumerico: store.respuestasWizard[v.id]?.valorNumerico,
+                        valorSeleccion: store.respuestasWizard[v.id]?.valorSeleccion,
+                        observaciones: $event
+                      })
+                    "
+                  />
+                </div>
               </div>
             </div>
-
-            <!-- 3. Campo de Observación -->
-            <div class="variable-col-observacion">
-              <v-text-field
-                :model-value="store.respuestasWizard[v.id]?.observaciones ?? ''"
-                placeholder="Observación (opcional)"
-                density="compact"
-                variant="outlined"
-                hide-details
-                class="input-observacion"
-                @update:model-value="
-                  store.guardarRespuestaVariable(v.id, {
-                    valorNumerico: store.respuestasWizard[v.id]?.valorNumerico,
-                    valorSeleccion: store.respuestasWizard[v.id]?.valorSeleccion,
-                    observaciones: $event
-                  })
-                "
-              />
-            </div>
-          </div>
-        </div>
-      </v-card>
+          </v-expansion-panel-text>
+        </v-expansion-panel>
+      </v-expansion-panels>
 
       <!-- Botones de Navegación del Wizard -->
       <v-card class="elevation-2 rounded-lg pa-3 bg-surface border">

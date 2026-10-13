@@ -54,7 +54,6 @@ const pestañasUsuarios = computed<TabItem[]>(() => {
 })
 
 const headersTabla = [
-    { title: 'Id', key: 'id', align: 'center' as const },
     { title: 'Nombre', key: 'nombre', align: 'center' as const },
     { title: 'Apellido', key: 'apellido', align: 'center' as const },
     { title: 'Correo', key: 'email', align: 'center' as const },
@@ -70,7 +69,17 @@ const headersTabla = [
 
 const supervisoresDisponibles = computed(() =>
     usuarios.value
-        .filter((u) => u.activo && u.rolesUsuario.some((r) => r.rol.esSupervisor))
+        .filter((u) =>
+            u.activo &&
+            (idUsuarioEditar.value === null || u.id !== idUsuarioEditar.value) &&
+            u.rolesUsuario.some((r) => {
+                const nombreRol = (r.rol?.nombre || '')
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .toUpperCase()
+                return r.rol?.esSupervisor || nombreRol.includes('ADMINISTRADOR') || nombreRol.includes('SUPERVISOR')
+            })
+        )
         .map((u) => ({ id: u.id, nombre: u.nombre, apellido: u.apellido }))
 )
 

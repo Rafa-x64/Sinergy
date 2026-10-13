@@ -44,16 +44,7 @@ const tituloRutina = computed(() => {
   }
 })
 
-const codigoFormato = computed(() => {
-  if (inspeccion.value?.tipoInspeccion === 'LUBRICACION') return 'FLUB001'
-  if (inspeccion.value?.tipoInspeccion?.startsWith('CHILLER') ||
-      inspeccion.value?.tipoInspeccion === 'COMPRESOR' ||
-      inspeccion.value?.tipoInspeccion === 'GENERADOR' ||
-      inspeccion.value?.tipoInspeccion?.startsWith('MONTACARGAS')) {
-    return 'FIM003'
-  }
-  return 'FIM006'
-})
+
 
 // Metadatos calculados de tiempo
 const fechaStr = computed(() => {
@@ -108,20 +99,6 @@ const equipoEvaluado = computed(() => {
   return inspeccion.value?.detalles?.[0]?.variable?.componente?.equipo || null
 })
 
-// Código abreviado del equipo (ej. COM_10003, GEN_20002 o identificacionAbreviada)
-const codigoAbreviadoEquipo = computed(() => {
-  const eq = equipoEvaluado.value
-  if (!eq) return '—'
-  if ((eq as any).montacargasDetalle?.identificacionAbreviada) {
-    return (eq as any).montacargasDetalle.identificacionAbreviada
-  }
-  const match = eq.codigo.match(/^[0-9]+([A-Z]+)([0-9]+)$/)
-  if (match) {
-    return `${match[1]}_${match[2]}`
-  }
-  return eq.codigo
-})
-
 // Nombre de supervisor aprobador: SOLO cuando la inspección ha sido formalmente APROBADA
 const nombreAprobador = computed(() => {
   if (inspeccion.value?.estadoInspeccion === 'APROBADO' && inspeccion.value?.aprobadoPor?.nombre) {
@@ -163,19 +140,6 @@ const observacionesGeneralesLimpias = computed(() => {
   }
   return texto
 })
-
-// Estilos de evaluación cualitativa
-const esEstadoPositivo = (valor?: string | null) => {
-  if (!valor) return false
-  const v = valor.trim().toLowerCase()
-  return v === 'normal' || v === 'conforme' || v === 'operativo' || v === 'si' || v === 'sí' || v === 'ok' || v === 'completado'
-}
-
-const esEstadoNegativo = (valor?: string | null) => {
-  if (!valor) return false
-  const v = valor.trim().toLowerCase()
-  return v === 'anormal' || v === 'no conforme' || v === 'falla' || v === 'inoperativo' || v === 'no' || v === 'crítico' || v === 'critico' || v === 'no_completado' || v === 'no completado'
-}
 
 // Acciones de exportación e impresión
 const imprimir = () => {
@@ -219,7 +183,7 @@ const descargarPDF = async () => {
     }
 
     const codigo = inspeccion.value?.codigoInspeccion || 'inspeccion'
-    pdf.save(`${codigoFormato.value}_${codigo}.pdf`)
+    pdf.save(`${codigo}.pdf`)
   } catch (error) {
     console.error('Error generando documento PDF:', error)
   } finally {
@@ -286,19 +250,19 @@ defineExpose({ abrir, cerrar })
             <tbody>
               <tr>
                 <td class="iso-cell-header text-center" style="width: 12%;">SEMANA</td>
-                <td class="iso-cell-data text-center font-weight-bold font-mono text-danger" style="width: 13%;">
+                <td class="iso-cell-data text-center font-weight-bold font-mono text-black" style="width: 13%;">
                   {{ semanaISO }}
                 </td>
                 <td class="iso-cell-header text-center" style="width: 12%;">FECHA</td>
-                <td class="iso-cell-data text-center font-weight-medium font-mono text-danger" style="width: 23%;">
+                <td class="iso-cell-data text-center font-weight-medium font-mono text-black" style="width: 23%;">
                   {{ fechaStr }}
                 </td>
                 <td class="iso-cell-header text-center" style="width: 10%;">DIA</td>
-                <td class="iso-cell-data text-center font-weight-medium text-danger" style="width: 15%;">
+                <td class="iso-cell-data text-center font-weight-medium text-black" style="width: 15%;">
                   {{ diaStr }}
                 </td>
                 <td class="iso-cell-header text-center" style="width: 8%;">HORA</td>
-                <td class="iso-cell-data text-center font-weight-medium font-mono text-danger" style="width: 7%;">
+                <td class="iso-cell-data text-center font-weight-medium font-mono text-black" style="width: 7%;">
                   {{ horaStr }}
                 </td>
               </tr>
@@ -322,27 +286,17 @@ defineExpose({ abrir, cerrar })
                 <td class="pa-2 align-top">
                   <div class="d-flex mb-1">
                     <span class="font-weight-medium mr-2" style="width: 60px;">Código:</span>
-                    <span class="font-mono">{{ ubicacionTecnicaEquipo?.codigo || '—' }}</span>
+                    <span class="font-mono text-black">{{ ubicacionTecnicaEquipo?.codigo || '—' }}</span>
                   </div>
                   <div class="d-flex">
                     <span class="font-weight-medium mr-2" style="width: 60px;">Nombre:</span>
-                    <span class="font-weight-bold">{{ ubicacionTecnicaEquipo?.nombre || '—' }}</span>
+                    <span class="font-weight-bold text-black">{{ ubicacionTecnicaEquipo?.nombre || '—' }}</span>
                   </div>
                 </td>
                 <td class="pa-2 align-top">
-                  <div class="d-flex mb-1" v-if="codigoAbreviadoEquipo !== '—' && codigoAbreviadoEquipo !== equipoEvaluado?.codigo">
-                    <span class="font-weight-medium mr-2" style="width: 110px;">Código Abreviado:</span>
-                    <span class="font-weight-bold font-mono text-danger">
-                      {{ codigoAbreviadoEquipo }}
-                    </span>
-                  </div>
-                  <div class="d-flex mb-1">
-                    <span class="font-weight-medium mr-2" style="width: 110px;">Código:</span>
-                    <span class="font-mono font-weight-bold">{{ equipoEvaluado?.codigo || '—' }}</span>
-                  </div>
                   <div class="d-flex">
-                    <span class="font-weight-medium mr-2" style="width: 110px;">Nombre:</span>
-                    <span class="font-weight-bold">{{ equipoEvaluado?.nombre || '—' }}</span>
+                    <span class="font-weight-medium mr-2" style="width: 80px;">Nombre:</span>
+                    <span class="font-weight-bold text-black">{{ equipoEvaluado?.nombre || '—' }}</span>
                   </div>
                 </td>
               </tr>
@@ -353,19 +307,19 @@ defineExpose({ abrir, cerrar })
           <table class="iso-table-grid mb-2 text-caption">
             <thead>
               <tr>
-                <th colspan="4" class="iso-cell-header text-center font-weight-bold py-1">
+                <th colspan="4" class="iso-cell-header text-center font-weight-bold py-1 text-black">
                   {{ inspeccion.tipoInspeccion === 'LUBRICACION' ? 'PUNTOS Y VARIABLES DE LUBRICACIÓN' : 'DATOS PARA LA INSPECCIÓN' }}
                 </th>
               </tr>
               <tr>
-                <th class="iso-cell-header text-center font-weight-bold" style="width: 25%;">Componente</th>
-                <th class="iso-cell-header text-center font-weight-bold" style="width: 35%;">
+                <th class="iso-cell-header text-center font-weight-bold text-black" style="width: 25%;">Componente</th>
+                <th class="iso-cell-header text-center font-weight-bold text-black" style="width: 35%;">
                   {{ inspeccion.tipoInspeccion === 'LUBRICACION' ? 'Punto de Lubricación' : 'Variable / Item' }}
                 </th>
-                <th class="iso-cell-header text-center font-weight-bold" style="width: 20%;">
+                <th class="iso-cell-header text-center font-weight-bold text-black" style="width: 20%;">
                   {{ inspeccion.tipoInspeccion === 'LUBRICACION' ? 'Estado / Cantidad' : 'Valor Medido / Estado' }}
                 </th>
-                <th class="iso-cell-header text-center font-weight-bold" style="width: 20%;">
+                <th class="iso-cell-header text-center font-weight-bold text-black" style="width: 20%;">
                   {{ inspeccion.tipoInspeccion === 'LUBRICACION' ? 'Dosis Estimada' : 'Rango de Trabajo' }}
                 </th>
               </tr>
@@ -374,31 +328,31 @@ defineExpose({ abrir, cerrar })
               <tr
                 v-for="d in inspeccion.detalles"
                 :key="d.id"
-                :class="{ 'iso-badge-anormal': d.fueraDeRango }"
+                class="bg-white text-black"
               >
                 <!-- Componente -->
-                <td class="pa-1 px-2 font-weight-medium">
+                <td class="pa-1 px-2 font-weight-medium text-black">
                   {{ d.variable?.componente?.nombre || 'General' }}
                 </td>
 
                 <!-- Variable / Punto de Lubricación -->
-                <td class="pa-1 px-2 font-weight-medium">
+                <td class="pa-1 px-2 font-weight-medium text-black">
                   {{ d.variable?.nombre || '—' }}
                 </td>
 
                 <!-- Valor Medido / Estado -->
-                <td class="pa-1 text-center font-weight-bold font-mono">
+                <td class="pa-1 text-center font-weight-bold font-mono text-black">
                   <template v-if="d.valorNumerico !== null && d.valorNumerico !== undefined && d.valorSeleccion">
-                    <span :class="{ 'iso-badge-normal': esEstadoPositivo(d.valorSeleccion), 'iso-badge-anormal': esEstadoNegativo(d.valorSeleccion) }" class="px-1 rounded">
+                    <span class="px-1 text-black font-weight-bold">
                       {{ d.valorSeleccion }}
                     </span>
-                    <span class="ml-1">({{ d.valorNumerico }} {{ d.variable?.unidad || '' }})</span>
+                    <span class="ml-1 text-black">({{ d.valorNumerico }} {{ d.variable?.unidad || '' }})</span>
                   </template>
                   <template v-else-if="d.valorNumerico !== null && d.valorNumerico !== undefined">
-                    {{ d.valorNumerico }} {{ d.variable?.unidad || '' }}
+                    <span class="text-black">{{ d.valorNumerico }} {{ d.variable?.unidad || '' }}</span>
                   </template>
                   <template v-else-if="d.valorSeleccion">
-                    <span :class="{ 'iso-badge-normal': esEstadoPositivo(d.valorSeleccion), 'iso-badge-anormal': esEstadoNegativo(d.valorSeleccion) }" class="px-1 rounded">
+                    <span class="px-1 text-black font-weight-bold">
                       {{ d.valorSeleccion }}
                     </span>
                   </template>
@@ -408,11 +362,11 @@ defineExpose({ abrir, cerrar })
                 </td>
 
                 <!-- Rango de Trabajo / Dosis Estimada -->
-                <td class="pa-1 text-center font-mono">
+                <td class="pa-1 text-center font-mono text-black">
                   {{ formatearRango(d.variable) }}
                 </td>
               </tr>
-              <tr v-if="!inspeccion.detalles || inspeccion.detalles.length === 0">
+              <tr v-if="!inspeccion.detalles || inspeccion.detalles.length === 0" class="bg-white">
                 <td colspan="4" class="pa-3 text-center text-medium-emphasis">
                   No se registraron detalles específicos en esta inspección.
                 </td>
@@ -421,41 +375,36 @@ defineExpose({ abrir, cerrar })
           </table>
 
           <!-- Sección: Observaciones Generales -->
-          <div class="iso-box-container mb-2">
-            <div class="iso-cell-header text-center font-weight-bold pa-1 text-caption">
+          <div class="iso-box-container mb-2 bg-white">
+            <div class="iso-cell-header text-center font-weight-bold pa-1 text-caption text-black">
               OBSERVACIONES GENERALES
             </div>
-            <div class="pa-2 text-caption font-weight-medium min-h-40">
+            <div class="pa-2 text-caption font-weight-medium min-h-40 text-black">
               {{ observacionesGeneralesLimpias }}
             </div>
           </div>
 
           <!-- Sección de Firmas de Responsabilidad -->
-          <table class="iso-table-grid mb-1 text-caption">
+          <table class="iso-table-grid mb-1 text-caption bg-white">
             <tbody>
               <tr>
-                <td class="pa-2 font-weight-bold text-uppercase" style="width: 35%;">
+                <td class="pa-2 font-weight-bold text-uppercase text-black" style="width: 35%;">
                   ELABORADO POR:
                 </td>
-                <td class="pa-2 font-weight-bold font-mono text-danger text-uppercase" style="width: 65%;">
+                <td class="pa-2 font-weight-bold font-mono text-black text-uppercase" style="width: 65%;">
                   {{ inspeccion.elaboradoPor?.nombre }} {{ inspeccion.elaboradoPor?.apellido }}
                 </td>
               </tr>
               <tr>
-                <td class="pa-2 font-weight-bold text-uppercase" style="width: 35%;">
+                <td class="pa-2 font-weight-bold text-uppercase text-black" style="width: 35%;">
                   REVISADO Y APROBADO POR:
                 </td>
-                <td class="pa-2 font-weight-bold font-mono text-danger text-uppercase" style="width: 65%;">
+                <td class="pa-2 font-weight-bold font-mono text-black text-uppercase" style="width: 65%;">
                   {{ nombreAprobador }}
                 </td>
               </tr>
             </tbody>
           </table>
-
-          <!-- Código Oficial de Formato -->
-          <div class="text-caption font-weight-bold text-slate-800">
-            {{ codigoFormato }}
-          </div>
 
         </div>
       </v-card-text>
@@ -542,13 +491,13 @@ defineExpose({ abrir, cerrar })
 }
 
 .iso-badge-normal {
-  background-color: #c8e6c9 !important;
-  color: #1b5e20 !important;
+  background-color: transparent !important;
+  color: #000000 !important;
 }
 
 .iso-badge-anormal {
-  background-color: #ff5252 !important;
-  color: #ffffff !important;
+  background-color: transparent !important;
+  color: #000000 !important;
 }
 
 .min-h-40 {

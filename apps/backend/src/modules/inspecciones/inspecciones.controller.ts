@@ -11,16 +11,22 @@ export const inspeccionesController = {
     next: NextFunction
   ) {
     try {
-      const esAdmin = req.usuario?.roles?.some((r: string) =>
-        r.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().includes('ADMINISTRADOR')
-      )
       const usuarioPlantaId: number | undefined = req.usuario?.plantaId ? Number(req.usuario.plantaId) : undefined
+      const usuarioPlantas: number[] = Array.isArray(req.usuario?.plantas) ? req.usuario.plantas : []
+      const permitidas = usuarioPlantas.length > 0 ? usuarioPlantas : (usuarioPlantaId ? [usuarioPlantaId] : [])
+      const queryPlantaId = req.query.plantaId !== undefined ? Number(req.query.plantaId) : undefined
 
-      // Admins pueden filtrar por cualquier planta vía query param o su planta si viene;
-      // usuarios normales siempre ven la suya.
-      const plantaId = esAdmin
-        ? (req.query.plantaId !== undefined ? Number(req.query.plantaId) : (usuarioPlantaId ?? NaN))
-        : (usuarioPlantaId ?? (req.query.plantaId !== undefined ? Number(req.query.plantaId) : NaN))
+      let plantaId: number
+      if (permitidas.length === 0) {
+        plantaId = queryPlantaId !== undefined ? queryPlantaId : (usuarioPlantaId ?? NaN)
+      } else if (
+        queryPlantaId !== undefined &&
+        (permitidas.includes(queryPlantaId) || queryPlantaId === 0)
+      ) {
+        plantaId = queryPlantaId
+      } else {
+        plantaId = permitidas[0] ?? NaN
+      }
 
       const alcance = (req.query.alcance as AlcanceInspeccion) || 'POR_LINEA'
       const referenciaId = req.query.referenciaId ? Number(req.query.referenciaId) : undefined
@@ -57,18 +63,25 @@ export const inspeccionesController = {
     try {
       const usuarioId = (req as any).usuario?.sub
       const usuarioPlantaId: number | undefined = req.usuario?.plantaId ? Number(req.usuario.plantaId) : undefined
+      const usuarioPlantas: number[] = Array.isArray(req.usuario?.plantas) ? req.usuario.plantas : []
+      const permitidas = usuarioPlantas.length > 0 ? usuarioPlantas : (usuarioPlantaId ? [usuarioPlantaId] : [])
       if (!usuarioId) {
         return res.status(401).json({ status: 'error', message: 'Usuario no autenticado' })
       }
 
-      const esAdmin = req.usuario?.roles?.some((r: string) =>
-        r.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().includes('ADMINISTRADOR')
-      )
+      const bodyPlantaId = req.body.plantaId !== undefined && req.body.plantaId !== null ? Number(req.body.plantaId) : undefined
 
-      // Si es admin, respeta la planta del body; si no, usa la planta de su perfil
-      const plantaId = esAdmin
-        ? (req.body.plantaId ? Number(req.body.plantaId) : (usuarioPlantaId ?? 1))
-        : (usuarioPlantaId ?? Number(req.body.plantaId)) ?? null
+      let plantaId: number | null
+      if (permitidas.length === 0) {
+        plantaId = bodyPlantaId !== undefined ? bodyPlantaId : (usuarioPlantaId ?? 1)
+      } else if (
+        bodyPlantaId !== undefined &&
+        (permitidas.includes(bodyPlantaId) || bodyPlantaId === 0)
+      ) {
+        plantaId = bodyPlantaId
+      } else {
+        plantaId = permitidas[0] ?? null
+      }
 
       const body: CrearInspeccionDTO = {
         ...req.body,
@@ -93,9 +106,25 @@ export const inspeccionesController = {
     next: NextFunction
   ) {
     try {
-      // PBAC: forzar la planta del usuario. Los admins (plantaId=undefined) ven todo.
-      const plantaId: number | undefined = req.usuario?.plantaId ? Number(req.usuario.plantaId) : undefined
-      const pendientes = await inspeccionesService.obtenerPendientesRevision(plantaId)
+      const queryPlantaId = req.query.plantaId ? Number(req.query.plantaId) : undefined
+      const usuarioPlantaId: number | undefined = req.usuario?.plantaId ? Number(req.usuario.plantaId) : undefined
+      const usuarioPlantas: number[] = Array.isArray(req.usuario?.plantas) ? req.usuario.plantas : []
+      const permitidas = usuarioPlantas.length > 0 ? usuarioPlantas : (usuarioPlantaId ? [usuarioPlantaId] : [])
+
+      let filtroPlantaId: number | undefined = undefined
+      let filtroPlantasIds: number[] | undefined = undefined
+
+      if (permitidas.length === 0) {
+        filtroPlantaId = queryPlantaId
+      } else if (queryPlantaId && permitidas.includes(queryPlantaId)) {
+        filtroPlantaId = queryPlantaId
+      } else if (permitidas.length > 1) {
+        filtroPlantasIds = permitidas
+      } else {
+        filtroPlantaId = permitidas[0]
+      }
+
+      const pendientes = await inspeccionesService.obtenerPendientesRevision(filtroPlantaId, filtroPlantasIds)
       return res.status(200).json({
         status: 'ok',
         message: 'Inspecciones pendientes obtenidas exitosamente',

@@ -192,12 +192,12 @@ export class AuthService {
       passwordHash = await encriptar(datos.password)
     }
 
-    let rolParaValidar: { id: number; requiereSupervisor: boolean } | null = null
+    let rolParaValidar: { id: number; nombre?: string; requiereSupervisor: boolean } | null = null
 
     if (datos.rolId !== undefined) {
       const rol = await prisma.rol.findUnique({
         where: { id: datos.rolId },
-        select: { id: true, requiereSupervisor: true },
+        select: { id: true, nombre: true, requiereSupervisor: true },
       })
       if (!rol) throw new AppError(`El rol con ID ${datos.rolId} no existe`, 400)
       rolParaValidar = rol
@@ -209,8 +209,12 @@ export class AuthService {
       if (!actual) throw new AppError(`El usuario con ID ${id} no existe`, 404)
       const rolActual = actual.rolesUsuario[0]?.rol
       rolParaValidar = rolActual
-        ? { id: rolActual.id, requiereSupervisor: rolActual.requiereSupervisor }
+        ? { id: rolActual.id, nombre: rolActual.nombre, requiereSupervisor: rolActual.requiereSupervisor }
         : null
+    }
+
+    if (datos.supervisorId !== undefined && datos.supervisorId !== null && datos.supervisorId === id) {
+      throw new AppError('Un usuario no puede ser su propio supervisor', 400)
     }
 
     const supervisorId = rolParaValidar
@@ -275,15 +279,25 @@ export class AuthService {
   }
 
   private async resolverSupervisorId(
-    rol: { id: number; requiereSupervisor: boolean },
+    rol: { id: number; nombre?: string; requiereSupervisor: boolean },
     supervisorId: number | null | undefined
   ): Promise<number | null> {
-    if (!rol.requiereSupervisor) {
-      return null
+    const nombreRol = (rol.nombre || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toUpperCase()
+    const esObligatorio =
+      (rol.requiereSupervisor &&
+        !nombreRol.includes('SUPERVISOR') &&
+        !nombreRol.includes('ADMINISTRADOR')) ||
+      nombreRol.includes('TECNICO')
+
+    if (esObligatorio && (supervisorId === null || supervisorId === undefined)) {
+      throw new AppError('Este rol requiere que se asigne un supervisor', 400)
     }
 
     if (supervisorId === null || supervisorId === undefined) {
-      throw new AppError('Este rol requiere que se asigne un supervisor', 400)
+      return null
     }
 
     const supervisor = await prisma.usuario.findUnique({
@@ -295,9 +309,13 @@ export class AuthService {
       throw new AppError(`El supervisor con ID ${supervisorId} no existe`, 400)
     }
 
-    const tieneRolSupervisor = supervisor.rolesUsuario.some((ur) => ur.rol.esSupervisor)
+    const tieneRolSupervisor = supervisor.rolesUsuario.some((ur) => {
+      const nom = ur.rol.nombre.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase()
+      return ur.rol.esSupervisor || nom.includes('ADMINISTRADOR') || nom.includes('SUPERVISOR')
+    })
+
     if (!tieneRolSupervisor) {
-      throw new AppError(`El usuario ${supervisorId} no tiene rol de Supervisor`, 400)
+      throw new AppError(`El usuario ${supervisorId} no tiene rol de Supervisor o Administrador`, 400)
     }
 
     return supervisorId

@@ -71,7 +71,7 @@ const chartOptions = {
       padding: 12,
       cornerRadius: 8,
       callbacks: {
-        label: (context: any) => ` Disponibilidad: ${context.raw}% de la flota activa`
+        label: (context: any) => ` Disponibilidad: ${context.raw}% de la maquinaria activa`
       }
     }
   }

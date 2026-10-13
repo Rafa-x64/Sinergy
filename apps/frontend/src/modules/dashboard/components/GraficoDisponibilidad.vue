@@ -176,7 +176,7 @@ const barOptions = {
     <v-col cols="12" md="5" class="d-flex">
       <v-card class="elevation-1 rounded-xl pa-4 pa-sm-5 w-100 d-flex flex-column bg-surface border">
         <div class="d-flex align-center justify-space-between mb-1">
-          <div class="text-subtitle-1 font-weight-bold text-slate-800">Distribución Global de Flota</div>
+          <div class="text-subtitle-1 font-weight-bold text-slate-800">Distribución Global de Maquinaria</div>
           <v-chip size="x-small" color="success" variant="flat" class="font-weight-bold">Tiempo Real</v-chip>
         </div>
         <div class="text-caption text-medium-emphasis mb-3">Relación Operativo / Inoperativo / Mantenimiento</div>

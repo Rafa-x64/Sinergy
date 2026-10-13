@@ -353,17 +353,33 @@ export class InspeccionesService {
 
     const fechaHoy = new Date()
     const codigoFecha = fechaHoy.toISOString().slice(0, 10).replace(/-/g, '')
-    const prefijoPlanta = dto.plantaId ? `PL${dto.plantaId}` : 'GEN'
+    const tipoInspeccion: TipoInspeccion = dto.tipoInspeccion ?? 'VARIABLES_CRITICAS'
+
+    // Prefijo legible según tipo de inspección (sustituye al antiguo PLx)
+    const prefijoTipo: Record<string, string> = {
+      LUBRICACION:          'LUB',
+      VARIABLES_CRITICAS:   'EXT',
+      INYECCION:            'INY',
+      PLANTA_MECANICA:      'PLM',
+      CHILLER:              'CHI',
+      CHILLER_DIARIO:       'CHI',
+      CHILLER_SEMANAL:      'CHI',
+      COMPRESOR:            'COM',
+      GENERADOR:            'GEN',
+      MONTACARGAS:          'MTC',
+      MONTACARGAS_DIARIO:   'MTC',
+      MONTACARGAS_SEMANAL:  'MTC',
+    }
+    const prefijoRutina = prefijoTipo[tipoInspeccion] ?? 'GEN'
 
     // Contar inspecciones de hoy para correlativo secuencial
     const conteoHoy = await prisma.inspeccion.count({
       where: {
-        codigoInspeccion: { startsWith: `INSP-${prefijoPlanta}-${codigoFecha}` }
+        codigoInspeccion: { startsWith: `INSP-LUB-${prefijoRutina}-${codigoFecha}` }
       }
     })
-    const secuencial = String(conteoHoy + 1).padStart(4, '0')
-    const codigoInspeccion = `INSP-${prefijoPlanta}-${codigoFecha}-${secuencial}`
-    const tipoInspeccion: TipoInspeccion = dto.tipoInspeccion ?? 'VARIABLES_CRITICAS'
+    const secuencial = String(conteoHoy + 1).padStart(2, '0')
+    const codigoInspeccion = `INSP-LUB-${prefijoRutina}-${codigoFecha}-${secuencial}`
 
     // Guardia anti-duplicado: Evita registrar múltiples inspecciones del mismo tipo para el mismo equipo en el mismo día
     if (dto.equipoId) {
@@ -455,11 +471,15 @@ export class InspeccionesService {
   /**
    * Lista todas las inspecciones PENDIENTES de aprobación.
    */
-  async obtenerPendientesRevision(plantaId?: number) {
+  async obtenerPendientesRevision(plantaId?: number, plantasIds?: number[]) {
+    const wherePlanta = plantasIds && plantasIds.length > 0
+      ? { plantaId: { in: plantasIds } }
+      : (plantaId ? { plantaId } : {})
+
     const inspecciones = await prisma.inspeccion.findMany({
       where: {
         estadoInspeccion: 'PENDIENTE',
-        ...(plantaId && { plantaId })
+        ...wherePlanta
       },
       orderBy: { fechaRegistro: 'desc' },
       include: {

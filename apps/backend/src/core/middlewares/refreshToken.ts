@@ -23,6 +23,7 @@ export async function manejarRefreshToken(
         rolesUsuario: {
           include: { rol: true },
         },
+        plantasUsuario: true,
       },
     })
 
@@ -31,11 +32,17 @@ export async function manejarRefreshToken(
     }
 
     const roles = usuario.rolesUsuario.map((ur) => ur.rol.nombre)
+    const plantasIds = Array.from(new Set([
+      ...usuario.plantasUsuario.map((up) => up.plantaId),
+      ...(usuario.plantaId ? [usuario.plantaId] : []),
+    ]))
+
     const nuevoAccessToken = generarAccessToken({
       sub: usuario.id,
       email: usuario.email,
       roles,
       plantaId: usuario.plantaId,
+      plantas: plantasIds,
     })
 
     res.status(200).json({

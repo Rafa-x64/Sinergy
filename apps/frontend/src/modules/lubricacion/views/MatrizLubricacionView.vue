@@ -56,6 +56,15 @@ interface FilaDetalleInspeccion {
 }
 
 const nuevoHorometro = ref<number>(0)
+const modoIngresoHorometro = ref<'HORA' | 'CALENDARIO'>('HORA')
+const fechaLecturaCalendario = ref<string>(new Date().toISOString().slice(0, 10))
+const horasPorDiaCalendario = ref<number>(24)
+
+const opcionesModoHorometro = [
+  { title: 'Por Horas (Odómetro)', value: 'HORA' },
+  { title: 'Por Fecha de Calendario', value: 'CALENDARIO' }
+]
+
 const esReemplazoReloj = ref<boolean>(false)
 const justificacionReemplazo = ref<string>('')
 const observacionesRutina = ref<string>('')
@@ -100,7 +109,8 @@ const equiposLineaWizard = computed<FilaMatrizLubricacion[]>(() => {
     const plantaObj = plantasStore.plantas.find(p => p.id === plantaAlcanceId.value)
     if (plantaObj) base = base.filter(f => f.plantaNombre.toLowerCase() === plantaObj.nombre.toLowerCase())
   }
-  return base.filter(f => f.ubicacionNombre === lineaAlcance.value)
+  // Omitir equipos sin puntos de lubricación configurados: no aportan datos y bloquean la navegación
+  return base.filter(f => f.ubicacionNombre === lineaAlcance.value && f.puntos.length > 0)
 })
 
 // Equipo activo en el wizard de línea
@@ -123,6 +133,8 @@ const equipoActualEvaluado = computed(() => {
   if (!modoWizardLinea.value) return true
   const equipoId = equipoWizardActual.value?.equipoId
   if (!equipoId) return false
+  // Equipos sin puntos se consideran evaluados automáticamente (no deberían aparecer en el wizard)
+  if (!equipoWizardActual.value?.puntos?.length) return true
   // Si ya existe un borrador guardado para este equipo, ya fue evaluado
   if (borradoresPorEquipo.value[equipoId]) return true
   // Verificar si el formulario activo tiene al menos una acción registrada
@@ -253,6 +265,9 @@ const filaEquipoActual = computed<FilaMatrizLubricacion | undefined>(() => {
 // Almacén temporal de borradores de inspección por equipo
 interface BorradorInspeccionEquipo {
   nuevoHorometro: number
+  modoIngresoHorometro?: 'HORA' | 'CALENDARIO'
+  fechaLecturaCalendario?: string
+  horasPorDiaCalendario?: number
   esReemplazoReloj: boolean
   justificacionReemplazo: string
   observacionesRutina: string
@@ -266,6 +281,9 @@ function guardarBorradorEquipoActual(idEquipo: number | null) {
   if (!idEquipo) return
   borradoresPorEquipo.value[idEquipo] = {
     nuevoHorometro: nuevoHorometro.value,
+    modoIngresoHorometro: modoIngresoHorometro.value,
+    fechaLecturaCalendario: fechaLecturaCalendario.value,
+    horasPorDiaCalendario: horasPorDiaCalendario.value,
     esReemplazoReloj: esReemplazoReloj.value,
     justificacionReemplazo: justificacionReemplazo.value,
     observacionesRutina: observacionesRutina.value,
@@ -279,12 +297,18 @@ function sincronizarFormularioConEquipo(equipo: FilaMatrizLubricacion) {
   const borrador = borradoresPorEquipo.value[equipo.equipoId]
   if (borrador) {
     nuevoHorometro.value = borrador.nuevoHorometro
+    modoIngresoHorometro.value = borrador.modoIngresoHorometro ?? 'HORA'
+    fechaLecturaCalendario.value = borrador.fechaLecturaCalendario ?? new Date().toISOString().slice(0, 10)
+    horasPorDiaCalendario.value = borrador.horasPorDiaCalendario ?? 24
     esReemplazoReloj.value = borrador.esReemplazoReloj
     justificacionReemplazo.value = borrador.justificacionReemplazo
     observacionesRutina.value = borrador.observacionesRutina
     detallesInspeccion.value = borrador.detalles
   } else {
     nuevoHorometro.value = equipo.horometroActual
+    modoIngresoHorometro.value = 'HORA'
+    fechaLecturaCalendario.value = new Date().toISOString().slice(0, 10)
+    horasPorDiaCalendario.value = 24
     esReemplazoReloj.value = false
     justificacionReemplazo.value = ''
     observacionesRutina.value = ''
@@ -407,12 +431,36 @@ async function onParteGuardada() {
 // ─── ACCIONES DE INSPECCIÓN DE LUBRICACIÓN ───────────────────────────────────
 
 function verificarCambioHorometro() {
-  if (!filaEquipoInspeccion.value) return
+  if (!filaEquipoInspeccionActiva.value) return
 
-  const horometroActual = filaEquipoInspeccion.value.horometroActual
+  const horometroActual = filaEquipoInspeccionActiva.value.horometroActual
   if (nuevoHorometro.value < horometroActual && !esReemplazoReloj.value) {
     modalReemplazoVisible.value = true
   }
+}
+
+function recalcularHorometroPorCalendario() {
+  if (modoIngresoHorometro.value !== 'CALENDARIO') return
+  if (!filaEquipoInspeccionActiva.value) return
+
+  const fechaBaseStr = filaEquipoInspeccionActiva.value.fechaUltimoHorometro
+  const baseHoras = filaEquipoInspeccionActiva.value.horometroActual
+
+  if (!fechaLecturaCalendario.value) {
+    nuevoHorometro.value = baseHoras
+    return
+  }
+
+  const fechaSeleccionada = new Date(fechaLecturaCalendario.value + 'T00:00:00')
+  const fechaBase = fechaBaseStr ? new Date(fechaBaseStr.slice(0, 10) + 'T00:00:00') : fechaSeleccionada
+
+  const diffMs = fechaSeleccionada.getTime() - fechaBase.getTime()
+  const diffDias = Math.max(0, Math.round(diffMs / (1000 * 60 * 60 * 24)))
+  const factor = Number(horasPorDiaCalendario.value) || 24
+
+  const proyectado = baseHoras + (diffDias * factor)
+  nuevoHorometro.value = Math.round(proyectado * 10) / 10
+  verificarCambioHorometro()
 }
 
 function onConfirmarReemplazoReloj(justificacion: string) {
@@ -422,8 +470,8 @@ function onConfirmarReemplazoReloj(justificacion: string) {
 }
 
 function onCancelarReemplazoReloj() {
-  if (filaEquipoInspeccion.value) {
-    nuevoHorometro.value = filaEquipoInspeccion.value.horometroActual
+  if (filaEquipoInspeccionActiva.value) {
+    nuevoHorometro.value = filaEquipoInspeccionActiva.value.horometroActual
   }
   esReemplazoReloj.value = false
   justificacionReemplazo.value = ''
@@ -1154,7 +1202,27 @@ async function finalizarWizardLinea() {
 
               <!-- Input Reactivo de Horómetro -->
               <div class="d-flex align-center gap-2 flex-wrap w-100 w-md-auto">
-                <div class="flex-grow-1 flex-md-grow-0" style="min-width: 180px; max-width: 100%;">
+                <!-- Selector de Modalidad: Por Horas vs Fecha Calendario -->
+                <div style="min-width: 190px;">
+                  <v-select
+                    v-model="modoIngresoHorometro"
+                    :items="opcionesModoHorometro"
+                    label="Modo de Toma"
+                    variant="outlined"
+                    density="compact"
+                    hide-details
+                    @update:model-value="(val) => { if (val === 'CALENDARIO') recalcularHorometroPorCalendario() }"
+                  >
+                    <template #prepend-inner>
+                      <v-icon size="18" color="primary">
+                        {{ modoIngresoHorometro === 'CALENDARIO' ? 'mdi-calendar-clock' : 'mdi-speedometer' }}
+                      </v-icon>
+                    </template>
+                  </v-select>
+                </div>
+
+                <!-- Modo Directo: Horas del Odómetro -->
+                <div v-if="modoIngresoHorometro === 'HORA'" class="flex-grow-1 flex-md-grow-0" style="min-width: 180px; max-width: 100%;">
                   <v-text-field
                     v-model.number="nuevoHorometro"
                     type="number"
@@ -1172,6 +1240,48 @@ async function finalizarWizardLinea() {
                       <v-icon size="18" color="primary">mdi-clock-outline</v-icon>
                     </template>
                   </v-text-field>
+                </div>
+
+                <!-- Modo Calendario: Selector Fecha + Factor Hrs/Día + Horas Proyectadas -->
+                <div v-else class="d-flex align-center gap-2 flex-wrap">
+                  <div style="min-width: 155px;">
+                    <v-text-field
+                      v-model="fechaLecturaCalendario"
+                      type="date"
+                      label="Fecha Calendario *"
+                      variant="outlined"
+                      density="compact"
+                      hide-details
+                      @update:model-value="recalcularHorometroPorCalendario"
+                    />
+                  </div>
+                  <div style="width: 105px;">
+                    <v-text-field
+                      v-model.number="horasPorDiaCalendario"
+                      type="number"
+                      min="1"
+                      max="24"
+                      label="Hrs / Día"
+                      variant="outlined"
+                      density="compact"
+                      hide-details
+                      @update:model-value="recalcularHorometroPorCalendario"
+                    />
+                  </div>
+                  <div style="min-width: 140px;">
+                    <v-text-field
+                      :model-value="nuevoHorometro"
+                      type="number"
+                      label="Horas Proyectadas"
+                      variant="outlined"
+                      density="compact"
+                      hide-details
+                      readonly
+                      bg-color="grey-lighten-4"
+                      prefix="≈"
+                      suffix="hrs"
+                    />
+                  </div>
                 </div>
 
                 <v-chip
@@ -1336,7 +1446,7 @@ async function finalizarWizardLinea() {
                           variant="outlined"
                           hide-details
                           style="min-width: 95px; max-width: 115px;"
-                          :suffix="detalle.lubricante.unidadMedida.slice(0, 3).toLowerCase()"
+                          :suffix="detalle.lubricante.unidadMedida.toLowerCase() === 'gramos' ? 'grs' : detalle.lubricante.unidadMedida.toLowerCase() === 'litros' ? 'lt' : detalle.lubricante.unidadMedida.slice(0, 3).toLowerCase()"
                           @keydown="(e: KeyboardEvent) => { if (e.key === '-' || e.key === 'e' || e.key === '+') e.preventDefault() }"
                           @update:model-value="(val) => { if (val !== null && val !== undefined && Number(val) < 0) detalle.cantidadRepuesta = Math.abs(Number(val)) }"
                         />

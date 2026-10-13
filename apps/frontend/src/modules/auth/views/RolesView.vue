@@ -18,7 +18,6 @@ const pestañasRoles: TabItem[] = [
 ]
 
 const headersTabla = [
-    { title: 'Id', key: 'id' },
     { title: 'Nombre', key: 'nombre' },
     { title: 'Descripcion', key: 'descripcion' },
 ]

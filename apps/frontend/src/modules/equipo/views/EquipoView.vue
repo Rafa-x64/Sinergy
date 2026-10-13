@@ -118,7 +118,6 @@ const headersEquipos = computed(() => {
 
 const headersTipos = computed(() => {
   const h: { title: string; key: string; align: 'center'; sortable?: boolean }[] = [
-    { title: 'ID', key: 'id', align: 'center' },
     { title: 'Nombre', key: 'nombre', align: 'center' },
     { title: 'Descripción', key: 'descripcion', align: 'center' }
   ]

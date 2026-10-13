@@ -88,8 +88,8 @@ const nombreCategoria = computed(() => {
   }
 })
 
-/** Si el usuario NO es administrador y tiene una planta asignada en su perfil, el selector se bloquea */
-const selectPlantaBloqueado = computed(() => !authStore.esAdmin && !!authStore.plantaId)
+/** Si el usuario tiene exactamente 1 planta asignada en su perfil, el selector se bloquea */
+const selectPlantaBloqueado = computed(() => authStore.plantasIds.length === 1)
 
 const procesarParametrosRuta = async () => {
   if (route.query.tipoInspeccion) {
@@ -129,8 +129,8 @@ onMounted(async () => {
 
   await Promise.all(promesas)
 
-  if (!authStore.esAdmin && authStore.plantaId) {
-    plantaId.value = authStore.plantaId
+  if (authStore.plantasIds.length === 1) {
+    plantaId.value = authStore.plantasIds[0]
   } else if (opcionesPlantas.value.length > 0 && (plantaId.value === null || plantaId.value === undefined)) {
     plantaId.value = opcionesPlantas.value[0].id
   }
@@ -148,7 +148,7 @@ watch(
 watch(
   () => authStore.plantaId,
   (nuevoId) => {
-    if (!authStore.esAdmin && nuevoId) {
+    if (authStore.plantasIds.length === 1 && nuevoId) {
       plantaId.value = nuevoId
     }
   },
@@ -161,15 +161,15 @@ watch(tipoInspeccion, (nuevoTipo) => {
   referenciaId.value = null
 
   if (nuevoTipo === 'MONTACARGAS') {
-    // Si no tiene planta obligatoria y no está en 0, preseleccionar 0 (Móviles)
-    if (authStore.esAdmin || !authStore.plantaId) {
+    // Si no tiene planta obligatoria fija (1 planta) y no está en 0, preseleccionar 0 (Móviles)
+    if (authStore.plantasIds.length !== 1) {
       plantaId.value = 0
     }
   } else {
     // Para chillers, compresores o generadores, si estaba en 'Ninguna (0)', restablecer a la planta del usuario o primera planta activa
     if (plantaId.value === 0) {
-      if (!authStore.esAdmin && authStore.plantaId) {
-        plantaId.value = authStore.plantaId
+      if (authStore.plantasIds.length === 1) {
+        plantaId.value = authStore.plantasIds[0]
       } else {
         const primeraPlantaFisica = opcionesPlantas.value.find((p) => p.id > 0)
         if (primeraPlantaFisica) {
@@ -200,9 +200,9 @@ const opcionesPlantas = computed(() => {
     }))
   }
 
-  // Usuario no-admin con planta fija asignada
-  if (!authStore.esAdmin && authStore.plantaId) {
-    return listado.filter((p) => p.id === authStore.plantaId)
+  // Si el usuario tiene plantas asignadas específicas (1 o N plantas)
+  if (authStore.plantasIds.length > 0) {
+    return listado.filter((p) => authStore.plantasIds.includes(p.id))
   }
 
   // Usuarios con acceso global / Admin: todas las plantas + opción "Ninguna" (móviles)

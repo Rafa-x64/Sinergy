@@ -110,7 +110,7 @@ const chartOptions = {
       <v-progress-circular indeterminate color="error" />
     </div>
     <div v-else-if="datos.length === 0" class="d-flex justify-center align-center flex-grow-1 text-caption text-medium-emphasis" style="min-height: 260px;">
-      No se registran señales de riesgo en la flota
+      No se registran señales de riesgo en la maquinaria
     </div>
     <div v-else class="flex-grow-1 position-relative" style="min-height: 260px;">
       <Bar :data="chartData" :options="chartOptions" />

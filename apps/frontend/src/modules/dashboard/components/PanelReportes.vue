@@ -186,8 +186,8 @@ function exportarR1Excel() {
 
     const ws = XLSX.utils.json_to_sheet(filas)
     const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, "Estado_Flota")
-    XLSX.writeFile(wb, `Reporte_R1_Estado_Flota_${new Date().toISOString().slice(0, 10)}.xlsx`)
+    XLSX.utils.book_append_sheet(wb, ws, "Estado_Maquinaria")
+    XLSX.writeFile(wb, `Reporte_R1_Estado_Maquinaria_${new Date().toISOString().slice(0, 10)}.xlsx`)
   } finally {
     r1DescargandoExcel.value = false
   }
@@ -198,11 +198,11 @@ function exportarR1Pdf() {
   r1DescargandoPdf.value = true
   try {
     exportarTablaPDF({
-      titulo: "Reporte de Estado de Flota Industrial (R1)",
+      titulo: "Reporte de Estado de Maquinaria Industrial (R1)",
       subtitulo: "Inventario general de maquinaria con estado operativo y última inspección",
-      nombreArchivo: `R1_Estado_Flota_${new Date().toISOString().slice(0, 10)}`,
+      nombreArchivo: `R1_Estado_Maquinaria_${new Date().toISOString().slice(0, 10)}`,
       resumen: [
-        { label: "Total Flota", valor: `${store.reporteFlota.resumen.total} equipos` },
+        { label: "Total Maquinaria", valor: `${store.reporteFlota.resumen.total} equipos` },
         { label: "Operativos", valor: `${store.reporteFlota.resumen.operativos}` },
         { label: "En Mantenimiento", valor: `${store.reporteFlota.resumen.enMantenimiento}` },
         { label: "Inoperativos", valor: `${store.reporteFlota.resumen.inoperativos}` },
@@ -412,7 +412,7 @@ function exportarR4Pdf() {
       subtitulo: "Resumen gerencial de disponibilidad operativa, productividad y causas críticas de inoperatividad",
       nombreArchivo: `R4_Reporte_Ejecutivo_${r4Mes.value}`,
       resumen: [
-        { label: "Flota Total", valor: `${kpis.flotaTotal} equipos` },
+        { label: "Maquinaria Total", valor: `${kpis.flotaTotal} equipos` },
         { label: "Disponibilidad", valor: `${kpis.disponibilidad}% (Tendencia: ${kpis.tendencia})` },
         { label: "Inspecciones Realizadas", valor: `${kpis.inspeccionesRealizadas}` },
         { label: "Desvíos Críticos", valor: `${kpis.totalNoConformidades}` },
@@ -632,7 +632,7 @@ onMounted(() => {
             Centro de Emisión de Reportes Normativos
           </div>
           <div class="text-caption text-medium-emphasis">
-            Generación y descarga de informes de flota, criticidad y formatos físicos
+            Generación y descarga de informes de maquinaria, criticidad y formatos físicos
           </div>
         </div>
 
@@ -645,7 +645,7 @@ onMounted(() => {
           divided
           class="flex-wrap rounded-lg"
         >
-          <v-btn value="r1" prepend-icon="mdi-format-list-numbered">R1: Flota</v-btn>
+          <v-btn value="r1" prepend-icon="mdi-format-list-numbered">R1: Maquinaria</v-btn>
           <v-btn value="r2" prepend-icon="mdi-file-table-outline">R2: Inspecciones</v-btn>
           <v-btn value="r3" prepend-icon="mdi-alert-octagon-outline">R3: Equipos Críticos</v-btn>
           <v-btn value="r4" prepend-icon="mdi-chart-box-outline">R4: Ejecutivo</v-btn>
@@ -660,7 +660,7 @@ onMounted(() => {
     <v-card v-if="reporteSeleccionado === 'r1'" class="elevation-1 rounded-xl pa-4 pa-sm-5 bg-surface border">
       <div class="d-flex flex-column flex-sm-row align-start align-sm-center justify-space-between gap-2 mb-4">
         <div>
-          <div class="text-subtitle-1 font-weight-bold text-primary">R1. Reporte de Estado de Flota Completo</div>
+          <div class="text-subtitle-1 font-weight-bold text-primary">R1. Reporte de Estado de Maquinaria Completo</div>
           <div class="text-caption text-medium-emphasis">Para comités de mantenimiento semanales. Inventario con última inspección y estado operativo</div>
         </div>
         <div class="d-flex flex-wrap gap-2">
@@ -1099,7 +1099,7 @@ onMounted(() => {
         <!-- 5 KPIs Principales -->
         <div class="d-flex flex-wrap gap-3 mb-4">
           <v-card variant="tonal" color="primary" class="pa-4 text-center rounded-xl border flex-grow-1" style="flex-basis: 18%; min-width: 170px;">
-            <div class="text-caption text-medium-emphasis font-weight-medium">Flota Total</div>
+            <div class="text-caption text-medium-emphasis font-weight-medium">Maquinaria Total</div>
             <div class="text-h4 font-weight-bold my-1 text-slate-800">{{ store.reporteEjecutivo.kpis.flotaTotal }}</div>
             <div class="text-caption text-medium-emphasis">{{ store.reporteEjecutivo.kpis.operativos }} Operativos</div>
           </v-card>
@@ -1158,7 +1158,7 @@ onMounted(() => {
             <v-card variant="outlined" class="pa-4 rounded-xl h-100 bg-white border">
               <div class="text-subtitle-2 font-weight-bold text-slate-800 mb-2 d-flex align-center gap-1">
                 <v-icon size="18" color="info">mdi-factory</v-icon>
-                Distribución de Flota por Planta
+                Distribución de Maquinaria por Planta
               </div>
               <div class="table-responsive">
                 <v-table density="compact">
@@ -1291,7 +1291,7 @@ onMounted(() => {
       <div class="d-flex flex-column flex-sm-row align-start align-sm-center justify-space-between gap-2 mb-4 d-print-none">
         <div>
           <div class="text-subtitle-1 font-weight-bold text-info">R6. Tarjeta de Inspección por Equipo (Ronda Física)</div>
-          <div class="text-caption text-medium-emphasis">Formato impreso F-MANT-04 para toma de lecturas en campo y evidencia física</div>
+          <div class="text-caption text-medium-emphasis">Tarjeta física para toma de lecturas en campo y evidencia de inspección</div>
         </div>
         <div class="d-flex flex-wrap gap-2 align-center">
           <v-select
@@ -1334,7 +1334,7 @@ onMounted(() => {
         <div class="d-flex justify-space-between align-center border-b pb-2 mb-3">
           <div>
             <h2 class="text-h6 font-weight-bold mb-0">TUBRICA — TARJETA DE RONDA TÉCNICA</h2>
-            <div class="text-caption font-mono">Formato F-MANT-04 | Sistema Sinergy</div>
+            <div class="text-caption font-mono">Sistema Sinergy | Tarjeta de Ronda Técnica</div>
           </div>
           <div class="text-right text-caption">
             <div><strong>Fecha:</strong> ____________________</div>

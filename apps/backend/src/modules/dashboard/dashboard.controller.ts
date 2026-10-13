@@ -4,24 +4,41 @@ import { AppError } from '../../core/errors/AppError'
 
 export class DashboardController {
 
-  private resolverPlantaId(req: Request, plantaIdQuery?: string): number | undefined {
-    if (req.usuario?.plantaId) return req.usuario.plantaId
-    if (plantaIdQuery) {
-      const id = parseInt(plantaIdQuery, 10)
-      if (!isNaN(id)) return id
+  private resolverPlantasFiltro(req: Request, plantaIdQuery?: string): { plantaId?: number; plantasIds?: number[] } {
+    const usuarioPlantas: number[] = Array.isArray(req.usuario?.plantas) ? req.usuario.plantas : []
+    const usuarioPlantaId: number | undefined = req.usuario?.plantaId ? Number(req.usuario.plantaId) : undefined
+    const qId = plantaIdQuery ? parseInt(plantaIdQuery, 10) : undefined
+
+    const permitidas = usuarioPlantas.length > 0 ? usuarioPlantas : (usuarioPlantaId ? [usuarioPlantaId] : [])
+
+    // Usuario con acceso global sin restricción de plantas asignadas
+    if (permitidas.length === 0) {
+      return { plantaId: qId && !isNaN(qId) ? qId : undefined }
     }
-    return undefined
+
+    // Si especificó una planta en el query y está dentro de sus plantas permitidas
+    if (qId && !isNaN(qId) && permitidas.includes(qId)) {
+      return { plantaId: qId }
+    }
+
+    // Si tiene múltiples plantas asignadas y no filtró una específica
+    if (permitidas.length > 1) {
+      return { plantasIds: permitidas }
+    }
+
+    // Si solo tiene una planta asignada
+    return { plantaId: permitidas[0] }
   }
 
   async disponibilidadEquipos(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const plantaId = this.resolverPlantaId(req, req.query.plantaId as string)
+      const { plantaId, plantasIds } = this.resolverPlantasFiltro(req, req.query.plantaId as string)
       const ubicacionTecnicaId = req.query.ubicacionTecnicaId
         ? parseInt(req.query.ubicacionTecnicaId as string, 10)
         : undefined
       const [global, porPlanta] = await Promise.all([
-        dashboardService.disponibilidadEquipos(plantaId, ubicacionTecnicaId),
-        dashboardService.disponibilidadPorPlanta(plantaId, ubicacionTecnicaId)
+        dashboardService.disponibilidadEquipos(plantaId, ubicacionTecnicaId, plantasIds),
+        dashboardService.disponibilidadPorPlanta(plantaId, ubicacionTecnicaId, plantasIds)
       ])
       res.json({ status: 'ok', data: { global, porPlanta } })
     } catch (error) {
@@ -31,8 +48,8 @@ export class DashboardController {
 
   async listarUbicacionesTecnicas(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const plantaId = req.query.plantaId ? parseInt(req.query.plantaId as string, 10) : undefined
-      const data = await dashboardService.listarUbicacionesTecnicas(plantaId)
+      const { plantaId, plantasIds } = this.resolverPlantasFiltro(req, req.query.plantaId as string)
+      const data = await dashboardService.listarUbicacionesTecnicas(plantaId, plantasIds)
       res.json({ status: 'ok', data })
     } catch (error) {
       next(error)
@@ -41,9 +58,9 @@ export class DashboardController {
 
   async topFallas(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const plantaId = this.resolverPlantaId(req, req.query.plantaId as string)
+      const { plantaId, plantasIds } = this.resolverPlantasFiltro(req, req.query.plantaId as string)
       const limite = req.query.limite ? parseInt(req.query.limite as string, 10) : 10
-      const data = await dashboardService.topEquiposConFallas(plantaId, limite)
+      const data = await dashboardService.topEquiposConFallas(plantaId, limite, plantasIds)
       res.json({ status: 'ok', data })
     } catch (error) {
       next(error)
@@ -52,9 +69,9 @@ export class DashboardController {
 
   async topRiesgo(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const plantaId = this.resolverPlantaId(req, req.query.plantaId as string)
+      const { plantaId, plantasIds } = this.resolverPlantasFiltro(req, req.query.plantaId as string)
       const limite = req.query.limite ? parseInt(req.query.limite as string, 10) : 10
-      const data = await dashboardService.topEquiposRiesgoCompuesto(plantaId, limite)
+      const data = await dashboardService.topEquiposRiesgoCompuesto(plantaId, limite, plantasIds)
       res.json({ status: 'ok', data })
     } catch (error) {
       next(error)
@@ -63,8 +80,8 @@ export class DashboardController {
 
   async evolucionDisponibilidad(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const plantaId = this.resolverPlantaId(req, req.query.plantaId as string)
-      const data = await dashboardService.evolucionDisponibilidad(plantaId)
+      const { plantaId, plantasIds } = this.resolverPlantasFiltro(req, req.query.plantaId as string)
+      const data = await dashboardService.evolucionDisponibilidad(plantaId, plantasIds)
       res.json({ status: 'ok', data })
     } catch (error) {
       next(error)
@@ -73,9 +90,9 @@ export class DashboardController {
 
   async cargaTecnico(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const plantaId = this.resolverPlantaId(req, req.query.plantaId as string)
+      const { plantaId, plantasIds } = this.resolverPlantasFiltro(req, req.query.plantaId as string)
       const mes = req.query.mes as string | undefined
-      const data = await dashboardService.cargaWorkPorTecnico(plantaId, mes)
+      const data = await dashboardService.cargaWorkPorTecnico(plantaId, mes, plantasIds)
       res.json({ status: 'ok', data })
     } catch (error) {
       next(error)
@@ -84,9 +101,9 @@ export class DashboardController {
 
   async noConformidades(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const plantaId = this.resolverPlantaId(req, req.query.plantaId as string)
+      const { plantaId, plantasIds } = this.resolverPlantasFiltro(req, req.query.plantaId as string)
       const { fechaInicio, fechaFin } = req.query as { fechaInicio?: string; fechaFin?: string }
-      const data = await dashboardService.noConformidades(plantaId, fechaInicio, fechaFin)
+      const data = await dashboardService.noConformidades(plantaId, fechaInicio, fechaFin, plantasIds)
       res.json({ status: 'ok', data })
     } catch (error) {
       next(error)
@@ -95,10 +112,11 @@ export class DashboardController {
 
   async inspeccionesDelPeriodo(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const plantaId = this.resolverPlantaId(req, req.query.plantaId as string)
+      const { plantaId, plantasIds } = this.resolverPlantasFiltro(req, req.query.plantaId as string)
       const { elaboradoPorId, tipoInspeccion, estado, fechaInicio, fechaFin, limite } = req.query as Record<string, string>
       const data = await dashboardService.inspeccionesDelPeriodo({
         plantaId,
+        plantasIds,
         elaboradoPorId: elaboradoPorId ? parseInt(elaboradoPorId, 10) : undefined,
         tipoInspeccion: tipoInspeccion && tipoInspeccion.trim() ? tipoInspeccion.trim() : undefined,
         estado,
@@ -126,10 +144,11 @@ export class DashboardController {
 
   async reporteEstadoFlota(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const plantaId = this.resolverPlantaId(req, req.query.plantaId as string)
+      const { plantaId, plantasIds } = this.resolverPlantasFiltro(req, req.query.plantaId as string)
       const { tipoEquipoId, estadoOperativo } = req.query as Record<string, string>
       const data = await dashboardService.reporteEstadoFlota({
         plantaId,
+        plantasIds,
         tipoEquipoId: tipoEquipoId ? parseInt(tipoEquipoId, 10) : undefined,
         estadoOperativo
       })
@@ -141,9 +160,9 @@ export class DashboardController {
 
   async reporteEjecutivoMensual(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const plantaId = this.resolverPlantaId(req, req.query.plantaId as string)
+      const { plantaId, plantasIds } = this.resolverPlantasFiltro(req, req.query.plantaId as string)
       const mes = req.query.mes as string | undefined
-      const data = await dashboardService.reporteEjecutivoMensual(plantaId, mes)
+      const data = await dashboardService.reporteEjecutivoMensual(plantaId, mes, plantasIds)
       res.json({ status: 'ok', data })
     } catch (error) {
       next(error)
@@ -152,8 +171,8 @@ export class DashboardController {
 
   async matrizCriticidad(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const plantaId = this.resolverPlantaId(req, req.query.plantaId as string)
-      const data = await dashboardService.matrizCriticidad(plantaId)
+      const { plantaId, plantasIds } = this.resolverPlantasFiltro(req, req.query.plantaId as string)
+      const data = await dashboardService.matrizCriticidad(plantaId, plantasIds)
       res.json({ status: 'ok', data })
     } catch (error) {
       next(error)

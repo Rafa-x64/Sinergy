@@ -21,7 +21,7 @@ const pestanasDashboard: TabItem[] = [
   { id: "saux", name: "Servicios Auxiliares", color: "purple" },
   { id: "historial", name: "Historial de Inspecciones", color: "info" },
   { id: "reportes", name: "Centro de Reportes", color: "info" },
-  { id: "equipos", name: "Estado de Flota", color: "info" }
+  { id: "equipos", name: "Estado de Maquinaria", color: "info" }
 ]
 
 const pestanaActiva = ref<string | number>("estadisticas")
@@ -57,7 +57,7 @@ const ubicacionSeleccionadaObjeto = computed(() => {
 })
 
 async function aplicarFiltroUbicacion() {
-  const plantaId = authStore.plantaId ?? undefined
+  const plantaId = authStore.plantasIds.length > 1 ? undefined : (authStore.plantaId ?? undefined)
   await store.cargarTodosLosKpis(plantaId, ubicacionFiltroId.value ?? undefined)
 }
 
@@ -69,9 +69,9 @@ async function limpiarFiltroUbicacion() {
 // ─── SERVICIOS AUXILIARES (SAUX) ──────────────────────────────────────────
 const TIPOS_SAUX = [
   { key: '', label: 'Todos los SAUX', icon: 'mdi-view-grid-outline', color: 'primary' },
-  { key: 'SAUX-P', label: 'Planta de Mezcla (PLM)', icon: 'mdi-blender-outline', color: 'deep-orange' },
-  { key: 'SAUX-E', label: 'Extrusión (EXT)', icon: 'mdi-pipe', color: 'indigo' },
-  { key: 'SAUX-I', label: 'Inyección (INY)', icon: 'mdi-needle', color: 'teal' },
+  { key: 'SAUP', label: 'Planta de Mezcla (PLM)', icon: 'mdi-blender-outline', color: 'deep-orange' },
+  { key: 'SAUE', label: 'Extrusión (EXT)', icon: 'mdi-pipe', color: 'indigo' },
+  { key: 'SAUI', label: 'Inyección (INY)', icon: 'mdi-needle', color: 'teal' },
 ]
 
 const sauxSeleccionado = ref<string>('')
@@ -126,7 +126,7 @@ const estadosFlotaNormalizados = computed(() => {
 })
 
 async function refrescarDashboard() {
-  const plantaId = authStore.plantaId ?? undefined
+  const plantaId = authStore.plantasIds.length > 1 ? undefined : (authStore.plantaId ?? undefined)
   await Promise.all([
     store.cargarTodosLosKpis(plantaId, ubicacionFiltroId.value ?? undefined),
     store.cargarUbicacionesTecnicas(plantaId)
@@ -441,7 +441,7 @@ onMounted(() => {
         <v-card class="elevation-2 rounded-lg pa-4 pa-sm-6 bg-surface">
           <div class="d-flex flex-column flex-sm-row align-start align-sm-center justify-space-between gap-2 mb-4">
             <div>
-              <h3 class="text-subtitle-1 font-weight-bold">Resumen General de la Flota Industrial</h3>
+              <h3 class="text-subtitle-1 font-weight-bold">Resumen General de la Maquinaria Industrial</h3>
               <p class="text-caption text-medium-emphasis mb-0">Distribución rápida de estados operativos</p>
             </div>
             <v-btn color="primary" variant="flat" size="small" to="/equipos" prepend-icon="mdi-cogs">

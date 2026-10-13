@@ -5,14 +5,18 @@ export class DashboardService {
   /**
    * KPI A — Disponibilidad de equipos agrupada por estadoOperativo.
    */
-  async disponibilidadEquipos(plantaId?: number, ubicacionTecnicaId?: number) {
+  async disponibilidadEquipos(plantaId?: number, ubicacionTecnicaId?: number, plantasIds?: number[]) {
+    const filtroPlanta = !ubicacionTecnicaId
+      ? (plantasIds && plantasIds.length > 0
+          ? { ubicacionTecnica: { plantaId: { in: plantasIds } } }
+          : (plantaId ? { ubicacionTecnica: { plantaId } } : {}))
+      : {}
+
     const rows = await prisma.equipo.groupBy({
       by: ['estadoOperativo'],
       where: {
         ...(ubicacionTecnicaId && { ubicacionTecnicaId }),
-        ...(!ubicacionTecnicaId && plantaId && {
-          ubicacionTecnica: { plantaId }
-        })
+        ...filtroPlanta
       },
       _count: { id: true }
     })
@@ -28,13 +32,17 @@ export class DashboardService {
 
   /**
    * Lista ubicaciones técnicas con su planta para poblar filtros del dashboard.
-   * Si se pasa plantaId, filtra por planta; de lo contrario retorna todas.
+   * Si se pasa plantaId o plantasIds, filtra por planta(s); de lo contrario retorna todas.
    */
-  async listarUbicacionesTecnicas(plantaId?: number) {
+  async listarUbicacionesTecnicas(plantaId?: number, plantasIds?: number[]) {
+    const filtroPlanta = plantasIds && plantasIds.length > 0
+      ? { plantaId: { in: plantasIds } }
+      : (plantaId ? { plantaId } : {})
+
     const ubicaciones = await prisma.ubicacionTecnica.findMany({
       where: {
         activa: true,
-        ...(plantaId && { plantaId })
+        ...filtroPlanta
       },
       select: {
         id: true,
@@ -52,20 +60,24 @@ export class DashboardService {
       plantaId: u.planta.id,
       plantaCodigo: u.planta.codigo,
       plantaNombre: u.planta.nombre,
-      esSAUX: u.codigo.toUpperCase().includes('SAUX')
+      esSAUX: u.codigo.toUpperCase().includes('SAU')
     }))
   }
 
   /**
    * KPI A — Disponibilidad desglosada por planta.
    */
-  async disponibilidadPorPlanta(plantaId?: number, ubicacionTecnicaId?: number) {
+  async disponibilidadPorPlanta(plantaId?: number, ubicacionTecnicaId?: number, plantasIds?: number[]) {
+    const filtroPlanta = !ubicacionTecnicaId
+      ? (plantasIds && plantasIds.length > 0
+          ? { ubicacionTecnica: { plantaId: { in: plantasIds } } }
+          : (plantaId ? { ubicacionTecnica: { plantaId } } : {}))
+      : {}
+
     const equipos = await prisma.equipo.findMany({
       where: {
         ...(ubicacionTecnicaId && { ubicacionTecnicaId }),
-        ...(!ubicacionTecnicaId && plantaId && {
-          ubicacionTecnica: { plantaId }
-        })
+        ...filtroPlanta
       },
       select: {
         estadoOperativo: true,
@@ -95,8 +107,10 @@ export class DashboardService {
   /**
    * KPI C — Top 10 equipos cuyas variables registran mayor % de fueraDeRango.
    */
-  async topEquiposConFallas(plantaId?: number, limite = 10) {
-    const filtroPlanta = plantaId ? `AND pl.id = ${Number(plantaId)}` : ''
+  async topEquiposConFallas(plantaId?: number, limite = 10, plantasIds?: number[]) {
+    const filtroPlanta = plantasIds && plantasIds.length > 0
+      ? `AND pl.id IN (${plantasIds.map(id => Number(id)).join(',')})`
+      : (plantaId ? `AND pl.id = ${Number(plantaId)}` : '')
 
     const resultado: Array<{
       equipo_id: number
@@ -166,9 +180,13 @@ export class DashboardService {
   /**
    * KPI G — Evolución de disponibilidad (% OPERATIVO) en los últimos 6 meses.
    */
-  async evolucionDisponibilidad(plantaId?: number) {
+  async evolucionDisponibilidad(plantaId?: number, plantasIds?: number[]) {
     const meses: Array<{ mes: string; porcentaje: number }> = []
     const ahora = new Date()
+
+    const filtroPlanta = plantasIds && plantasIds.length > 0
+      ? { ubicacionTecnica: { plantaId: { in: plantasIds } } }
+      : (plantaId ? { ubicacionTecnica: { plantaId } } : {})
 
     for (let i = 5; i >= 0; i--) {
       const fecha = new Date(ahora.getFullYear(), ahora.getMonth() - i, 1)
@@ -180,13 +198,13 @@ export class DashboardService {
           where: {
             estadoOperativo: 'OPERATIVO',
             creadoEn: { lte: finMes },
-            ...(plantaId && { ubicacionTecnica: { plantaId } })
+            ...filtroPlanta
           }
         }),
         prisma.equipo.count({
           where: {
             creadoEn: { lte: finMes },
-            ...(plantaId && { ubicacionTecnica: { plantaId } })
+            ...filtroPlanta
           }
         })
       ])
@@ -203,7 +221,7 @@ export class DashboardService {
   /**
    * KPI D — Inspecciones elaboradas por técnico en el mes dado.
    */
-  async cargaWorkPorTecnico(plantaId?: number, mes?: string) {
+  async cargaWorkPorTecnico(plantaId?: number, mes?: string, plantasIds?: number[]) {
     const ahora = new Date()
     const año = mes ? parseInt(mes.split('-')[0]) : ahora.getFullYear()
     const mesNum = mes ? parseInt(mes.split('-')[1]) : ahora.getMonth() + 1
@@ -211,11 +229,15 @@ export class DashboardService {
     const inicio = new Date(año, mesNum - 1, 1)
     const fin = new Date(año, mesNum, 0, 23, 59, 59)
 
+    const filtroPlanta = plantasIds && plantasIds.length > 0
+      ? { plantaId: { in: plantasIds } }
+      : (plantaId ? { plantaId } : {})
+
     const rows = await prisma.inspeccion.groupBy({
       by: ['elaboradoPorId'],
       where: {
         fechaRegistro: { gte: inicio, lte: fin },
-        ...(plantaId && { plantaId })
+        ...filtroPlanta
       },
       _count: { id: true }
     })
@@ -244,12 +266,15 @@ export class DashboardService {
    */
   async reporteEstadoFlota(filtros: {
     plantaId?: number
+    plantasIds?: number[]
     tipoEquipoId?: number
     estadoOperativo?: string
   }) {
     const where: any = {}
 
-    if (filtros.plantaId) {
+    if (filtros.plantasIds && filtros.plantasIds.length > 0) {
+      where.ubicacionTecnica = { plantaId: { in: filtros.plantasIds } }
+    } else if (filtros.plantaId) {
       where.ubicacionTecnica = { plantaId: filtros.plantaId }
     }
     if (filtros.tipoEquipoId) {
@@ -328,7 +353,7 @@ export class DashboardService {
   /**
    * R4 — Reporte Ejecutivo Mensual (1 Página) con cálculos 100% reales.
    */
-  async reporteEjecutivoMensual(plantaId?: number, mesParam?: string) {
+  async reporteEjecutivoMensual(plantaId?: number, mesParam?: string, plantasIds?: number[]) {
     const ahora = new Date()
     const año = mesParam ? parseInt(mesParam.split('-')[0]) : ahora.getFullYear()
     const mesNum = mesParam ? parseInt(mesParam.split('-')[1]) : ahora.getMonth() + 1
@@ -339,8 +364,13 @@ export class DashboardService {
     // Mes anterior real para cálculo exacto de tendencia
     const finMesAnt = new Date(año, mesNum - 1, 0, 23, 59, 59)
 
-    const wherePlantaEquipo = plantaId ? { ubicacionTecnica: { plantaId } } : {}
-    const wherePlantaInsp = plantaId ? { plantaId } : {}
+    const wherePlantaEquipo = plantasIds && plantasIds.length > 0
+      ? { ubicacionTecnica: { plantaId: { in: plantasIds } } }
+      : (plantaId ? { ubicacionTecnica: { plantaId } } : {})
+
+    const wherePlantaInsp = plantasIds && plantasIds.length > 0
+      ? { plantaId: { in: plantasIds } }
+      : (plantaId ? { plantaId } : {})
 
     const [
       totalEquipos,
@@ -367,8 +397,8 @@ export class DashboardService {
       prisma.inspeccion.count({ where: { ...wherePlantaInsp, estadoInspeccion: 'APROBADO', fechaRegistro: { gte: inicioMes, lte: finMes } } }),
       prisma.inspeccion.count({ where: { ...wherePlantaInsp, estadoInspeccion: 'RECHAZADO', fechaRegistro: { gte: inicioMes, lte: finMes } } }),
       prisma.inspeccion.count({ where: { ...wherePlantaInsp, estadoInspeccion: 'PENDIENTE', fechaRegistro: { gte: inicioMes, lte: finMes } } }),
-      this.noConformidades(plantaId, inicioMes.toISOString(), finMes.toISOString()),
-      this.disponibilidadPorPlanta(plantaId),
+      this.noConformidades(plantaId, inicioMes.toISOString(), finMes.toISOString(), plantasIds),
+      this.disponibilidadPorPlanta(plantaId, undefined, plantasIds),
       prisma.equipo.findMany({
         where: {
           ...wherePlantaEquipo,
@@ -434,8 +464,10 @@ export class DashboardService {
   /**
    * R5 — Matriz de Criticidad por Equipo (Clasificación A, B, C) con lógica matemáticamente balanceada.
    */
-  async matrizCriticidad(plantaId?: number) {
-    const wherePlanta = plantaId ? { ubicacionTecnica: { plantaId } } : {}
+  async matrizCriticidad(plantaId?: number, plantasIds?: number[]) {
+    const wherePlanta = plantasIds && plantasIds.length > 0
+      ? { ubicacionTecnica: { plantaId: { in: plantasIds } } }
+      : (plantaId ? { ubicacionTecnica: { plantaId } } : {})
 
     const equipos = await prisma.equipo.findMany({
       where: wherePlanta,
@@ -534,10 +566,14 @@ export class DashboardService {
   /**
    * R3 — No conformidades: variables fuera de rango con contexto completo.
    */
-  async noConformidades(plantaId?: number, fechaInicio?: string, fechaFin?: string) {
+  async noConformidades(plantaId?: number, fechaInicio?: string, fechaFin?: string, plantasIds?: number[]) {
     const filtros: string[] = ['id2.valor_numerico IS NOT NULL']
 
-    if (plantaId) filtros.push(`pl.id = ${Number(plantaId)}`)
+    if (plantasIds && plantasIds.length > 0) {
+      filtros.push(`pl.id IN (${plantasIds.map(id => Number(id)).join(',')})`)
+    } else if (plantaId) {
+      filtros.push(`pl.id = ${Number(plantaId)}`)
+    }
     if (fechaInicio) filtros.push(`i.fecha_registro >= '${fechaInicio}'::timestamptz`)
     if (fechaFin) filtros.push(`i.fecha_registro <= '${fechaFin}'::timestamptz`)
 
@@ -598,6 +634,7 @@ export class DashboardService {
    */
   async inspeccionesDelPeriodo(filtros: {
     plantaId?: number
+    plantasIds?: number[]
     elaboradoPorId?: number
     tipoInspeccion?: string
     estado?: string
@@ -606,7 +643,11 @@ export class DashboardService {
     limite?: number
   }) {
     const where: any = {}
-    if (filtros.plantaId) where.plantaId = filtros.plantaId
+    if (filtros.plantasIds && filtros.plantasIds.length > 0) {
+      where.plantaId = { in: filtros.plantasIds }
+    } else if (filtros.plantaId) {
+      where.plantaId = filtros.plantaId
+    }
     if (filtros.elaboradoPorId) where.elaboradoPorId = filtros.elaboradoPorId
     if (filtros.tipoInspeccion) where.tipoInspeccion = filtros.tipoInspeccion
     if (filtros.estado) where.estadoInspeccion = filtros.estado
@@ -704,19 +745,11 @@ export class DashboardService {
    * KPI C2 — Top N equipos por Score de Riesgo Compuesto.
    * Combina 4 señales: variables fuera de rango, lubricación vencida,
    * fugas detectadas en rutinas y penalización por estado operativo.
-   *
-   * Ponderación:
-   *   40% → % de variables numéricas fuera de límites normativos
-   *   25% → % de puntos de lubricación vencidos (horas uso >= limite_horas_cambio)
-   *   20% → % de rutinas (últimos 90 días) con al menos una fuga reportada
-   *   15% → penalización fija: INOPERATIVO=15, EN_MANTENIMIENTO=8, OPERATIVO=0
-   *
-   * Nota: estado_semaforo no existe como columna; se calcula comparando
-   * el horómetro actual (última lectura en historial_horometros) con
-   * horometro_ultimo_cambio + limite_horas_cambio del punto.
    */
-  async topEquiposRiesgoCompuesto(plantaId?: number, limite = 10) {
-    const filtroPlanta = plantaId ? `AND pl.id = ${Number(plantaId)}` : ''
+  async topEquiposRiesgoCompuesto(plantaId?: number, limite = 10, plantasIds?: number[]) {
+    const filtroPlanta = plantasIds && plantasIds.length > 0
+      ? `AND pl.id IN (${plantasIds.map(id => Number(id)).join(',')})`
+      : (plantaId ? `AND pl.id = ${Number(plantaId)}` : '')
 
     type FilaRaw = {
       equipo_id:        number

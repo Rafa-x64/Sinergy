@@ -16,6 +16,47 @@ El formato sigue el estándar [Keep a Changelog](https://keepachangelog.com/es/1
 
 ## [Unreleased]
 
+- **Modalidad Dual de Toma de Horómetro: Odómetro en Horas vs Fecha de Calendario (`feat: horometro-modalidad-calendario`)**:
+  - **`MatrizLubricacionView.vue`**: Se implementó un selector desplegable de modo de captura (`modoIngresoHorometro`) con dos opciones:
+    1. *Por Horas (Odómetro)*: Permite el ingreso manual directo de las horas del odómetro en el tacómetro del equipo (comportamiento estándar).
+    2. *Por Fecha de Calendario*: Permite registrar inspecciones en equipos que operan sin horómetro físico o con régimen de ciclo calendario continuo. Incluye selector de fecha (`fechaLecturaCalendario`), factor de régimen diario editable (`horasPorDiaCalendario`, por defecto 24 hrs/día) y cálculo reactivo inmediato de horas proyectadas a partir de la última fecha y lectura registradas.
+    - Se integra con el sistema de borradores por equipo (`borradoresPorEquipo`), persistiendo el modo seleccionado y sus valores al avanzar o retroceder en el wizard de línea o al cambiar de equipo.
+    - No altera el esquema de la base de datos ni los endpoints existentes, garantizando total compatibilidad hacia atrás y preservando la integridad del historial de horómetros.
+
+- **Saneamiento de Componentes en Planta de Mezcla (PLM) (`fix: saneamiento-componentes-plm`)**:
+  - **Saneamiento en Base de Datos**: Se procesaron 42 componentes de gravimétricos en la planta `1000-PLM` cuyos nombres contenían estructuras JSON serializadas de importaciones de Excel (`{"richText":[...]}`). Los nombres fueron normalizados a texto legible estándar (`Reductor Agitador`).
+  - **Auditoría de Alcance y Plantillas PLM**: Se constató que los equipos de PLM no poseen variables directas configuradas y sus tipos de equipo carecen de plantillas normativas en la base de datos, lo cual activaba el filtro de omisión de equipos sin variables. Con el saneamiento de nombres, los componentes de PLM quedan completamente listos para recibir puntos de lubricación y plantillas normativas sin generar anomalías visuales en la interfaz.
+
+- **Eliminación de Códigos de Formato en Documentos de Impresión (`refactor: eliminar-codigos-formato-pdf`)**:
+  - **`ModalImpresionInspeccion.vue`**: Se eliminó el computed `codigoFormato` que asignaba códigos internos (`FLUB001`, `FIM003`, `FIM006`) según el tipo de inspección. El nombre del archivo PDF exportado ahora usa únicamente el código de inspección (`INSP-LUB-EXT-YYYYMMDD-NN.pdf`) sin prefijos de formato.
+  - **`PanelReportes.vue`**: Se eliminaron las referencias al código `F-MANT-04` en la descripción de la Tarjeta de Ronda (R6) tanto en el panel de controles como en el encabezado de la tarjeta imprimible. Reemplazados por texto descriptivo neutro sin nomenclatura de formato normativo.
+  - **Decisión Arquitectónica**: Los códigos de formato tipo `FL003`, `FN002`, `FIM006`, `FLUB001`, `F-MANT-04` eran identificadores de un sistema de gestión documental heredado no integrado a Sinergy. Su inclusión en los PDFs generaba confusión en los usuarios y no aportaban trazabilidad real dentro del sistema. Se eliminan de todos los artefactos de impresión; el único identificador válido en los documentos es el `codigoInspeccion` (`INSP-TIP-PLANTA-FECHA-SEQ`) generado por Sinergy.
+
+- **Limpieza Estética de Impresión y Soporte Multi-Planta (`fix: impresion-estetica-multiplanta`)**:
+  - **Hoja de Impresión Limpia y Monocromática (`ModalImpresionInspeccion.vue`)**:
+    - Se eliminó el fondo rojo (`#ff5252`) en las filas de lubricación e inspección, estableciendo fondo blanco puro (`#ffffff`) y tipografía en negro puro (`#000000`).
+    - Eliminado el color rojo en fechas, horas, semanas ISO y firmas.
+    - Simplificación en la sección *DATOS DEL EQUIPO*: se retiraron los campos *Código Abreviado* y *Código SAP*, mostrando únicamente el nombre legible de la maquinaria.
+    - Se retiró el código de formato del documento (*FLUB001* / *FIM006*) en el pie de página.
+  - **Soporte Completo de Múltiples Plantas (`Dashboard` e `Inspecciones`)**:
+    - **Backend Dashboard (`dashboard.service.ts`, `dashboard.controller.ts`)**: Se implementó `resolverPlantasFiltro` y soporte para `plantasIds: number[]` en todos los KPIs (`disponibilidadEquipos`, `disponibilidadPorPlanta`, `listarUbicacionesTecnicas`, `topEquiposConFallas`, `topEquiposRiesgoCompuesto`, `evolucionDisponibilidad`, `cargaWorkPorTecnico`, `reporteEstadoFlota`, `reporteEjecutivoMensual`, `matrizCriticidad`, `noConformidades`, `inspeccionesDelPeriodo`). Los usuarios con múltiples plantas (como Elizabeth en Extrusión y Mezcla) ahora ven consolidados y desglosados los datos de todas sus sedes autorizadas.
+    - **Backend Inspecciones (`inspecciones.controller.ts`, `inspecciones.service.ts`)**: En `obtenerEquiposElegibles`, `crearInspeccion` y `obtenerPendientes`, se respeta la planta solicitada o el conjunto de plantas autorizadas del usuario sin forzarlo a una única planta.
+    - **Wizard de Inspecciones (`WizardSeleccionAlcance.vue`)**: El selector de planta ahora se mantiene habilitado para usuarios multi-planta (`authStore.esMultiPlanta`), desplegando exclusivamente las plantas asignadas en su perfil.
+    - **Frontend Dashboard (`DashboardView.vue`)**: Para usuarios con rol multi-planta, las consultas de KPIs y ubicaciones técnicas abarcan de forma predeterminada todas sus plantas asignadas.
+
+- **Correcciones de Asignación de Supervisores, Paneles e IDs (`fix: usuarios-supervisores-paneles-ids`)**:
+  - **Campo de Supervisor Siempre Visible (`FormularioUsuario.vue`)**:
+    - El selector de *Supervisor Asignado* ahora está presente de forma fija en el formulario tanto al registrar como al editar cualquier usuario.
+    - Se eliminó el ocultamiento condicional (`v-if`) que impedía verlo cuando aún no se había seleccionado un rol o en roles de administradores.
+    - Validación adaptativa: obligatorio para personal técnico y opcional para supervisores y administradores.
+  - **Identificación Amplia de Supervisores (`UsuariosView.vue`, `auth.service.ts`)**:
+    - Se corrigió la comparación de roles para normalizar textos (`.includes('ADMINISTRADOR')` y `.includes('SUPERVISOR')`), permitiendo que usuarios con rol `"Administrador del Sistema"` o `"Supervisor / Gerente"` aparezcan en la lista y sean aceptados por el backend.
+    - Validación para prevenir que un usuario sea su propio supervisor.
+  - **Paneles de Inspección Contraídos (`FormWizardInspeccion.vue`)**:
+    - Los paneles desplegables de componentes ahora inician cerrados por defecto al cambiar de equipo.
+  - **Ocultamiento de IDs Internos en Tablas**:
+    - Retiradas las columnas de ID de base de datos en `EquipoView.vue`, `RolesView.vue` y `UsuariosView.vue`.
+
 - **Ajustes de UI en Formularios de Inspección, Bandeja de Aprobaciones y Vida Útil en Lubricación (`feat: ui-inspecciones-linea-aprobaciones-vida-util`)**:
   - **Formulario de Inspecciones en Fila Única (`FormWizardInspeccion.vue`)**:
     - Reestructurada la visualización de cada variable operativa a una sola fila horizontal limpia (`nombre`, `campo` numérico/selección y `observación`), reduciendo drásticamente la altura vertical del formulario.
