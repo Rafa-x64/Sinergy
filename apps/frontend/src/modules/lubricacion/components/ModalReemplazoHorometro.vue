@@ -46,7 +46,7 @@ function cancelar() {
           </v-avatar>
         </template>
         <v-card-title class="text-subtitle-1 font-weight-bold">
-          Detección de Reemplazo de Odómetro / Horómetro
+          Detección de Reemplazo de Horómetro
         </v-card-title>
       </v-card-item>
 

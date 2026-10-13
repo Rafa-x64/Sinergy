@@ -61,9 +61,29 @@ const fechaLecturaCalendario = ref<string>(new Date().toISOString().slice(0, 10)
 const horasPorDiaCalendario = ref<number>(24)
 
 const opcionesModoHorometro = [
-  { title: 'Por Horas (Odómetro)', value: 'HORA' },
+  { title: 'Por Horas (Horómetro)', value: 'HORA' },
   { title: 'Por Fecha de Calendario', value: 'CALENDARIO' }
 ]
+
+// Cálculo de días, semanas y horas proyectadas para modo calendario
+const diasTranscurridosCalendario = computed(() => {
+  if (!filaEquipoInspeccionActiva.value || !fechaLecturaCalendario.value) return 0
+  const fechaBaseStr = filaEquipoInspeccionActiva.value.fechaUltimoHorometro
+  if (!fechaBaseStr) return 0
+  const fechaSeleccionada = new Date(fechaLecturaCalendario.value + 'T00:00:00')
+  const fechaBase = new Date(fechaBaseStr.slice(0, 10) + 'T00:00:00')
+  const diffMs = fechaSeleccionada.getTime() - fechaBase.getTime()
+  return Math.max(0, Math.round(diffMs / (1000 * 60 * 60 * 24)))
+})
+
+const semanasTranscurridasCalendario = computed(() => {
+  return (diasTranscurridosCalendario.value / 7).toFixed(1)
+})
+
+const horasIncrementoCalendario = computed(() => {
+  const factor = Number(horasPorDiaCalendario.value) || 24
+  return diasTranscurridosCalendario.value * factor
+})
 
 const esReemplazoReloj = ref<boolean>(false)
 const justificacionReemplazo = ref<string>('')
@@ -443,22 +463,8 @@ function recalcularHorometroPorCalendario() {
   if (modoIngresoHorometro.value !== 'CALENDARIO') return
   if (!filaEquipoInspeccionActiva.value) return
 
-  const fechaBaseStr = filaEquipoInspeccionActiva.value.fechaUltimoHorometro
   const baseHoras = filaEquipoInspeccionActiva.value.horometroActual
-
-  if (!fechaLecturaCalendario.value) {
-    nuevoHorometro.value = baseHoras
-    return
-  }
-
-  const fechaSeleccionada = new Date(fechaLecturaCalendario.value + 'T00:00:00')
-  const fechaBase = fechaBaseStr ? new Date(fechaBaseStr.slice(0, 10) + 'T00:00:00') : fechaSeleccionada
-
-  const diffMs = fechaSeleccionada.getTime() - fechaBase.getTime()
-  const diffDias = Math.max(0, Math.round(diffMs / (1000 * 60 * 60 * 24)))
-  const factor = Number(horasPorDiaCalendario.value) || 24
-
-  const proyectado = baseHoras + (diffDias * factor)
+  const proyectado = baseHoras + horasIncrementoCalendario.value
   nuevoHorometro.value = Math.round(proyectado * 10) / 10
   verificarCambioHorometro()
 }
@@ -485,6 +491,7 @@ function calcularHorasUso(detalle: FilaDetalleInspeccion): number {
 
 function calcularPorcentajeVida(detalle: FilaDetalleInspeccion): number {
   if (detalle.seRealizoCambioTotal) return 0
+  if (!detalle.limiteHorasCambio || detalle.limiteHorasCambio <= 0) return 0
   const horas = calcularHorasUso(detalle)
   const pct = (horas / detalle.limiteHorasCambio) * 100
   return Math.min(100, Math.max(0, Math.round(pct)))
@@ -1207,7 +1214,7 @@ async function finalizarWizardLinea() {
                   <v-select
                     v-model="modoIngresoHorometro"
                     :items="opcionesModoHorometro"
-                    label="Modo de Toma"
+                    label="Modo de Horómetro"
                     variant="outlined"
                     density="compact"
                     hide-details
@@ -1221,7 +1228,7 @@ async function finalizarWizardLinea() {
                   </v-select>
                 </div>
 
-                <!-- Modo Directo: Horas del Odómetro -->
+                <!-- Modo Directo: Horas del Horómetro -->
                 <div v-if="modoIngresoHorometro === 'HORA'" class="flex-grow-1 flex-md-grow-0" style="min-width: 180px; max-width: 100%;">
                   <v-text-field
                     v-model.number="nuevoHorometro"
@@ -1292,9 +1299,23 @@ async function finalizarWizardLinea() {
                   class="font-weight-bold"
                 >
                   <v-icon start size="14">mdi-alert</v-icon>
-                  Tacómetro Reemplazado
+                  Horómetro Reemplazado
                 </v-chip>
               </div>
+            </div>
+
+            <!-- Resumen Informativo de Semanas/Días en Modo Calendario -->
+            <div
+              v-if="modoIngresoHorometro === 'CALENDARIO'"
+              class="mt-2 pt-2 border-t d-flex align-center gap-2 flex-wrap text-caption text-medium-emphasis"
+            >
+              <v-chip size="x-small" color="primary" variant="tonal" class="font-weight-medium">
+                <v-icon start size="13">mdi-calendar-range</v-icon>
+                {{ diasTranscurridosCalendario }} días ({{ semanasTranscurridasCalendario }} semanas) transcurridos
+              </v-chip>
+              <span>Avance computado: <strong>+{{ horasIncrementoCalendario.toLocaleString() }} hrs</strong></span>
+              <span>&bull;</span>
+              <span>Horómetro resultante: <strong>{{ nuevoHorometro.toLocaleString() }} hrs</strong></span>
             </div>
 
             <v-alert
@@ -1396,14 +1417,27 @@ async function finalizarWizardLinea() {
                       </div>
                     </td>
 
-                    <!-- Horas Acumuladas -->
+                    <!-- Horas Acumuladas y Semanas -->
                     <td>
-                      <div class="font-weight-bold text-body-2">
-                        {{ calcularHorasUso(detalle) }} / {{ detalle.limiteHorasCambio }} hrs
-                      </div>
-                      <div class="text-caption text-medium-emphasis">
-                        Base: {{ detalle.horometroUltimoCambio }} hrs
-                      </div>
+                      <template v-if="detalle.limiteHorasCambio > 0">
+                        <div class="font-weight-bold text-body-2">
+                          {{ calcularHorasUso(detalle) }} / {{ detalle.limiteHorasCambio }} hrs
+                        </div>
+                        <div class="text-caption text-medium-emphasis d-flex align-center gap-1 flex-wrap">
+                          <span>Base: {{ detalle.horometroUltimoCambio }} hrs</span>
+                          <span v-if="detalle.limiteHorasCambio >= 168 || calcularHorasUso(detalle) >= 168" class="text-primary font-weight-medium">
+                            ({{ (calcularHorasUso(detalle) / 168).toFixed(1) }} / {{ (detalle.limiteHorasCambio / 168).toFixed(1) }} sem)
+                          </span>
+                        </div>
+                      </template>
+                      <template v-else>
+                        <div class="font-weight-bold text-body-2 text-medium-emphasis">
+                          Bajo Demanda
+                        </div>
+                        <div class="text-caption text-medium-emphasis">
+                          Uso: {{ calcularHorasUso(detalle) }} hrs
+                        </div>
+                      </template>
                     </td>
 
                     <!-- Nivel Observado -->
