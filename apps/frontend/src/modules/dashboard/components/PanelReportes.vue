@@ -1333,7 +1333,7 @@ onMounted(() => {
       <div v-else class="tarjeta-ronda-imprimible pa-4 border rounded bg-white text-black">
         <div class="d-flex justify-space-between align-center border-b pb-2 mb-3">
           <div>
-            <h2 class="text-h6 font-weight-bold mb-0">TUBRICA — TARJETA DE RONDA TÉCNICA</h2>
+            <h2 class="text-h6 font-weight-bold mb-0">SINERGY — TARJETA DE RONDA TÉCNICA</h2>
             <div class="text-caption font-mono">Sistema Sinergy | Tarjeta de Ronda Técnica</div>
           </div>
           <div class="text-right text-caption">

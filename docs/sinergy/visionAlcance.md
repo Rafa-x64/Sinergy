@@ -1,6 +1,6 @@
 # Documento de Visión y Alcance — Proyecto Sinergy
 
-**Cliente / Organización:** Tubrica  
+**Cliente / Organización:** Sinergy  
 **Sistema:** Plataforma Digital de Control de Mantenimiento e Inspección Industrial  
 **Versión:** 1.0  
 **Fecha:** 21 de Julio de 2026  
@@ -10,7 +10,7 @@
 
 ## 1. Declaración del Problema
 
-Actualmente, el registro y control de inspecciones de equipos y variables críticas en las 3 plantas de Tubrica se realiza mediante formatos impresos y plantillas de Excel distribuidas. Esta modalidad presenta los siguientes inconvenientes operativos y financieros:
+Actualmente, el registro y control de inspecciones de equipos y variables críticas en las 3 plantas de Sinergy se realiza mediante formatos impresos y plantillas de Excel distribuidas. Esta modalidad presenta los siguientes inconvenientes operativos y financieros:
 
 1. **Falta de Trazabilidad y Riesgo de Auditoría:** No existe un registro centralizado e inalterable que certifique quién ejecutó la inspección, quién la revisó y quién la aprobó.
 2. **Pérdida de Información por Fallas de Conectividad:** Las áreas operativas de planta presentan zonas ciegas sin cobertura de internet, impidiendo el registro digital directo.
@@ -21,7 +21,7 @@ Actualmente, el registro y control de inspecciones de equipos y variables críti
 
 ## 2. Visión del Producto
 
-**Sinergy** es la plataforma digital unificada de Tubrica diseñada para modernizar, estandarizar y blindar la captura de datos de inspección operativa en planta. 
+**Sinergy** es la plataforma digital unificada de Sinergy diseñada para modernizar, estandarizar y blindar la captura de datos de inspección operativa en planta. 
 
 Permite a los técnicos registrar variables operativas y chequeos desde dispositivos móviles en tiempo real —incluso en zonas sin señal de internet— y ofrece a la gerencia un tablero de control centralizado con indicadores de gestión, alertas de desviaciones y trazabilidad total para auditorías de calidad.
 
@@ -55,7 +55,7 @@ Permite a los técnicos registrar variables operativas y chequeos desde disposit
 
 ## 5. Alcance de la Versión 1.0 (Incluido)
 
-El proyecto abarca la digitalización de los siguientes módulos operativos en las 3 plantas de Tubrica:
+El proyecto abarca la digitalización de los siguientes módulos operativos en las 3 plantas de Sinergy:
 
 1. **Módulo de Variables Críticas (Basado en Datos):**
    - Estructura jerárquica: Ubicación Técnica → Planta → Línea de Producción → Equipo → Componente → Variable.

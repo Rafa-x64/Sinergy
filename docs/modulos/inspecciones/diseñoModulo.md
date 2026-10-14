@@ -174,7 +174,7 @@ Devuelve la estructura completa de una línea con todos sus equipos operativos, 
       "id": 2,
       "codigo": "1000-EXT",
       "nombre": "Área de Extrusión",
-      "planta": { "id": 1, "codigo": "PL-01", "nombre": "Tubrica Planta 1" }
+      "planta": { "id": 1, "codigo": "PL-01", "nombre": "Sinergy Planta 1" }
     },
     "equipos": [
       {

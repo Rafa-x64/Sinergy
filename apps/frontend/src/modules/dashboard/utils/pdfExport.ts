@@ -32,7 +32,7 @@ export function exportarTablaPDF(config: {
   doc.setFont("helvetica", "bold")
   doc.setFontSize(14)
   doc.setTextColor(255, 255, 255)
-  doc.text("TUBRICA — SISTEMA SINERGY", marginX, 10)
+  doc.text("SISTEMA SINERGY", marginX, 10)
 
   doc.setFontSize(10)
   doc.setFont("helvetica", "normal")

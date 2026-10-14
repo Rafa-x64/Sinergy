@@ -71,7 +71,7 @@ const manejarSubmit = async (): Promise<void> => {
 
         <!-- Columna Logo -->
         <div class="brand-section">
-          <img src="/LOGO_TUBRICA_AZUL.png" alt="Logo Tubrica" class="brand-logo" />
+          <img src="/logo-sinergy.svg" alt="Sinergy" class="brand-logo" />
         </div>
       </div>
     </v-card>

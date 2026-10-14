@@ -1,6 +1,6 @@
 # Modelo Entidad-Relación (MER / ERM) — Sistema Sinergy
 
-**Cliente / Empresa:** Tubrica
+**Cliente / Empresa:** Sinergy
 **Sistema:** Plataforma Digital de Mantenimiento e Inspección Industrial (Sinergy)
 **Motor Target:** PostgreSQL 14+ / Prisma ORM
 **Versión:** 3.0 (Enterprise / Alta Disponibilidad)
@@ -14,7 +14,7 @@ El modelo de datos de Sinergy está diseñado bajo el patrón **Data-Driven UI**
 
 ### A. Reglas de Jerarquía Física (Estructura de Planta)
 
-1. **Plantas (`plantas`):** 3 plantas de Tubrica.
+1. **Plantas (`plantas`):** 3 plantas de Sinergy.
 2. **Ubicaciones Técnicas (`ubicaciones_tecnicas`):** Nodos geográficos o lógicos pertenecientes a una Planta (`planta_id`). La FK `planta_id` es **nullable** por requerimiento de flexibilidad operativa.
 3. **Líneas de Producción (`lineas`):** 6–17 líneas por planta. Clave compuesta única: `(codigo, planta_id)`.
 4. **Equipos (`equipos`):** Activos físicos con tipos controlados por ENUM: `MAQUINARIA`, `MONTACARGAS`, `COMPRESOR`, `GENERADOR`, `CHILLER`. `linea_id` es nullable para equipos móviles (montacargas).

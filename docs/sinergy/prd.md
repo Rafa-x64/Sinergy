@@ -1,7 +1,7 @@
 # Documento de Requisitos del Producto (PRD) — Sinergy
 
 **Nombre del Sistema:** Sinergy (Plataforma de Mantenimiento e Inspección)  
-**Organización:** Tubrica  
+**Organización:** Sinergy  
 **Versión:** 1.0  
 **Dirigido a:** Gerencia de Mantenimiento, Dirección de Operaciones y Supervisores de Planta  
 
@@ -9,7 +9,7 @@
 
 ## 1. Resumen Ejecutivo
 
-Sinergy es una solución tecnológica integral diseñada para optimizar y estandarizar las inspecciones de mantenimiento industrial en las 3 plantas de Tubrica. Sustituye la toma manual de datos en papel y hojas de Excel por un sistema web inteligente y resiliente a fallas de internet.
+Sinergy es una solución tecnológica integral diseñada para optimizar y estandarizar las inspecciones de mantenimiento industrial en las 3 plantas de Sinergy. Sustituye la toma manual de datos en papel y hojas de Excel por un sistema web inteligente y resiliente a fallas de internet.
 
 La plataforma asegura que el 100% de la información capturada en planta sea confiable, auditable y accesible en tiempo real para la toma de decisiones directivas.
 
@@ -36,7 +36,7 @@ La plataforma asegura que el 100% de la información capturada en planta sea con
   4. Opciones Estandarizadas de Inspección: Normal (`N`), Existe (`E`), Anormal (`A`), Bajo (`B`), No Existe (`NE`), No Aplica (`N/A`).
 
 ### B. Módulo de Montacargas
-- **Propósito:** Garantizar la disponibilidad y operatividad de la flota de montacargas de Tubrica.
+- **Propósito:** Garantizar la disponibilidad y operatividad de la flota de montacargas de Sinergy.
 - **Gestión de Catálogo:** Registro detallado de cada equipo incluyendo Código de Activo (ej. `1000MTC00009`), Serial, Denominación (Tipo, Marca `Yale`, Modelo), Ubicación Técnica (ej. `1000-DES-MT01`), Descripción y Estatus (`Operativo` / `Inoperativo`).
 - **Puntos de Chequeo:** Verificación focalizada en sistemas críticos: Motor, Caja, Radiador, Frenos y Ruedas.
 

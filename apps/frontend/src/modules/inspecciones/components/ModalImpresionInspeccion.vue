@@ -238,7 +238,7 @@ defineExpose({ abrir, cerrar })
           <!-- Encabezado con Logo y Título -->
           <div class="iso-header-grid mb-2">
             <div class="iso-logo-cell">
-              <img src="/LOGO_TUBRICA_AZUL.png" alt="TUBRICA" class="iso-logo-img" />
+              <img src="/logo-sinergy.svg" alt="Sinergy" class="iso-logo-img" />
             </div>
             <div class="iso-title-cell text-center font-weight-bold">
               {{ tituloRutina }}
@@ -457,8 +457,9 @@ defineExpose({ abrir, cerrar })
 }
 
 .iso-logo-img {
-  height: 38px;
-  max-width: 160px;
+  height: 30px;
+  width: auto;
+  max-width: 140px;
   object-fit: contain;
 }
 

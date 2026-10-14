@@ -1,6 +1,6 @@
 # Escenarios y Casos de Uso del Sistema — Sinergy
 
-**Organización:** Tubrica  
+**Organización:** Sinergy  
 **Sistema:** Plataforma Digital de Control de Mantenimiento  
 **Versión:** 1.0  
 **Dirigido a:** Gerencia de Mantenimiento y Supervisión Operativa  
@@ -9,7 +9,7 @@
 
 ## Introducción
 
-Este documento ilustra mediante ejemplos claros y paso a paso cómo los colaboradores de Tubrica (técnicos, supervisores y gerentes) utilizarán la plataforma Sinergy en su jornada laboral diaria para cumplir con los objetivos operativos.
+Este documento ilustra mediante ejemplos claros y paso a paso cómo los colaboradores de Sinergy (técnicos, supervisores y gerentes) utilizarán la plataforma Sinergy en su jornada laboral diaria para cumplir con los objetivos operativos.
 
 ---
 
@@ -55,7 +55,7 @@ Este documento ilustra mediante ejemplos claros y paso a paso cómo los colabora
 ---
 
 ### CU-04: Modificación de la Estructura de Planta (Alta de Maquinaria/Variables)
-- **Escenario:** Tubrica instala una nueva máquina en la Línea #05 de la Planta de Extrusión o modifica una variable de control.
+- **Escenario:** Sinergy instala una nueva máquina en la Línea #05 de la Planta de Extrusión o modifica una variable de control.
 - **Paso a Paso:**
   1. El supervisor ingresa al menú de **Administración de Planta**.
   2. Selecciona la Línea #05 y presiona **Agregar Nuevo Equipo**.

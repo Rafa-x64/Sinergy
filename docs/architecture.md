@@ -439,7 +439,7 @@ La arquitectura Feature-Based agrupa el código por contexto de negocio en lugar
 
 **Decisión:** Implementar el módulo de inspección de variables críticas como una interfaz generada dinámicamente desde la base de datos, en lugar de crear vistas hardcodeadas por línea, máquina o componente.
 
-**Razón:** Tubrica tiene 3 plantas, entre 6 y 17 líneas por planta, múltiples equipos por línea y decenas de componentes con variables heterogéneas. Crear una vista por configuración física implica que cualquier cambio operacional (nuevo equipo, renombrar una variable) requeriría modificación de código fuente, compilación y un nuevo despliegue. Esto es deuda técnica inviable.
+**Razón:** Sinergy tiene 3 plantas, entre 6 y 17 líneas por planta, múltiples equipos por línea y decenas de componentes con variables heterogéneas. Crear una vista por configuración física implica que cualquier cambio operacional (nuevo equipo, renombrar una variable) requeriría modificación de código fuente, compilación y un nuevo despliegue. Esto es deuda técnica inviable.
 
 **Alternativas descartadas:** Vistas estáticas por línea/equipo (acoplamiento insostenible, cero escalabilidad), generación de código automático desde la DB (complejidad innecesaria en esta fase).
 
@@ -461,7 +461,7 @@ La arquitectura Feature-Based agrupa el código por contexto de negocio en lugar
 
 ---
 
-## Módulo: Variables Críticas (Tubrica)
+## Módulo: Variables Críticas (Sinergy)
 
 Esta sección documenta la arquitectura específica de este módulo dentro del sistema Sinergy.
 

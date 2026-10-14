@@ -107,7 +107,7 @@ Aquí se registran las anotaciones, palabras clave y requerimientos solicitados 
 
 **Estructura y Atributos de Datos del Montacargas (Catálogo / Maestro):**
 - **Código de Equipo (Ej. `1000MTC00009`):**
-  - `1000`: Empresa / Planta (Tubrica).
+  - `1000`: Empresa / Planta (Sinergy).
   - `MTC00009`: Identificación correlativa.
 - **Denominación (Ej. `Montacarga Yale GLP090 M09`):**
   - Tipo: `Montacarga`
@@ -116,7 +116,7 @@ Aquí se registran las anotaciones, palabras clave y requerimientos solicitados 
   - Identificación abreviada: `M09`
 - **Serial:** Número de serie del equipo.
 - **Ubicación Técnica (Ej. `1000-DES-MT01`):**
-  - `1000`: Tubrica.
+  - `1000`: Sinergy.
   - `DES`: Ubicación / Área física.
   - `MT01`: Identificador de montacargas en área.
 - **Denominación 2:** Descripción detallada de la ubicación técnica.
@@ -167,7 +167,7 @@ Aquí se registran las anotaciones, palabras clave y requerimientos solicitados 
 
 ---
 
-## Módulo: Variables Críticas (Tubrica)
+## Módulo: Variables Críticas (Sinergy)
 
 > [!IMPORTANT]
 > Este módulo reemplaza el registro manual en Excel. El sistema debe ser agnóstico a la cantidad de plantas, líneas y equipos. Ningún cambio físico en la planta debe requerir modificación de código fuente.

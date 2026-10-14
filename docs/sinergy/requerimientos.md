@@ -1,6 +1,6 @@
 # Especificación de Requisitos del Sistema — Sinergy
 
-**Organización:** Tubrica  
+**Organización:** Sinergy  
 **Sistema:** Plataforma Digital de Control de Mantenimiento  
 **Versión:** 1.0  
 **Dirigido a:** Gerencia de Operaciones, Jefatura de Mantenimiento, Supervisores  
@@ -45,7 +45,7 @@
 
 | ID | Descripción del Requisito | Detalle / Criterio de Aprobación | Prioridad |
 |---|---|---|---|
-| **REQ-VC-01** | **Navegación Jerárquica:** Selección fluida por niveles: Ubicación Técnica → Planta → Línea de Producción (15-17 por planta) → Equipo → Componente → Variable. | Estructura flexible aplicable a las 3 plantas de Tubrica. | Alta |
+| **REQ-VC-01** | **Navegación Jerárquica:** Selección fluida por niveles: Ubicación Técnica → Planta → Línea de Producción (15-17 por planta) → Equipo → Componente → Variable. | Estructura flexible aplicable a las 3 plantas de Sinergy. | Alta |
 | **REQ-VC-02** | **Administración de Estructura por Planta (Sin Sistemas):** El supervisor puede agregar o editar líneas, máquinas, componentes y variables desde el menú administrativo sin requerir programación de software. | Cero dependencia de programadores para cambios en la planta. | Alta |
 | **REQ-VC-03** | **Visualización Adaptativa:** La pantalla de inspección se genera dinámicamente según la máquina elegida sin recargar innecesariamente toda la base de datos. | Carga rápida en dispositivos móviles. | Alta |
 
