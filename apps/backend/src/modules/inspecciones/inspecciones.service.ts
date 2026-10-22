@@ -515,6 +515,9 @@ export class InspeccionesService {
    * Obtiene una inspección por ID con todos sus detalles evaluados y comparación de rangos.
    */
   async obtenerPorId(idInput: string | number) {
+    if (!/^\d+$/.test(String(idInput))) {
+      throw new AppError('El ID de la inspección debe ser numérico', 400)
+    }
     const id = BigInt(idInput)
     let inspeccion = await prisma.inspeccion.findUnique({
       where: { id },
@@ -712,6 +715,9 @@ export class InspeccionesService {
     supervisorId: number,
     dto: EvaluarInspeccionDTO
   ) {
+    if (!/^\d+$/.test(String(idInput))) {
+      throw new AppError('El ID de la inspección debe ser numérico', 400)
+    }
     const id = BigInt(idInput)
     const inspeccion = await prisma.inspeccion.findUnique({ where: { id } })
 
@@ -819,6 +825,9 @@ export class InspeccionesService {
    * Elimina una inspección física o administrativamente.
    */
   async eliminarInspeccion(idInput: string | number) {
+    if (!/^\d+$/.test(String(idInput))) {
+      throw new AppError('El ID de la inspección debe ser numérico', 400)
+    }
     const id = BigInt(idInput)
     const inspeccion = await prisma.inspeccion.findUnique({ where: { id } })
 
