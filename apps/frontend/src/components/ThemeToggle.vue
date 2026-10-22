@@ -5,6 +5,7 @@
     variant="text"
     size="small"
     :title="themeName"
+    color="inherit"
   >
     <v-icon>{{ themeIcon }}</v-icon>
   </v-btn>
@@ -17,10 +18,13 @@ import { computed } from 'vue'
 const theme = useTheme()
 
 const toggleTheme = () => {
-  theme.global.name.value =
-    theme.global.name.value === 'sinergyLightTheme'
-      ? 'sinergyDarkTheme'
-      : 'sinergyLightTheme'
+  const nuevo = theme.global.name.value === 'sinergyLightTheme'
+    ? 'sinergyDarkTheme'
+    : 'sinergyLightTheme'
+
+  theme.global.name.value = nuevo
+  localStorage.setItem('sinergy_theme', nuevo)
+  localStorage.setItem('sinergy_theme_manual', 'true')
 }
 
 const themeIcon = computed(() => {

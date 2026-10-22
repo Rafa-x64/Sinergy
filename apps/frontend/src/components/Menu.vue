@@ -6,6 +6,7 @@ import SinergyChip from './SinergyChip.vue'
 import { useAuthStore } from '../modules/auth/auth.store'
 import { useNotificationStore } from '../modules/notificaciones/notificaciones.store'
 import NotificationBell from '../modules/notificaciones/components/NotificationBell.vue'
+import ThemeToggle from './ThemeToggle.vue'
 
 const authStore = useAuthStore()
 const notificationStore = useNotificationStore()
@@ -108,6 +109,7 @@ const cerrarSesion = async (): Promise<void> => {
 
         <v-spacer></v-spacer>
 
+        <ThemeToggle class="mr-1" />
         <NotificationBell v-if="authStore.accessToken" :user-token="authStore.accessToken" color="warning" />
 
         <v-btn icon>
@@ -118,7 +120,10 @@ const cerrarSesion = async (): Promise<void> => {
     <!-- Drawer DESKTOP (Laptop) -->
     <v-navigation-drawer permanent :width="300" v-if="!ocultarLayout && isDesktop">
         <v-list-item class="py-2">
-            <SinergyChip />
+            <div class="d-flex align-center justify-space-between w-100">
+                <SinergyChip />
+                <ThemeToggle />
+            </div>
         </v-list-item>
         <v-divider></v-divider>
         <v-list-item v-for="modulo in modulosVisibles" :color="modulo.color" :key="modulo.icon" link :to="modulo.to"

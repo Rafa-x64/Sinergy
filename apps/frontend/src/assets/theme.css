@@ -18,7 +18,7 @@
 .dark-theme {
   --app-bg: #0b0f19;
   --app-surface: #131b2e;
-  --app-border: rgba(255, 255, 255, 0.06);
+  --app-border: rgba(255, 255, 255, 0.08);
   --app-text-primary: #f8fafc;
   --app-text-secondary: #94a3b8;
   --app-primary: #818cf8;
@@ -26,12 +26,44 @@
   /* Sincronizar variables de Bootstrap con el tema oscuro */
   --bs-body-bg: #0b0f19 !important;
   --bs-body-color: #f8fafc !important;
-  --bs-border-color: rgba(255, 255, 255, 0.08) !important;
+  --bs-border-color: rgba(255, 255, 255, 0.1) !important;
   --bs-primary: #818cf8 !important;
   --bs-primary-rgb: 129, 140, 248 !important;
   --bs-secondary-color: #94a3b8 !important;
   --bs-tertiary-bg: #131b2e !important;
   --bs-emphasis-color: #ffffff !important;
+}
+
+/* Tablas y tarjetas en tema oscuro */
+.v-theme--sinergyDarkTheme .v-card,
+.v-theme--sinergyDarkTheme .v-sheet {
+  background-color: #131b2e !important;
+  color: #f8fafc !important;
+}
+
+.v-theme--sinergyDarkTheme .v-table {
+  background-color: #131b2e !important;
+  color: #f8fafc !important;
+}
+
+.v-theme--sinergyDarkTheme .v-table thead th {
+  background-color: #1a253c !important;
+  color: #cbd5e1 !important;
+}
+
+.v-theme--sinergyDarkTheme .v-table tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+}
+
+/* Textos auxiliares */
+.v-theme--sinergyDarkTheme .text-text-principal {
+  color: #f8fafc !important;
+}
+.v-theme--sinergyDarkTheme .text-text-secondary {
+  color: #94a3b8 !important;
+}
+.v-theme--sinergyDarkTheme .text-text-muted {
+  color: #64748b !important;
 }
 
 /* ─── Scrollbars globales ───────────────────────────────────────────── */

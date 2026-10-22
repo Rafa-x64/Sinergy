@@ -37,7 +37,7 @@ const pool = new Pool({ connectionString })
 const prisma = new PrismaClient({ adapter: new PrismaPg(pool) })
 
 // ─── Utilidades ──────────────────────────────────────────────────────────────
-const PASSWORD_PRUEBA = 'Cambiar.2026!'
+const PASSWORD_PRUEBA = 'tubrica.2026'
 
 /** Fecha relativa: hace N días. */
 const hace = (dias) => new Date(Date.now() - dias * 24 * 60 * 60 * 1000)
@@ -290,7 +290,13 @@ async function limpiarBaseDeDatos() {
   await prisma.$executeRawUnsafe(
     `TRUNCATE TABLE ${tablas.map((t) => `"${t}"`).join(', ')} RESTART IDENTITY CASCADE;`
   )
-  console.log('   · Tablas vaciadas (TRUNCATE ... RESTART IDENTITY CASCADE)')
+  // Asegura valores recientes en el enum TipoInspeccion y NivelLubricante de Postgres
+  await prisma.$executeRawUnsafe(`ALTER TYPE "TipoInspeccion" ADD VALUE IF NOT EXISTS 'CHILLER_DIARIO';`)
+  await prisma.$executeRawUnsafe(`ALTER TYPE "TipoInspeccion" ADD VALUE IF NOT EXISTS 'CHILLER_SEMANAL';`)
+  await prisma.$executeRawUnsafe(`ALTER TYPE "NivelLubricante" ADD VALUE IF NOT EXISTS 'MINIMO';`)
+  await prisma.$executeRawUnsafe(`ALTER TYPE "NivelLubricante" ADD VALUE IF NOT EXISTS 'NORMAL';`)
+  await prisma.$executeRawUnsafe(`ALTER TYPE "NivelLubricante" ADD VALUE IF NOT EXISTS 'MAXIMO';`)
+  console.log('   · Tablas vaciadas y enums verificados')
 }
 
 // ─── Seed principal ──────────────────────────────────────────────────────────
@@ -300,10 +306,18 @@ async function main() {
   await limpiarBaseDeDatos()
 
   // 1) ROLES ------------------------------------------------------------------
-  const rolAdmin = await prisma.rol.create({
+  const rolSuperAdmin = await prisma.rol.create({
     data: {
       nombre: 'Administrador del Sistema',
-      descripcion: 'Jefatura de Mantenimiento / Dirección. Acceso total: usuarios, estructura de planta y tablero directivo.',
+      descripcion: 'Super Administrador Corporativo Tubrica. Acceso total e irrestricto a todas las plantas y configuración general.',
+      esSupervisor: false,
+      requiereSupervisor: false
+    }
+  })
+  const rolAdminPlanta = await prisma.rol.create({
+    data: {
+      nombre: 'Administrador de Planta',
+      descripcion: 'Administrador local de planta. Gestión de equipos, usuarios de planta y tablero operativo local.',
       esSupervisor: false,
       requiereSupervisor: false
     }
@@ -324,7 +338,7 @@ async function main() {
       requiereSupervisor: true
     }
   })
-  console.log(`   · Roles creados: ${rolAdmin.nombre}, ${rolSupervisor.nombre}, ${rolTecnico.nombre}`)
+  console.log(`   · Roles creados: ${rolSuperAdmin.nombre}, ${rolAdminPlanta.nombre}, ${rolSupervisor.nombre}, ${rolTecnico.nombre}`)
 
   // 2) PLANTAS ----------------------------------------------------------------
   const plantasPorCodigo = {}
@@ -351,26 +365,74 @@ async function main() {
   // 4) USUARIOS ---------------------------------------------------------------
   const hash = await bcrypt.hash(PASSWORD_PRUEBA, 12)
 
-  const admin = await prisma.usuario.create({
+  // 4.1 Super Administrador Tubrica (todas las plantas)
+  const superAdmin = await prisma.usuario.create({
     data: {
-      nombre: 'Admin',
-      apellido: 'Sistema',
-      email: 'admin.sinergy@sinergy.local',
-      nombreUsuario: 'admin.sinergy',
+      nombre: 'Super',
+      apellido: 'Admin Tubrica',
+      email: 'admin.tubrica@tubrica.com',
+      nombreUsuario: 'admin.tubrica',
       passwordHash: hash,
       activo: true,
       ultimoAcceso: new Date(),
       plantaId: null,
-      rolesUsuario: { create: [{ rolId: rolAdmin.id }] },
+      rolesUsuario: { create: [{ rolId: rolSuperAdmin.id }] },
       plantasUsuario: { create: idsPlantas.map((plantaId) => ({ plantaId })) }
     }
   })
 
+  // 4.2 Administradores por Planta
+  const adminExtrusion = await prisma.usuario.create({
+    data: {
+      nombre: 'Admin',
+      apellido: 'Extrusión',
+      email: 'admin.extrusion@tubrica.com',
+      nombreUsuario: 'admin.extrusion',
+      passwordHash: hash,
+      activo: true,
+      ultimoAcceso: new Date(),
+      plantaId: plantasPorCodigo['1000'].id,
+      rolesUsuario: { create: [{ rolId: rolAdminPlanta.id }] },
+      plantasUsuario: { create: [{ plantaId: plantasPorCodigo['1000'].id }] }
+    }
+  })
+
+  const adminInyeccion = await prisma.usuario.create({
+    data: {
+      nombre: 'Admin',
+      apellido: 'Inyección',
+      email: 'admin.inyeccion@tubrica.com',
+      nombreUsuario: 'admin.inyeccion',
+      passwordHash: hash,
+      activo: true,
+      ultimoAcceso: new Date(),
+      plantaId: plantasPorCodigo['2000'].id,
+      rolesUsuario: { create: [{ rolId: rolAdminPlanta.id }] },
+      plantasUsuario: { create: [{ plantaId: plantasPorCodigo['2000'].id }] }
+    }
+  })
+
+  const adminMezcla = await prisma.usuario.create({
+    data: {
+      nombre: 'Admin',
+      apellido: 'Mezcla',
+      email: 'admin.mezcla@tubrica.com',
+      nombreUsuario: 'admin.mezcla',
+      passwordHash: hash,
+      activo: true,
+      ultimoAcceso: new Date(),
+      plantaId: plantasPorCodigo['3000'].id,
+      rolesUsuario: { create: [{ rolId: rolAdminPlanta.id }] },
+      plantasUsuario: { create: [{ plantaId: plantasPorCodigo['3000'].id }] }
+    }
+  })
+
+  // 4.3 Supervisores
   const supervisor = await prisma.usuario.create({
     data: {
-      nombre: 'Supervisor',
-      apellido: 'General',
-      email: 'supervisor@sinergy.local',
+      nombre: 'Carlos',
+      apellido: 'Mendoza (Supervisor)',
+      email: 'supervisor@tubrica.com',
       nombreUsuario: 'supervisor',
       passwordHash: hash,
       activo: true,
@@ -381,11 +443,27 @@ async function main() {
     }
   })
 
+  const supervisorInyeccion = await prisma.usuario.create({
+    data: {
+      nombre: 'Luis',
+      apellido: 'Pérez (Supervisor)',
+      email: 'supervisor.inyeccion@tubrica.com',
+      nombreUsuario: 'supervisor.inyeccion',
+      passwordHash: hash,
+      activo: true,
+      ultimoAcceso: new Date(),
+      plantaId: plantasPorCodigo['2000'].id,
+      rolesUsuario: { create: [{ rolId: rolSupervisor.id }] },
+      plantasUsuario: { create: [{ plantaId: plantasPorCodigo['2000'].id }] }
+    }
+  })
+
+  // 4.4 Técnicos de Planta
   const tecnicoExtrusion = await prisma.usuario.create({
     data: {
-      nombre: 'Técnico',
-      apellido: 'Extrusión',
-      email: 'tecnico.extrusion@sinergy.local',
+      nombre: 'José',
+      apellido: 'Rivas (Técnico)',
+      email: 'tecnico.extrusion@tubrica.com',
       nombreUsuario: 'tecnico.extrusion',
       passwordHash: hash,
       activo: true,
@@ -399,20 +477,37 @@ async function main() {
 
   const tecnicoInyeccion = await prisma.usuario.create({
     data: {
-      nombre: 'Técnico',
-      apellido: 'Inyección',
-      email: 'tecnico.inyeccion@sinergy.local',
+      nombre: 'Miguel',
+      apellido: 'Gómez (Técnico)',
+      email: 'tecnico.inyeccion@tubrica.com',
       nombreUsuario: 'tecnico.inyeccion',
       passwordHash: hash,
       activo: true,
       ultimoAcceso: new Date(),
       plantaId: plantasPorCodigo['2000'].id,
-      supervisorId: supervisor.id,
+      supervisorId: supervisorInyeccion.id,
       rolesUsuario: { create: [{ rolId: rolTecnico.id }] },
       plantasUsuario: { create: [{ plantaId: plantasPorCodigo['2000'].id }] }
     }
   })
-  console.log('   · Usuarios creados: admin.sinergy, supervisor, tecnico.extrusion, tecnico.inyeccion')
+
+  const tecnicoMezcla = await prisma.usuario.create({
+    data: {
+      nombre: 'Andrés',
+      apellido: 'Salazar (Técnico)',
+      email: 'tecnico.mezcla@tubrica.com',
+      nombreUsuario: 'tecnico.mezcla',
+      passwordHash: hash,
+      activo: true,
+      ultimoAcceso: new Date(),
+      plantaId: plantasPorCodigo['3000'].id,
+      supervisorId: supervisor.id,
+      rolesUsuario: { create: [{ rolId: rolTecnico.id }] },
+      plantasUsuario: { create: [{ plantaId: plantasPorCodigo['3000'].id }] }
+    }
+  })
+
+  console.log('   · Usuarios creados: admin.tubrica, admin.extrusion, admin.inyeccion, admin.mezcla, supervisor, supervisor.inyeccion, tecnico.extrusion, tecnico.inyeccion, tecnico.mezcla')
 
   // 5) TIPOS DE EQUIPO + PLANTILLAS DE VARIABLES ------------------------------
   const tiposEquipoPorNombre = {}
@@ -956,7 +1051,7 @@ async function main() {
   await prisma.auditoriaLog.createMany({
     data: [
       {
-        usuarioId: admin.id,
+        usuarioId: superAdmin.id,
         accion: 'CREAR_ESTRUCTURA_PLANTA',
         tablaAfectada: 'plantas',
         registroId: BigInt(plantasPorCodigo['1000'].id),
@@ -990,12 +1085,17 @@ async function main() {
   console.log('\n✅ Seed completado exitosamente.\n')
   console.log('   Credenciales de acceso:')
   console.log('   ┌──────────────────────────┬──────────────────┬────────────────────────────────────────────┐')
-  console.log('   │ Usuario                  │ Contraseña       │ Rol                                        │')
+  console.log('   │ Usuario                  │ Contraseña       │ Rol / Alcance                              │')
   console.log('   ├──────────────────────────┼──────────────────┼────────────────────────────────────────────┤')
-  console.log('   │ admin.sinergy            │ Cambiar.2026!     │ Administrador del Sistema                  │')
-  console.log('   │ supervisor               │ Cambiar.2026!     │ Supervisor / Gerente de Mantenimiento      │')
-  console.log('   │ tecnico.extrusion        │ Cambiar.2026!     │ Técnico de Mantenimiento (Extrusión)       │')
-  console.log('   │ tecnico.inyeccion        │ Cambiar.2026!     │ Técnico de Mantenimiento (Inyección)       │')
+  console.log('   │ admin.tubrica            │ tubrica.2026     │ Super Admin (Todas las plantas)            │')
+  console.log('   │ admin.extrusion          │ tubrica.2026     │ Admin Planta (Extrusión)                   │')
+  console.log('   │ admin.inyeccion          │ tubrica.2026     │ Admin Planta (Inyección)                   │')
+  console.log('   │ admin.mezcla             │ tubrica.2026     │ Admin Planta (Mezcla)                      │')
+  console.log('   │ supervisor               │ tubrica.2026     │ Supervisor (Extrusión / Global)            │')
+  console.log('   │ supervisor.inyeccion     │ tubrica.2026     │ Supervisor (Inyección)                     │')
+  console.log('   │ tecnico.extrusion        │ tubrica.2026     │ Técnico (Extrusión)                        │')
+  console.log('   │ tecnico.inyeccion        │ tubrica.2026     │ Técnico (Inyección)                        │')
+  console.log('   │ tecnico.mezcla           │ tubrica.2026     │ Técnico (Mezcla)                           │')
   console.log('   └──────────────────────────┴──────────────────┴────────────────────────────────────────────┘\n')
 }
 

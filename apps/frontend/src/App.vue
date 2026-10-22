@@ -19,16 +19,28 @@ watch(
     } else {
       document.documentElement.classList.remove('dark-theme')
     }
-    localStorage.setItem('sinergy_theme', nuevoTema)
   },
   { immediate: true }
 )
 
 onMounted(() => {
   const temaGuardado = localStorage.getItem('sinergy_theme')
-  if (temaGuardado && (temaGuardado === 'sinergyLightTheme' || temaGuardado === 'sinergyDarkTheme')) {
+  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+
+  if (temaGuardado === 'sinergyLightTheme' || temaGuardado === 'sinergyDarkTheme') {
     theme.global.name.value = temaGuardado
+  } else {
+    // Si no hay preferencia guardada, sincronizar con el navegador/SO
+    theme.global.name.value = mediaQuery.matches ? 'sinergyDarkTheme' : 'sinergyLightTheme'
   }
+
+  // Escuchar cambios de tema del navegador en tiempo real
+  mediaQuery.addEventListener('change', (e) => {
+    const preferenciaManual = localStorage.getItem('sinergy_theme_manual')
+    if (!preferenciaManual) {
+      theme.global.name.value = e.matches ? 'sinergyDarkTheme' : 'sinergyLightTheme'
+    }
+  })
 
   // Desactivar globalmente el popup de autocompletado nativo del navegador en todos los inputs
   document.addEventListener(
