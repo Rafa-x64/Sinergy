@@ -210,7 +210,7 @@ const EQUIPOS = [
   },
   {
     codigo: '1000TOR00001', nombre: 'Torno CNC Haas ST-20 T01', tipo: 'Torno', ubicacion: '1000-EXT-L02',
-    serial: 'HAAS-ST20-0001', marca: 'Haas', modelo: 'ST-20', estado: 'EN_MANTENIMIENTO'
+    serial: 'HAAS-ST20-0001', marca: 'Haas', modelo: 'ST-20', estado: 'OPERATIVO'
   },
   {
     codigo: '1000MTC00009', nombre: 'Montacarga Yale GLP090 M09', tipo: 'Montacargas', ubicacion: '1000-EXT-MT01',
@@ -253,8 +253,22 @@ const EQUIPOS = [
   },
   {
     codigo: '3000BOM00001', nombre: 'Bomba Centrífuga KSB Etanorm B02', tipo: 'Bomba', ubicacion: '3000-MEZ-SRV',
-    serial: 'KSB-ETANORM-0002', marca: 'KSB', modelo: 'Etanorm 065', estado: 'INOPERATIVO',
+    serial: 'KSB-ETANORM-0002', marca: 'KSB', modelo: 'Etanorm 065', estado: 'OPERATIVO',
     horometros: [300, 360, 400]
+  },
+  // Equipos adicionales para cobertura VARIABLES_CRITICAS en todas las plantas
+  {
+    codigo: '1000BOM00001', nombre: 'Bomba Centrífuga Grundfos CM5 B03', tipo: 'Bomba', ubicacion: '1000-EXT-SRV',
+    serial: 'GF-CM5-0001', marca: 'Grundfos', modelo: 'CM5-5', estado: 'OPERATIVO',
+    horometros: [450, 520, 590]
+  },
+  {
+    codigo: '2000TOR00001', nombre: 'Torno CNC Haas ST-10 T02', tipo: 'Torno', ubicacion: '2000-INY-L01',
+    serial: 'HAAS-ST10-0002', marca: 'Haas', modelo: 'ST-10', estado: 'OPERATIVO'
+  },
+  {
+    codigo: '3000TOR00001', nombre: 'Torno Paralelo Pinacho S-90 T03', tipo: 'Torno', ubicacion: '3000-MEZ-L01',
+    serial: 'PINACHO-S90-0001', marca: 'Pinacho', modelo: 'S-90', estado: 'OPERATIVO'
   },
   {
     codigo: '3000MTC00001', nombre: 'Montacarga Hyster H50FT M02', tipo: 'Montacargas', ubicacion: '3000-MEZ-L01',
